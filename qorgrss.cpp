@@ -50,10 +50,20 @@ Download::Download(RSSChannel *C) {
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }
 void Download::run() {
-    URL.remove("http://");
+    bool SSLFeed = false;
+    if(URL.contains("https://"))    {
+        URL.remove("https://");
+        SSLFeed = true;
+    } else {
+        URL.remove("http://");
+    }
     QString server = URL.mid(0, URL.indexOf("/"));
-    QTcpSocket *S = new QTcpSocket();
-    S->connectToHost(server, 80);
+    QSslSocket *S = new QSslSocket();
+    if(SSLFeed) {
+        S->connectToHostEncrypted(server,443);
+    } else {
+        S->connectToHost(server, 80);
+    }
     QString Output;
     if (S->waitForConnected()) {
         QString Req = URL.mid(URL.indexOf("/"), URL.length()-URL.indexOf("/"));
@@ -93,10 +103,20 @@ void Download::run() {
     emit Downloaded(Output);
 }
 QByteArray Download::SubDownload(QString I) {
-    I.remove("http://");
+    bool SSLFeed = false;
+    if(I.contains("https://"))    {
+        I.remove("https://");
+        SSLFeed = true;
+    } else {
+        I.remove("http://");
+    }
     QString server = I.mid(0, I.indexOf("/"));
-    QTcpSocket *S = new QTcpSocket();
-    S->connectToHost(server, 80);
+    QSslSocket *S = new QSslSocket();
+    if(SSLFeed) {
+        S->connectToHostEncrypted(server,443);
+    } else {
+        S->connectToHost(server, 80);
+    }
     QByteArray Reply;
     if (S->waitForConnected()) {
         QString Req = I.mid(I.indexOf("/"), I.length()-I.indexOf("/"));
@@ -125,9 +145,10 @@ QByteArray Download::SubDownload(QString I) {
 }
 
 QString stringBetween(QString Tag, QString Text) {
-    Text = Text.mid(Text.indexOf(Tag, 0, Qt::CaseInsensitive)+Tag.length(),
-                    Text.indexOf(Tag, Text.indexOf(Tag, 0, Qt::CaseInsensitive)+1,
-                                 Qt::CaseInsensitive)-Text.indexOf(Tag, 0, Qt::CaseInsensitive)-Tag.length());
+
+    Text = Text.mid(Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1,
+                    Text.indexOf(Tag+">", Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1, Qt::CaseInsensitive)
+                    - Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) - Tag.length()-1);
     Text.remove("<![CDATA[");
     Text.remove("]]>");
     if (Text.contains(">")) {
@@ -136,7 +157,22 @@ QString stringBetween(QString Tag, QString Text) {
     if (Text.contains("<")) {
         Text = Text.mid(0, Text.lastIndexOf("<"));
     }
-    return Text;
+    Text.replace("&lt;", "<");
+    Text.replace("&gt;", ">");
+    Text.replace("&amp;", "&");
+    Text.replace("&quot;", "\"");
+    QString Output;
+    for (int i = 0; i < Text.length()-4 ; i++) {
+        if(Text[i] == '&' && Text[i+1] == '#' && Text[i+4] == ';') {
+            QChar C(Text.mid(i+2,2).toInt());
+            Output.append(C);
+            i+=4;
+        } else {
+            Output.append(Text[i]);
+        }
+    }
+    Output.append(Text.mid(Text.length()-4,4));
+    return Output;
 }
 
 qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
@@ -163,6 +199,8 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     Titles->setColumnWidth(1, 120);
     connect(Titles, SIGNAL(clicked(QModelIndex)), this, SLOT(chooseItem(QModelIndex)));
     View = new QWebView(this);
+    connect(View->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList < QSslError > )),
+            this, SLOT(HTTPSS(QNetworkReply*)));
     Link = new QLabel(this);
     Link->setTextFormat(Qt::RichText);
     UpdateQuene = 0;
@@ -346,7 +384,7 @@ void qorgRSS::AddS() {
 }
 void qorgRSS::DownloadedS(QString Rep) {
     vector  <RSSItem*>  Itm;
-    Download *D = qobject_cast < Download* > (QObject::sender());
+    Download *D = qobject_cast<Download*>(QObject::sender());
     RSSChannel *Channel = D->Ch;
     if (Rep.contains("<rss ")&&Rep.contains("</rss>")) {
         if (Rep.contains("<channel>")&&Rep.contains("</channel>")) {
@@ -357,10 +395,6 @@ void qorgRSS::DownloadedS(QString Rep) {
                 item->GUID = stringBetween("guid", Rep);
                 QString Title = stringBetween("title", Rep);
                 Title.remove("\r\n");
-                Title.replace("&lt;", "<");
-                Title.replace("&gt;", ">");
-                Title.replace("&amp;", "&");
-                Title.replace("&quot;", "\"");
                 Title.remove("<br>");
                 item->Title = Title;
                 item->Link = stringBetween("link", Rep);
@@ -368,9 +402,6 @@ void qorgRSS::DownloadedS(QString Rep) {
                     item->GUID = item->Link;
                 }
                 QString Des = stringBetween("description", Rep);
-                Des.replace("&lt;", "<");
-                Des.replace("&gt;", ">");
-                Des.replace("&amp;", "&");
                 item->Description = Des;
                 QString PB = stringBetween("pubDate", Rep);
                 PB = PB.remove(0, 5);
@@ -408,19 +439,17 @@ void qorgRSS::DownloadedS(QString Rep) {
             item->GUID = stringBetween("id", Rep);
             QString Title = stringBetween("title", Rep);
             Title.remove("\r\n");
-            Title.replace("&lt;", "<");
-            Title.replace("&gt;", ">");
-            Title.replace("&amp;", "&");
-            Title.replace("&quot;", "\"");
             Title.remove("<br>");
             item->Title = Title;
             QString Link = Rep.mid(Rep.indexOf("<link", 0, Qt::CaseInsensitive), Rep.indexOf("/>", Rep.indexOf("<link", 0, Qt::CaseInsensitive), Qt::CaseInsensitive)-Rep.indexOf("<link", 0, Qt::CaseInsensitive));
             Link = Link.mid(Link.indexOf("href=\"")+6, Link.indexOf("\"", Link.indexOf("href=\"")+6)-6);
             item->Link = Link;
-            QString Des = stringBetween("summary", Rep);
-            Des.replace("&lt;", "<");
-            Des.replace("&gt;", ">");
-            Des.replace("&amp;", "&");
+            QString Des;
+            if(Rep.contains("summary")) {
+                Des = stringBetween("summary", Rep);
+            } else {
+                Des = stringBetween("content", Rep);
+            }
             item->Description = Des;
             QString PB = stringBetween("updated", Rep);
             item->PubDate = QDateTime::fromString(PB, Qt::ISODate).toLocalTime();
@@ -526,3 +555,7 @@ void qorgRSS::UpdateS() {
     }
 }
 #include "qorgrss.moc"
+void qorgRSS::HTTPSS(QNetworkReply *QNR) {
+    QNR->ignoreSslErrors();
+    delete QNR;
+}
