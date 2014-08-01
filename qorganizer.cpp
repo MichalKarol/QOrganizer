@@ -28,7 +28,7 @@ QOrganizer::QOrganizer()
     Stacked=new QStackedWidget();
     //Home widget
     QTextBrowser *Label=new QTextBrowser(this);
-    Label->setText("QOrganizer 1.0\nCreated by: Mkarol (mkarol@linux.pl)\n22.03.1014\nYou could help in developing this software by donating:"
+    Label->setText("QOrganizer 1.0\nCreated by: Mkarol (mkarol@linux.pl)\n01.08.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK\nLitecoins: LbDEkiQQJ8XzGoqf4oJE3UfJmW5qzPsK3i");
     //Timers and tray
     UInterval=30;

@@ -41,5 +41,3 @@ CONFIG += qt
 
 RESOURCES += \
     resources.qrc
-
-RC_ICONS = QOrganizer.ico
