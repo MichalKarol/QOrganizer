@@ -1,6 +1,6 @@
 #ifndef QORGAB_H
 #define QORGAB_H
-#include <QtWidgets>
+#include  <QtWidgets>
 using namespace std;
 
 struct Person
@@ -22,10 +22,10 @@ public:
     qorgAB(QWidget*);
     QString output();
     void input(QString);
-    QList <QString> getBirthdays(QDate);
-    QList <QString> getEmails();
+    QList  < QString >  getBirthdays(QDate);
+    QList  < QString >  getEmails();
 private:
-    vector <Person> Personv;
+    vector  < Person >  Personv;
     QListWidgetItem *lastitem;
     uint lastIID;
     QGridLayout *La;

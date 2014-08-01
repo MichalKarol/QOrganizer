@@ -1,10 +1,10 @@
 #ifndef QORGMAIL_H
 #define QORGMAIL_H
-#include <QtWidgets>
-#include <QWebView>
-#include <QSslSocket>
+#include  <QtWidgets>
+#include  <QWebView>
+#include  <QSslSocket>
 #include "qorgtools.h"
-#include <qorgab.h>
+#include  "qorgab.h"
 using namespace std;
 
 class Structure
@@ -55,7 +55,7 @@ public:
     QString Email_Body[2];
     uint Email_UID;
     short Email_Flags;
-    vector <Structure*>Structurev;
+    vector  < Structure* > Structurev;
 };
 class Mailbox
 {
@@ -78,8 +78,8 @@ public:
     QString Mbox_Name;
     QString Mbox_Showname;
     unsigned short Mbox_Attrybutes;
-    vector <Mailbox*> Mbox_Children;
-    vector <Email*> Emailv;
+    vector  < Mailbox* >  Mbox_Children;
+    vector  < Email* >  Emailv;
     bool Mbox_Refresh;
     bool Mbox_Top;
 };
@@ -93,7 +93,7 @@ public:
     QString SMTPserver;
     QString User;
     QString Password;
-    vector <Mailbox*> Mboxv;
+    vector  < Mailbox* >  Mboxv;
 };
 
 class qorgMail: public QWidget
@@ -113,7 +113,7 @@ public:
     void getUpdate();
 private:
     qorgAB *AB;
-    vector <Mail> Mailv;
+    vector  < Mail >  Mailv;
     QString MailCat;
     QGridLayout *Layout;
     void setMailbox(int);
@@ -135,7 +135,7 @@ private:
     QPushButton *Delete;
     QPushButton *Forward;
     QPushButton *Reply;
-    QList <QWidget*> F;
+    QList  < QWidget* >  F;
 
     void setLayoutC();
     QTreeWidget *List;
@@ -146,7 +146,7 @@ private:
     QLineEdit *SMTPS;
     QComboBox *Choose;
     QPushButton *AddB;
-    QList <QWidget*> C;
+    QList  < QWidget* >  C;
 private slots:
     //CAT
     void testInput();

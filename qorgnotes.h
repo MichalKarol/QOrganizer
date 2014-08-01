@@ -1,6 +1,6 @@
 #ifndef QORGNOTES_H
 #define QORGNOTES_H
-#include <QtWidgets>
+#include  <QtWidgets>
 using namespace std;
 struct Note
 {
@@ -16,7 +16,7 @@ public:
     qorgNotes(QWidget*);
     QString output();
     void input(QString);
-    vector <Note> Notes;
+    vector  < Note >  Notes;
 private:
     void updateList();
     QGridLayout *Layout;

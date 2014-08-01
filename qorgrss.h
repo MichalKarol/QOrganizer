@@ -1,9 +1,9 @@
 #ifndef QORGRSS_H
 #define QORGRSS_H
 
-#include <QtWidgets>
-#include <QNetworkReply>
-#include <QWebView>
+#include  <QtWidgets>
+#include  <QNetworkReply>
+#include  <QWebView>
 using namespace std;
 
 class RSSItem
@@ -25,7 +25,7 @@ public:
     ~RSSChannel();
     QString Title;
     QString Link;
-    vector <RSSItem*> Itemv;
+    vector  < RSSItem* >  Itemv;
 };
 
 class qorgRSS : public QWidget
@@ -37,7 +37,7 @@ public:
     QString output();
     void input(QString);
     void setChannel(QString);
-    QList <QString> getChannels();
+    QList  < QString >  getChannels();
     QString getCurrent()
     {
         return currentChannel;
@@ -46,7 +46,7 @@ public:
 private:
     QString currentChannel;
     int currentC;
-    vector <RSSChannel> RSSv;
+    vector  < RSSChannel >  RSSv;
     QGridLayout *Layout;
     QTreeWidget *List;
     QLabel *Lab;

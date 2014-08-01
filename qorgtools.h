@@ -1,6 +1,6 @@
 #ifndef QORGTOOLS_H
 #define QORGTOOLS_H
-#include <QtWidgets>
+#include  <QtWidgets>
 QByteArray calculateXOR(QByteArray A,QByteArray B);
 QString Bit7ToBit8(QString);
 QString QPEncode(QByteArray);

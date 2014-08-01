@@ -3,7 +3,7 @@
 #include "qorganizer.h"
 #include "qorgtools.h"
 #include "qorgio.h"
-#include <QObject>
+//#include  <QObject>
 class qorgLogin :public QDialog
 {
     Q_OBJECT

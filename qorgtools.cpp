@@ -1,76 +1,57 @@
 #include "qorgtools.h"
-QByteArray calculateXOR(QByteArray A,QByteArray B)
-{
+QByteArray calculateXOR(QByteArray A, QByteArray B) {
     QByteArray xored;
-    for(int i=0,j=0;i<A.length();i++,j++)
-    {
-        if(j==B.length())
-        {
-            j=0;
+    for (int i = 0, j = 0; i < A.length(); i++, j++) {
+        if (j == B.length()) {
+            j = 0;
         }
         xored.append(A.at(i)^B.at(j));
     }
     return xored;
 }
-QString Bit7ToBit8(QString I)
-{
-    while(I.indexOf("&")!=-1)
-    {
-        if(I.indexOf("-")<I.indexOf("&"))
-        {
-            I=I.mid(0,I.indexOf("-"))+"##45"+I.mid(I.indexOf("-")+1,I.length()-1);
-        }
-        else
-        {
-            QString Cl=I.mid(0,I.indexOf("&"));
-            QString Fo=I.mid(I.indexOf("-")+1,I.length()-I.indexOf("-")-1);
-            QByteArray Array=QByteArray::fromBase64(I.mid(I.indexOf("&")+1,I.indexOf("-")-I.indexOf("&")-1).toUtf8());
+QString Bit7ToBit8(QString I) {
+    while (I.indexOf("&") != -1) {
+        if (I.indexOf("-") < I.indexOf("&")) {
+            I = I.mid(0, I.indexOf("-"))+"##45"+I.mid(I.indexOf("-")+1, I.length()-1);
+        } else {
+            QString Cl = I.mid(0, I.indexOf("&"));
+            QString Fo = I.mid(I.indexOf("-")+1, I.length()-I.indexOf("-")-1);
+            QByteArray Array = QByteArray::fromBase64(I.mid(I.indexOf("&")+1, I.indexOf("-")-I.indexOf("&")-1).toUtf8());
             QString Out;
-            while(!Array.isEmpty())
-            {
+            while (!Array.isEmpty()) {
                 uint utf16=(unsigned char)Array[0]*256+(unsigned char)Array[1];
-                Array.remove(0,2);
-                uint unicode=0;
-                if(utf16>=0xD800&&utf16<=0xDFFF)
-                {
+                Array.remove(0, 2);
+                uint unicode = 0;
+                if (utf16 >= 0xD800&&utf16 <= 0xDFFF) {
                     unicode=(utf16-0xD800)*1024+((unsigned char)Array[0]*256+(unsigned char)Array[1]-0xDC00)+0x10000;
-                    Array.remove(0,2);
+                    Array.remove(0, 2);
+                } else {
+                    unicode = utf16;
                 }
-                else
-                {
-                    unicode=utf16;
-                }
-                if(unicode<0x80)
-                {
-                    char A=unicode%128;
+                if (unicode < 0x80) {
+                    char A = unicode%128;
                     Out+=A;
-                }
-                else if(unicode>0x7F&&unicode<0x800)
-                {
-                    char A=128+unicode%64;
-                    char B=192+((unicode<<21)>>27);
+                } else if (unicode > 0x7F&&unicode < 0x800) {
+                    char A = 128+unicode%64;
+                    char B = 192+((unicode << 21) >> 27);
                     QByteArray H;
                     H.append(B);
                     H.append(A);
                     Out+=H;
-                }
-                else if(unicode>0x7FF&&unicode<0x100000)
-                {
-                    char A=128+unicode%64;
-                    char B=128+((unicode<<20)>>26);
-                    char C=224+((unicode<<16)>>28);
+                } else if (unicode > 0x7FF&&unicode < 0x100000) {
+                    char A = 128+unicode%64;
+                    char B = 128+((unicode << 20) >> 26);
+                    char C = 224+((unicode << 16) >> 28);
                     QByteArray H;
                     H.append(C);
                     H.append(B);
                     H.append(A);
                     Out+=H;
-                }
-                else
-                {
-                    char A=128+unicode%64;
-                    char B=128+((unicode<<20)>>26);
-                    char C=128+((unicode<<14)>>26);
-                    char D=240+((unicode<<11)>>29);
+                } else {
+                    char A = 128+unicode%64;
+                    char B = 128+((unicode << 20) >> 26);
+                    char C = 128+((unicode << 14) >> 26);
+                    char D = 240+((unicode << 11) >> 29);
                     QByteArray H;
                     H.append(D);
                     H.append(C);
@@ -79,142 +60,119 @@ QString Bit7ToBit8(QString I)
                     Out+=H;
                 }
             }
-            I=Cl+Out+Fo;
+            I = Cl+Out+Fo;
         }
     }
-    while(I.indexOf("##45")!=-1)
-    {
-        I=I.mid(0,I.indexOf("##45"))+"-"+I.mid(I.indexOf("##45")+4,I.length()-I.indexOf("##45")-4);
+    while (I.indexOf("##45") != -1) {
+        I = I.mid(0, I.indexOf("##45"))+"-"+I.mid(I.indexOf("##45")+4, I.length()-I.indexOf("##45")-4);
     }
     return I;
 }
-QString QPEncode(QByteArray I)
-{
+QString QPEncode(QByteArray I) {
     QString HEX="0123456789ABCDEF";
     QString Output;
-    for(int i=0;i<I.length();i++)
-    {
-        if(I[i].operator >=((char)32)&&I[i].operator <=((char)126))
-        {
+    for (int i = 0; i < I.length(); i++) {
+        if (I[i].operator  >= ((char)32)&&I[i].operator  <= ((char)126)) {
             Output+=I[i];
-        }
-        else
-        {
+        } else {
             Output.append('=');
-            Output.append(HEX.at(((I[i] >> 4) & 0x0F)));
+            Output.append(HEX.at(((I[i] >>  4) & 0x0F)));
             Output.append(HEX.at(I[i] & 0x0F));
         }
     }
     return Output;
 }
-QByteArray QPDecode(QByteArray I)
-{
-    I.replace("=\r\n","");
+QByteArray QPDecode(QByteArray I) {
+    I.replace("=\r\n", "");
     QString HEX="0123456789ABCDEF";
     QByteArray BA;
-    for(int i=0;i<I.length();i++)
-    {
-        if(I[i]=='=')
-        {
-            int A=HEX.indexOf(I.at(i+1));
-            int B=HEX.indexOf(I.at(i+2));
+    for (int i = 0; i < I.length(); i++) {
+        if (I[i] == '=') {
+            int A = HEX.indexOf(I.at(i+1));
+            int B = HEX.indexOf(I.at(i+2));
             BA.append(char(A*16+B));
             i+=2;
-        }
-        else
-        {
+        } else {
             BA.append(I[i]);
         }
     }
     return BA;
 }
-QString OutputTools(QString I, QString TAG)
-{
+QString OutputTools(QString I, QString TAG) {
     return "<"+TAG+">"+I.toUtf8().toBase64()+"</"+TAG+">\n";
 }
-QString OutputToolsS(QString I, QString TAG)
-{
+QString OutputToolsS(QString I, QString TAG) {
     return "<"+TAG+">"+I+"</"+TAG+">\n";
 }
-QString OutputTools(int I, QString TAG)
-{
+QString OutputTools(int I, QString TAG) {
     return "<"+TAG+">"+QString::number(I)+"</"+TAG+">\n";
 }
-QString OutputTools(bool I, QString TAG)
-{
-    if(I)
-    {
+QString OutputTools(bool I, QString TAG) {
+    if (I) {
         return "<"+TAG+">1</"+TAG+">\n";
     }
     return "<"+TAG+">0</"+TAG+">\n";
 }
-QString InputS(QString IN, QString TAG)
-{
-return QString(QByteArray::fromBase64(IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2).toUtf8()));
+QString InputS(QString IN, QString TAG) {
+    return QString(QByteArray::fromBase64(
+                       IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
+                              IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2).toUtf8()));
 }
-QString InputSS(QString IN, QString TAG)
-{
-return IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2);
+QString InputSS(QString IN, QString TAG) {
+    return IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
+                  IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2);
 }
-int InputI(QString IN, QString TAG)
-{
-return IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2).toInt();
+int InputI(QString IN, QString TAG) {
+    return IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
+                  IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")
+                  -TAG.length()-2).toInt();
 }
-bool InputB(QString IN, QString TAG)
-{
-return (IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2)=="1");
+bool InputB(QString IN, QString TAG) {
+    return (IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
+                   IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")
+                   -TAG.length()-2) == "1");
 }
-void colorItem(QTreeWidgetItem *Itm,short P)
-{
-    switch (P)
-    {
+void colorItem(QTreeWidgetItem *Itm, short P) {
+    switch (P) {
     case 5:
     {
-        for(int i=0;i<Itm->columnCount();i++)
-        {
-            Itm->setBackgroundColor(i,QColor("#FF8888"));
+        for (int i = 0; i < Itm->columnCount(); i++) {
+            Itm->setBackgroundColor(i, QColor("#FF8888"));
         }
     }break;
     case 4:
     {
-        for(int i=0;i<Itm->columnCount();i++)
-        {
-            Itm->setBackgroundColor(i,QColor("#FFDA88"));
+        for (int i = 0; i < Itm->columnCount(); i++) {
+            Itm->setBackgroundColor(i, QColor("#FFDA88"));
         }
     }break;
     case 2:
     {
-        for(int i=0;i<Itm->columnCount();i++)
-        {
-            Itm->setBackgroundColor(i,QColor("#B888B8"));
+        for (int i = 0; i < Itm->columnCount(); i++) {
+            Itm->setBackgroundColor(i, QColor("#B888B8"));
         }
     }break;
     case 1:
     {
-        for(int i=0;i<Itm->columnCount();i++)
-        {
-            Itm->setBackgroundColor(i,QColor("#8888FF"));
+        for (int i = 0; i < Itm->columnCount(); i++) {
+            Itm->setBackgroundColor(i, QColor("#8888FF"));
         }
     }break;
     case 0:
     {
-        for(int i=0;i<Itm->columnCount();i++)
-        {
-            Itm->setBackgroundColor(i,QColor("#88FF88"));
+        for (int i = 0; i < Itm->columnCount(); i++) {
+            Itm->setBackgroundColor(i, QColor("#88FF88"));
         }
     }break;
     }
 }
-QString salting(QString A)
-{
+QString salting(QString A) {
     QString output;
-    int salt=0;
-    for(int i=0;i<A.length();i++)
-    {
-        salt+=(int)A[i].toLatin1();
+    int salt = 0;
+    for (int i = 0; i < A.length(); i++) {
+        salt+=static_cast<int>(A[i].toLatin1());
     }
-    switch (salt%5)
-    {
+    switch (salt%5) {
     case 0:
     {
         output="OC2mwEEOYlPoj7lwyJpr";
@@ -237,8 +195,7 @@ QString salting(QString A)
     }break;
     }
     output.append(A);
-    switch (salt%4)
-    {
+    switch (salt%4) {
     case 0:
     {
         output+="3WLtmogKQqdYChOGArYT";
