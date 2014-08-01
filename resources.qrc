@@ -1,0 +1,31 @@
+<RCC>
+    <qresource prefix="/mail">
+        <file alias="Forward.png">Images/Forward.png</file>
+        <file alias="Reply.png">Images/Reply.png</file>
+    </qresource>
+    <qresource prefix="/cal">
+        <file alias="Birthday.png">Images/Birthday.png</file>
+        <file alias="Clock.png">Images/Clock.png</file>
+        <file alias="Event.png">Images/Event.png</file>
+    </qresource>
+    <qresource prefix="/main">
+        <file alias="Add.png">Images/Add.png</file>
+        <file alias="AdressBook.png">Images/AdressBook.png</file>
+        <file alias="Calendar.png">Images/Calendar.png</file>
+        <file alias="Delete.png">Images/Delete.png</file>
+        <file alias="Edit.png">Images/Edit.png</file>
+        <file alias="Lock.png">Images/Lock.png</file>
+        <file alias="Mail.png">Images/Mail.png</file>
+        <file alias="Notes.png">Images/Notes.png</file>
+        <file alias="Options.png">Images/Options.png</file>
+        <file alias="PassMGR.png">Images/PassMGR.png</file>
+        <file alias="QOrganizer.png">Images/QOrganizer.png</file>
+        <file alias="QOrganizerDownload.png">Images/QOrganizerDownload.png</file>
+        <file alias="Refresh.png">Images/Refresh.png</file>
+        <file alias="RSS.png">Images/RSS.png</file>
+        <file alias="Save.png">Images/Save.png</file>
+    </qresource>
+    <qresource prefix="/passwd">
+        <file alias="Light.png">Images/Light.png</file>
+    </qresource>
+</RCC>
