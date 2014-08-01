@@ -1,8 +1,8 @@
 #ifndef QORGCALENDAR_H
 #define QORGCALENDAR_H
-#include <QtWidgets>
-#include <qorgtools.h>
-#include <qorgab.h>
+#include  <QtWidgets>
+#include  "qorgtools.h"
+#include  "qorgab.h"
 using namespace std;
 struct CalNor
 {
@@ -33,8 +33,8 @@ public:
     QStringList getCategories();
     void setCategory(QString);
     QString getUpdate();
-    vector <CalNor> Normal;
-    vector <CalRec> Recurrent;
+    vector  < CalNor >  Normal;
+    vector  < CalRec >  Recurrent;
     QString category;
 private:
     qorgAB *AB;
@@ -42,9 +42,9 @@ private:
     void setCalendar();
       void updateAll();
       void sort();
-    QList <uint> checkEvN(QDate,short);
-    QList <uint> checkEvR(QDate,short);
-    QList <QString> checkBd(QDate);
+    QList  < uint >  checkEvN(QDate,short);
+    QList  < uint >  checkEvR(QDate,short);
+    QList  < QString >  checkBd(QDate);
     //Widget elements
     QDate currentDate;
     QGridLayout* Layout;
@@ -56,8 +56,8 @@ private:
     QTableWidget *Calendar;
     QTreeWidget *DayView;
     QTreeWidget *Incoming;
-    QList <uint> NotifiedN;
-    QList <uint> NotifiedR;
+    QList  < uint >  NotifiedN;
+    QList  < uint >  NotifiedR;
     QTimer *NTimer;
 private slots:
 

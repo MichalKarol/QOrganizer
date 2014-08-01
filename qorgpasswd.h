@@ -1,6 +1,6 @@
 #ifndef QORGPASSWD_H
 #define QORGPASSWD_H
-#include <QtWidgets>
+#include  <QtWidgets>
 #include "qorgtools.h"
 using namespace std;
 class Password
@@ -18,7 +18,7 @@ public:
     Program();
     ~Program();
     QString Name;
-    vector <Password*> Passwordv;
+    vector  < Password* >  Passwordv;
 };
 
 class qorgPasswd : public QWidget
@@ -30,7 +30,7 @@ public:
     QString output();
     void input(QString);
 private:
-    vector <Program> Programv;
+    vector  < Program >  Programv;
     QGridLayout *La;
     QTreeWidgetItem *lastitem;
     QPoint Last;

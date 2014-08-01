@@ -1,6 +1,6 @@
 #ifndef QORGANIZER_H
 #define QORGANIZER_H
-#include <QtWidgets>
+#include  <QtWidgets>
 #include "qorgcalendar.h"
 #include "qorgmail.h"
 #include "qorgnotes.h"
