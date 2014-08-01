@@ -87,7 +87,7 @@ public:
                                 "}");
         Occurance = new QComboBox(this);
         Occurance->addItems(QStringList() << "No occurance" << "Daily" << "Weekly" << "Monthy" << "Yearly");
-        connect(Occurance, SIGNAL(currentIndexChangedstatic_cast<int> ), this, SLOT(lockstatic_cast<int> ));
+        connect(Occurance, SIGNAL(currentIndexChanged(int)), this, SLOT(lock(int)));
         Starts1 = new QDateEdit(Date, this);
         Starts2 = new QTimeEdit(QTime(12, 00), this);
         connect(Starts2, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
