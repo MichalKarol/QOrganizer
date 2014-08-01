@@ -457,7 +457,9 @@ void qorgRSS::DownloadedS(QString Rep) {
             Rep.remove(0, Rep.indexOf("</entry>")+8);
         }
     } else {
+        if (UpdateQuene == 0 ) {
         QMessageBox::critical(this, "Error", "Error during reading feed.");
+        }
     }
     if (Itm.size() > 0) {
         bool NewChannel = true;
@@ -554,8 +556,8 @@ void qorgRSS::UpdateS() {
         UpdateQuene--;
     }
 }
-#include "qorgrss.moc"
 void qorgRSS::HTTPSS(QNetworkReply *QNR) {
     QNR->ignoreSslErrors();
     delete QNR;
 }
+#include "qorgrss.moc"
