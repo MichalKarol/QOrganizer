@@ -148,6 +148,7 @@ private slots:
         } else {
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
+            OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
             Finish1->setDisabled(true);
         }
     }
@@ -355,6 +356,7 @@ private slots:
         } else {
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
+            OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
             Finish1->setDisabled(true);
         }
     }
