@@ -408,12 +408,13 @@ void SSLCON::DownloadEmails() {
                             UIDL.removeFirst();
                             for (int k = 0; k < UIDL.size();k++) {
                                 UIDLi.append(UIDL[k].mid(0, UIDL[k].indexOf(")")).toInt());
+
                             }
                             for (uint k = 0; k < Vec->size();k++) {
-                                if ((*Vec)[k]->Email_UID != UIDLi[k]) {
-                                    Vec->erase(Vec->begin()+k);
-                                    k--;
-                                }
+                                    if (UIDLi.size()-1 < static_cast<int>(k) || (*Vec)[k]->Email_UID != UIDLi[k]) {
+                                        Vec->erase(Vec->begin()+k);
+                                        k--;
+                                    }
                             }
                             if (Vec->size() != 0) {
                                 for (int k = UIDLi.size()-1; k > -1; k--) {
@@ -443,7 +444,7 @@ void SSLCON::DownloadEmails() {
                             for (uint k = 0; k < En-Fn+1; k++) {
                                 QString Sub = SubL[k].mid(0, SubL[k].indexOf("\r\n)"));
                                 Sub.remove("\r\n");
-                                Sub.replace("?= =?", "?==?");
+                                Sub.replace("?= =?","?==?");
                                 while (Sub.contains("=?")) {
                                     int St = Sub.indexOf("=?");
                                     int Se = Sub.indexOf("?", St+2);
@@ -526,7 +527,8 @@ void SSLCON::DownloadEmails() {
                             FromsL.removeFirst();
                             for (uint k = 0; k < En-Fn+1; k++) {
                                 QString From = FromsL[k].mid(0, FromsL[k].indexOf("\r\n)"));
-                                QString Name = From.mid(0, From.indexOf("  < "));
+                                QString Name = From.mid(0, From.indexOf("<"));
+                                Name.replace("?= =?","?==?");
                                 while (Name.contains("=?")) {
                                     int St = Name.indexOf("=?");
                                     int Se = Name.indexOf("?", St+2);
@@ -1018,14 +1020,14 @@ void SSLCON::SendEmail() {
     QString Output;
     QString boundry = QCryptographicHash::hash(Data.toUtf8(), QCryptographicHash::Md5).toHex();
     Output.append(Header+"\r\n");
-    Output.append("Content-Type: multipart/mixed; boundary =\"------"+boundry+"\"\nThis is a multi-part message in MIME format.\n\n");
+    Output.append("Content-Type: multipart/mixed; boundary=\"------"+boundry+"\"\nThis is a multi-part message in MIME format.\n\n");
     Output.append("--------"+boundry+"\n");
-    Output.append("Content-Type: text/plain; charset = UTF-8\n");
+    Output.append("Content-Type: text/plain; charset=UTF-8\n");
     Output.append("Content-Transfer-Encoding: base64\n\n");
     Output.append(Data.toUtf8().toBase64()+"\n\n");
-    if (Att.size() != 0&&Att[0][0] != '<'&&EM->Structurev[Att[0].toInt()]->Structure_Type == "TEXT"&&EM->Structurev[Att[0].toInt()]->Structure_Subtype == "HTML") {
+    if (Att.size() != 0&&Att[0][0] != '<' && EM->Structurev[Att[0].toInt()]->Structure_Type == "TEXT" && EM->Structurev[Att[0].toInt()]->Structure_Subtype == "HTML") {
         Output.append("--------"+boundry+"\n");
-        Output.append("Content-Type: text/html; charset = UTF-8\n");
+        Output.append("Content-Type: text/html; charset=UTF-8\n");
         Output.append("Content-Transfer-Encoding: base64\n\n");
         Output.append(EM->Email_Body[1].toUtf8().toBase64()+"\n\n");
         Att.removeFirst();
@@ -1077,7 +1079,7 @@ void SSLCON::SendEmail() {
                 Output.append("Content-Type: "+EM->Structurev[Att[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Att[i].toInt()]->Structure_Subtype.toLower());
                 Output.append("; name=\""+EM->Structurev[Att[i].toInt()]->Structure_CID+"\"\n");
                 Output.append("Content-Transfer-Encoding: "+EM->Structurev[Att[i].toInt()]->Structure_Encoding+"\n");
-                Output.append("Content-ID:  < "+EM->Structurev[Att[i].toInt()]->Structure_CID+" > \n\n");
+                Output.append("Content-ID: <"+EM->Structurev[Att[i].toInt()]->Structure_CID+">\n\n");
             } else {
                 Output.append("Content-Type: "+EM->Structurev[Att[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Att[i].toInt()]->Structure_Subtype.toLower());
                 Output.append("; name=\""+EM->Structurev[Att[i].toInt()]->Structure_Attrybutes.Name+"\"\n");
@@ -1125,14 +1127,14 @@ void SSLCON::SendEmail() {
         emit SendEmailS(false);
         return;
     }
-    S.write(QString("MAIL FROM:  < "+M->User+"@"+M->IMAPserver.mid(5, M->IMAPserver.length()-5)+" > \r\n").toUtf8());
+    S.write(QString("MAIL FROM: <"+M->User+"@"+M->IMAPserver.mid(5, M->IMAPserver.length()-5)+">\r\n").toUtf8());
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false);
         return;
     }
     for (int i = 0; i < To.size(); i++) {
-        S.write(QString("RCPT TO:  < "+To[i]+" > \r\n").toUtf8());
+        S.write(QString("RCPT TO: <"+To[i]+">\r\n").toUtf8());
         Reply = readAll(&S);
         if (Reply.isEmpty()) {
             emit SendEmailS(false);
@@ -1456,8 +1458,8 @@ public:
         if (I == Reply) {
             Subject->setText("Re: "+E->Email_Subject);
             if (!E->Email_From.EMailA.contains("noreply")) {
-            QListWidgetItem *Itm = new QListWidgetItem(E->Email_From.EMailA+" "+E->Email_From.Name);
-            Receivers->addItem(Itm);
+                QListWidgetItem *Itm = new QListWidgetItem(E->Email_From.EMailA+" "+E->Email_From.Name);
+                Receivers->addItem(Itm);
             }
             Text->setPlainText("Message replied:\n----------\n"+E->Email_Body[0]+"\n----------\n");
         }
