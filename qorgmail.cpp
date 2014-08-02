@@ -443,7 +443,7 @@ void SSLCON::DownloadEmails() {
                             for (uint k = 0; k < En-Fn+1; k++) {
                                 QString Sub = SubL[k].mid(0, SubL[k].indexOf("\r\n)"));
                                 Sub.remove("\r\n");
-                                Sub.replace("?= =?", "? == ?");
+                                Sub.replace("?= =?", "?==?");
                                 while (Sub.contains("=?")) {
                                     int St = Sub.indexOf("=?");
                                     int Se = Sub.indexOf("?", St+2);
