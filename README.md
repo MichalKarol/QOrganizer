@@ -1,6 +1,6 @@
 QOrganizer
 ==========
-QOrganizer - personal and business data organizer using AES128 to encrypt user data.
+QOrganizer - personal and business information organizer using AES128 to encrypt user data.
 QOrganizer is a lightweight personal and business data organizer.
 
 By using Qt QOrganizer is multi platform and AES128 encryption is a great way to keep things private.
