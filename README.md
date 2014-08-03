@@ -8,4 +8,4 @@ I would be very thankful for reporting every issue and sharing every useful tip.
 
 Ready packages for Debian and Windows will be released soon on Sourceforge.
 
-Have fun, Michał Karol <karol@linux.pl>
+Have fun, Michał Karol <mailto:mkarol@linux.pl>
