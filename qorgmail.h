@@ -54,7 +54,7 @@ public:
     QDateTime Email_Date;
     QString Email_Body[2];
     uint Email_UID;
-    short Email_Flags;
+    char Email_Flags;
     vector  < Structure* > Structurev;
 };
 class Mailbox
@@ -77,7 +77,7 @@ public:
     };
     QString Mbox_Name;
     QString Mbox_Showname;
-    unsigned short Mbox_Attrybutes;
+    unsigned char Mbox_Attrybutes;
     vector  < Mailbox* >  Mbox_Children;
     vector  < Email* >  Emailv;
     bool Mbox_Refresh;
