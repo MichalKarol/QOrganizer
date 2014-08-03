@@ -1554,6 +1554,7 @@ private slots:
             for (int i = 0; i < Receivers->count(); i++) {
                 if (Receivers->item(i)->toolTip() == To->text()) {
                     OK = false;
+                    break;
                 }
             }
             if (OK) {
@@ -1572,6 +1573,7 @@ private slots:
             for (int i = 0; i < Attachments->count(); i++) {
                 if (Attachments->item(i)->toolTip() == Path) {
                     OK = false;
+                    break;
                 }
             }
             if (OK) {
@@ -2076,6 +2078,7 @@ void qorgMail::EditMailS(bool I) {
                         B[j]->Emailv = A[i]->Emailv;
                         B[j]->Mbox_Refresh = A[i]->Mbox_Refresh;
                         found = true;
+                        break;
                     }
                 }
                 if (!found) {
@@ -2321,6 +2324,7 @@ void qorgMail::RefreshS(bool I) {
                         B[j]->Emailv = A[i]->Emailv;
                         B[j]->Mbox_Refresh = A[i]->Mbox_Refresh;
                         found = true;
+                        break;
                     }
                 }
                 if (!found) {

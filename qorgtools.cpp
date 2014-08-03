@@ -90,7 +90,7 @@ QByteArray QPDecode(QByteArray I) {
         if (I[i] == '=') {
             int A = HEX.indexOf(I.at(i+1));
             int B = HEX.indexOf(I.at(i+2));
-            BA.append(char(A*16+B));
+            BA.append(static_cast<char>(A*16+B));
             i+=2;
         } else {
             BA.append(I[i]);

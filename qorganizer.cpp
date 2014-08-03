@@ -233,7 +233,9 @@ void QOrganizer::updateCalendar() {
     if (categories.size() > 0) {
         Itm->setExpanded(true);
         for (int i = 0; i < categories.size(); i++) {
-            Itm->addChild(new QTreeWidgetItem(QStringList(categories[i])));
+            QTreeWidgetItem *Itmc = new QTreeWidgetItem(Itm);
+            Itmc->setText(0, categories[i]);
+            Itmc->setToolTip(0, categories[i]);
             if (categories[i] == currentCategory) {
                 Itm->child(i)->setSelected(true);
                 selected = true;
