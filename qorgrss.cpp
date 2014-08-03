@@ -417,8 +417,8 @@ void qorgRSS::DownloadedS(QString Rep) {
                 QStringList H = D[3].split(":");
                 Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
                 if (D[4] != "GMT") {
-                    short H = D[4].mid(1, 2).toShort();
-                    short M = D[4].mid(3, 2).toShort();
+                    char H = D[4].mid(1, 2).toShort();
+                    char M = D[4].mid(3, 2).toShort();
                     int Sec = H*3600+M*60;
                     if (D[4][0] == '+') {
                         Tmp = Tmp.addSecs(-Sec);

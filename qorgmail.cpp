@@ -89,12 +89,10 @@ Mail::~Mail() {
     this->Mboxv.clear();
 }
 
-class SSLCON : public QThread
-{
+class SSLCON : public QThread {
     Q_OBJECT
 public:
-    enum Method
-    {
+    enum Method {
         Sleep,
         Login,
         Mailboxes,
@@ -502,8 +500,8 @@ void SSLCON::DownloadEmails() {
                                     QStringList H = D[3].split(":");
                                     Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
                                     if (D[4] != "GMT") {
-                                        short H = D[4].mid(1, 2).toShort();
-                                        short M = D[4].mid(3, 2).toShort();
+                                        char H = D[4].mid(1, 2).toShort();
+                                        char M = D[4].mid(3, 2).toShort();
                                         int Sec = H*3600+M*60;
                                         if (D[4][0] == '+') {
                                             Tmp = Tmp.addSecs(-Sec);
@@ -572,7 +570,7 @@ void SSLCON::DownloadEmails() {
                                 FlagsL.removeFirst();
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     QString Fla = FlagsL[k].mid(0, FlagsL[k].indexOf(")"));
-                                    short Flag = 0;
+                                    char Flag = 0;
                                     if (Fla.contains("\\Answered")) {
                                         Flag|=Email::Answered;
                                     }
@@ -894,7 +892,7 @@ void SSLCON::DownloadEmails() {
                             Bar->setValue(60);
                             QByteArray Text;
                             {
-                                double VA=(double(40)/double(En-Fn+1));
+                                double VA=(static_cast<double>(40)/static_cast<double>(En-Fn+1));
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     for (uint l = 0; l < (*Vec)[Fn+k-1]->Structurev.size()&&l < 2; l++) {
                                         int t = 0;
@@ -927,7 +925,7 @@ void SSLCON::DownloadEmails() {
                                             (*Vec)[Fn+k-1]->Email_Body[t]=Tmp;
                                         }
                                     }
-                                    Bar->setValue(int(60+(k+1)*VA));
+                                    Bar->setValue(static_cast<int>(60+(k+1)*VA));
                                 }
                             }
                         }
@@ -1621,8 +1619,8 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     MailView->setColumnWidth(2, 120);
     connect(MailView, SIGNAL(clicked(QModelIndex)), this, SLOT(chooseEmail(QModelIndex)));
     ReadMail = new QWebView(this);
-    connect(ReadMail->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList < QSslError > )),
-            this, SLOT(HTTPSS(QNetworkReply*,QList <QSslError>)));
+    connect(ReadMail->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError> )),
+            this, SLOT(HTTPSS(QNetworkReply*, QList <QSslError>)));
     Quene=-1;
     AttachmentList = new QListWidget(this);
     connect(AttachmentList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(downloadAttachment(QModelIndex)));
@@ -1681,9 +1679,9 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
 }
 qorgMail::~qorgMail() {
     for (uint i = 0; i < Mailv.size(); i++) {
-        for (uint j = 0; j < Mailv[i].Mboxv.size();j++) {
-            for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size();k++) {
-                for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Structurev.size();l++) {
+        for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
+            for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size(); k++) {
+                for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
                     delete Mailv[i].Mboxv[j]->Emailv[k]->Structurev[l];
                 }
                 delete Mailv[i].Mboxv[j]->Emailv[k];

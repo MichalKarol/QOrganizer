@@ -13,7 +13,7 @@ QString InputS(QString, QString);
 QString InputSS(QString, QString);
 int InputI(QString, QString);
 bool InputB(QString, QString);
-void colorItem(QTreeWidgetItem*,short);
+void colorItem(QTreeWidgetItem*,char);
 QString salting(QString);
 
 class QItemPushButton :public QPushButton

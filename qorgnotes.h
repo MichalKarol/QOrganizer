@@ -5,7 +5,7 @@ using namespace std;
 struct Note
 {
     QString topic;
-    short int priority;
+    unsigned char priority;
     QString text;
 };
 

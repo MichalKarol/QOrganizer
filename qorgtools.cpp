@@ -132,7 +132,7 @@ bool InputB(QString IN, QString TAG) {
                    IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")
                    -TAG.length()-2) == "1");
 }
-void colorItem(QTreeWidgetItem *Itm, short P) {
+void colorItem(QTreeWidgetItem *Itm, char P) {
     switch (P) {
     case 5:
     {

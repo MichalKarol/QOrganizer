@@ -8,7 +8,7 @@ struct CalNor
 {
     QString name;
     QString category;
-    unsigned short priority;
+    unsigned char priority;
     QDateTime datet;
     QDateTime edatet;
 };
@@ -16,8 +16,8 @@ struct CalRec
 {
     QString name;
     QString category;
-    unsigned short priority;
-    unsigned short type;
+    unsigned char priority;
+    unsigned char type;
     QDateTime datet;
     QDateTime edatet;
     QDate edate;
@@ -33,8 +33,8 @@ public:
     QStringList getCategories();
     void setCategory(QString);
     QString getUpdate();
-    vector  < CalNor >  Normal;
-    vector  < CalRec >  Recurrent;
+    vector <CalNor> Normal;
+    vector <CalRec> Recurrent;
     QString category;
 private:
     qorgAB *AB;
@@ -42,9 +42,9 @@ private:
     void setCalendar();
       void updateAll();
       void sort();
-    QList  < uint >  checkEvN(QDate,short);
-    QList  < uint >  checkEvR(QDate,short);
-    QList  < QString >  checkBd(QDate);
+    QList <uint> checkEvN(QDate,char);
+    QList <uint> checkEvR(QDate,char);
+    QList <QString> checkBd(QDate);
     //Widget elements
     QDate currentDate;
     QGridLayout* Layout;
@@ -56,8 +56,8 @@ private:
     QTableWidget *Calendar;
     QTreeWidget *DayView;
     QTreeWidget *Incoming;
-    QList  < uint >  NotifiedN;
-    QList  < uint >  NotifiedR;
+    QList <uint> NotifiedN;
+    QList <uint> NotifiedR;
     QTimer *NTimer;
 private slots:
 

@@ -149,7 +149,7 @@ private slots:
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
             if (i < 3) {
-                OccuraneEndDate->setDate(QDate::currentDate().addDays(1));
+                OccuraneEndDate->setDate(Starts1->date().addDays(1));
             } else {
                 OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
             }
@@ -361,7 +361,7 @@ private slots:
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
             if (i < 3) {
-                OccuraneEndDate->setDate(QDate::currentDate().addDays(1));
+                OccuraneEndDate->setDate(Starts1->date().addDays(1));
             } else {
                 OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
             }
@@ -550,7 +550,6 @@ QString qorgCalendar::output() {
         work.append(OutputTools(Recurrent[i].edatet.toString(Qt::ISODate), "EDATE"));
         work.append(OutputTools(Recurrent[i].edate.toString(Qt::ISODate), "EDAT"));
         out.append(OutputToolsS(work, "REC"));
-
     }
     out = OutputToolsS(out, "CALENDAR");
     return out;
@@ -566,7 +565,6 @@ void qorgCalendar::input(QString IN) {
         nor.edatet = QDateTime::fromString(InputS(work, "EDATE"), Qt::ISODate);
         Normal.push_back(nor);
         IN.remove(IN.indexOf("<NOR>"), IN.indexOf("</NOR>")-IN.indexOf("<NOR>")+6);
-
     }
     while (IN.contains("<REC>")) {
         CalRec rec;
@@ -580,7 +578,6 @@ void qorgCalendar::input(QString IN) {
         rec.edate = QDate::fromString(InputS(work, "EDAT"), Qt::ISODate);
         Recurrent.push_back(rec);
         IN.remove(IN.indexOf("<REC>"), IN.indexOf("</REC>")-IN.indexOf("<REC>")+6);
-
     }
     sort();
     updateAll();
@@ -611,7 +608,7 @@ QString qorgCalendar::getUpdate() {
         uint hour = 0;
         uint today = 0;
         uint tomorrow = 0;
-        for (short i = 5; i > 0; i--) {
+        for (char i = 5; i > 0; i--) {
             QList  <uint>  N = checkEvN(QDate::currentDate(), i);
             QList  <uint>  R = checkEvR(QDate::currentDate(), i);
             for (int j = 0; j < N.size(); j++) {
@@ -708,7 +705,7 @@ void qorgCalendar::setCalendar() {
                 }
             }
         }
-        for (short j = 5; j > 0; j--) {
+        for (char j = 5; j > 0; j--) {
             QList  <uint>  N = checkEvN(currentDate, j);
             QList  <uint>  R = checkEvR(currentDate, j);
             for (int k = 0; k < N.size(); k++) {
@@ -806,7 +803,7 @@ void qorgCalendar::setCalendar() {
             if (category == ""||category == "Birthdays") {
                 Bd=(checkBd(Date).size() != 0);
             }
-            for (short j = 5; j > 0; j--) {
+            for (char j = 5; j > 0; j--) {
                 if (checkEvN(Date, j).size() != 0) {
                     Ev = true;
                     break;
@@ -839,7 +836,7 @@ void qorgCalendar::setCalendar() {
     }
     Calendar->setVerticalHeaderLabels(labels);
 }
-QList < uint >  qorgCalendar::checkEvN(QDate IN, short P) {
+QList < uint >  qorgCalendar::checkEvN(QDate IN, char P) {
     QList  <uint>  Output;
     for (uint i = 0; i < Normal.size(); i++) {
         if (IN >= Normal[i].datet.date()&&IN <= Normal[i].edatet.date()) {
@@ -850,7 +847,7 @@ QList < uint >  qorgCalendar::checkEvN(QDate IN, short P) {
     }
     return Output;
 }
-QList < uint >  qorgCalendar::checkEvR(QDate IN, short P) {
+QList < uint >  qorgCalendar::checkEvR(QDate IN, char P) {
     QList  <uint>  Output;
     for (uint i = 0; i < Recurrent.size(); i++) {
         if (IN >= Recurrent[i].datet.date()&&IN <= Recurrent[i].edate) {
@@ -907,7 +904,7 @@ void qorgCalendar::updateAll() {
             }
             j+=B.size();
         }
-        for (short k = 5; k > 0; k--) {
+        for (char k = 5; k > 0; k--) {
             QList  <uint>  N = checkEvN(QDate::currentDate().addDays(i), k);
             QList  <uint>  R = checkEvR(QDate::currentDate().addDays(i), k);
             j+=(N.size()+R.size());
@@ -977,7 +974,7 @@ void qorgCalendar::updateAll() {
                 }
                 j+=B.size();
             }
-            for (short k = 5; k > 0; k--) {
+            for (char k = 5; k > 0; k--) {
                 for (uint l = 0; l < Recurrent.size(); l++) {
                     if (QDate::currentDate().addDays(i) >= Recurrent[l].datet.date()&&QDate::currentDate().addDays(i+1) <= Recurrent[l].edate) {
                         if ((category == Recurrent[l].category||category == "")&&Recurrent[l].priority == k&&Recurrent[l].type == 4) {
@@ -1127,9 +1124,9 @@ void qorgCalendar::setNotification(bool first) {
     uint closest = 86400; //1 day
     if (first) {
         QList  <QString>  Immediate;
-        for (short a = 0; a < 2; a++) {
+        for (char a = 0; a < 2; a++) {
             Tmp = Tmp.addDays(a);
-            for (short i = 5; i > 0; i--) {
+            for (char i = 5; i > 0; i--) {
                 QList  <uint>  NID = checkEvN(Tmp.date(), i);
                 QList  <uint>  RID = checkEvR(Tmp.date(), i);
                 for (int j = 0; j < NID.size(); j++) {
@@ -1184,9 +1181,9 @@ void qorgCalendar::setNotification(bool first) {
         }
     } else {
         QList  <QString>  Notify;
-        for (short a = 0; a < 2; a++) {
+        for (char a = 0; a < 2; a++) {
             Tmp = Tmp.addDays(a);
-            for (short i = 5; i > 0; i--) {
+            for (char i = 5; i > 0; i--) {
                 QList  <uint>  NID = checkEvN(Tmp.date(), i);
                 QList  <uint>  RID = checkEvR(Tmp.date(), i);
                 if (QObject::sender() == NTimer) {

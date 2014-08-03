@@ -153,14 +153,14 @@ void qorgPasswd::UpdateTree() {
     if (Programv.size() > 0) {
         Tree->clear();
         while (true) {
-            bool OK = true;
+            bool Sorted = true;
             for (uint i = 0; i < Programv.size()-1; i++) {
                 if (Programv[i].Name > Programv[i+1].Name) {
                     swap(Programv[i], Programv[i+1]);
-                    OK = false;
+                    Sorted = false;
                 }
             }
-            if (OK) {
+            if (Sorted) {
                 break;
             }
         }
