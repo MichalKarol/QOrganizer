@@ -208,7 +208,7 @@ void qorgAB::AddS() {
     }
 }
 void qorgAB::row(QString IN) {
-    QLineEdit *I = qobject_cast < QLineEdit* > (QObject::sender());
+    QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
     if (IN.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {

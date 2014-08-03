@@ -70,7 +70,7 @@ private slots:
     void chooseItem(QModelIndex);
     void RefreshS();
     void UpdateS();
-    void HTTPSS(QNetworkReply*);
+    void HTTPSS(QNetworkReply*,QList <QSslError>);
 signals:
     void updateTree();
     void doubleClick(QString);

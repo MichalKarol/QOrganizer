@@ -146,7 +146,7 @@ private:
     QLineEdit *SMTPS;
     QComboBox *Choose;
     QPushButton *AddB;
-    QList  < QWidget* >  C;
+    QList  <QWidget*>  C;
 private slots:
     //CAT
     void testInput();
@@ -174,7 +174,7 @@ private slots:
     void DeleteEmailS(bool);
     void UpdateEmail(bool);
     void UpdateS();
-    void HTTPSS(QNetworkReply*);
+    void HTTPSS(QNetworkReply*,QList <QSslError>);
 signals:
     void updateTree();
     void doubleClick(QString);

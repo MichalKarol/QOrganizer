@@ -148,7 +148,11 @@ private slots:
         } else {
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
-            OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
+            if (i < 3) {
+                OccuraneEndDate->setDate(QDate::currentDate().addDays(1));
+            } else {
+                OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
+            }
             Finish1->setDisabled(true);
         }
     }
@@ -274,7 +278,7 @@ public:
                                 "}");
         Occurance = new QComboBox(this);
         Occurance->addItems(QStringList() << "No occurance" << "Daily" << "Weekly" << "Monthy" << "Yearly");
-        connect(Occurance, SIGNAL(currentIndexChangedstatic_cast<int> ), this, SLOT(lockstatic_cast<int> ));
+        connect(Occurance, SIGNAL(currentIndexChanged(int)), this, SLOT(lock(int)));
         Starts1 = new QDateEdit(this);
         Starts2 = new QTimeEdit(this);
         Finish1 = new QDateEdit(this);
@@ -356,7 +360,11 @@ private slots:
         } else {
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
-            OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
+            if (i < 3) {
+                OccuraneEndDate->setDate(QDate::currentDate().addDays(1));
+            } else {
+                OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
+            }
             Finish1->setDisabled(true);
         }
     }
@@ -1088,7 +1096,7 @@ void qorgCalendar::monthChanged(int IN) {
 void qorgCalendar::yearChanged(QString IN) {
     if (IN == "") {
         Year->blockSignals(true);
-        QPushButton *Ypom = qobject_cast < QPushButton* > (QObject::sender());
+        QPushButton *Ypom = qobject_cast<QPushButton*>(QObject::sender());
         if (Ypom == Yminus) {
             if (currentDate.year()-1 >= QDate::currentDate().year()-20) {
                 currentDate.setDate(currentDate.year()-1, currentDate.month(), currentDate.day());

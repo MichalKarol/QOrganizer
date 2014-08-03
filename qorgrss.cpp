@@ -199,8 +199,8 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     Titles->setColumnWidth(1, 120);
     connect(Titles, SIGNAL(clicked(QModelIndex)), this, SLOT(chooseItem(QModelIndex)));
     View = new QWebView(this);
-    connect(View->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList < QSslError > )),
-            this, SLOT(HTTPSS(QNetworkReply*)));
+    connect(View->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError> )),
+            this, SLOT(HTTPSS(QNetworkReply*,QList <QSslError>)));
     Link = new QLabel(this);
     Link->setTextFormat(Qt::RichText);
     UpdateQuene = 0;
@@ -556,7 +556,8 @@ void qorgRSS::UpdateS() {
         UpdateQuene--;
     }
 }
-void qorgRSS::HTTPSS(QNetworkReply *QNR) {
+void qorgRSS::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
+    I.clear();
     QNR->ignoreSslErrors();
     delete QNR;
 }
