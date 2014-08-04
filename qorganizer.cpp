@@ -18,6 +18,7 @@
 QOrganizer::QOrganizer() {
     setWindowIcon(QIcon(":/main/QOrganizer.png"));
     setWindowTitle("QOrganizer");
+    this->setMinimumWidth(1024);
     AdressBook = new qorgAB(this);
     Calendar = new qorgCalendar(this, AdressBook);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
@@ -121,6 +122,7 @@ QOrganizer::QOrganizer() {
     Stacked->addWidget(W);
     Stacked->addWidget(Block);
     layout->addWidget(Stacked, 0, 1);
+    layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
     delete hash;

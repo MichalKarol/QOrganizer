@@ -190,6 +190,7 @@ QString stringBetween(QString Tag, QString Text) {
 
 qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     Layout = new QGridLayout(this);
+    Layout->setMargin(0);
     List = new QTreeWidget(this);
     List->header()->hide();
     List->setColumnCount(2);

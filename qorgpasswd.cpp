@@ -110,6 +110,7 @@ qorgPasswd::qorgPasswd(QWidget *parent) :QWidget(parent) {
     lastitem = NULL;
     QGridLayout *Layout = new QGridLayout(this);
     Layout->addWidget(Tree, 0, 0, 2, 1);
+    Layout->setMargin(0);
     La = new QGridLayout();
     La->addWidget(L[0], 0, 0);
     La->addWidget(ProgramL, 0, 1, 1, 2);

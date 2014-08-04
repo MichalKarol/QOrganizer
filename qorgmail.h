@@ -86,7 +86,7 @@ public:
     };
     QString Mbox_Name;
     QString Mbox_Showname;
-    unsigned char Mbox_Attrybutes;
+    unsigned int Mbox_Attrybutes;
     vector  <Mailbox*>  Mbox_Children;
     vector  <Email*>  Emailv;
     bool Mbox_Refresh;
