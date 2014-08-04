@@ -1,5 +1,20 @@
-#include "qorgcalendar.h"
-using namespace std;
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#include <qorgcalendar.h>
+#include <algorithm>
 
 class QTableCalendarWidget: public QWidget {
     Q_OBJECT
@@ -151,7 +166,7 @@ private slots:
             if (i < 3) {
                 OccuraneEndDate->setDate(Starts1->date().addDays(1));
             } else {
-                OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
+                OccuraneEndDate->setDate(QDate(2099, Starts1->date().month(), Starts1->date().day()));
             }
             Finish1->setDisabled(true);
         }
@@ -363,7 +378,7 @@ private slots:
             if (i < 3) {
                 OccuraneEndDate->setDate(Starts1->date().addDays(1));
             } else {
-                OccuraneEndDate->setDate(QDate(2099,Starts1->date().month(),Starts1->date().day()));
+                OccuraneEndDate->setDate(QDate(2099, Starts1->date().month(), Starts1->date().day()));
             }
             Finish1->setDisabled(true);
         }
@@ -658,7 +673,6 @@ QString qorgCalendar::getUpdate() {
         return "Calendar: No event.";
     }
 }
-//private methods
 void qorgCalendar::setCalendar() {
     Calendar->clearContents();
     DayView->clear();
@@ -770,7 +784,6 @@ void qorgCalendar::setCalendar() {
         Itm->setTextAlignment(Qt::AlignCenter);
         Itm->setTextColor(Qt::gray);
         Itm->setToolTip(temp.addDays(1-i).toString("d/MM/yyyy"));
-        Itm->setFlags(Itm->flags() xor Qt::ItemIsEditable);
         Items.append(Itm);
     }
     for (int i = 0; i < temp.daysInMonth(); i++) {
@@ -779,7 +792,6 @@ void qorgCalendar::setCalendar() {
             ItmSel = Items.size();
         }
         Itm->setToolTip(temp.addDays(i).toString("d/MM/yyyy"));
-        Itm->setFlags(Itm->flags() xor Qt::ItemIsEditable);
         Items.append(Itm);
         if (temp.addDays(i) == QDate::currentDate()) {
             Itm->setBackground(QColor("#EE7777"));
@@ -791,7 +803,6 @@ void qorgCalendar::setCalendar() {
         Itm->setTextAlignment(Qt::AlignCenter);
         Itm->setToolTip(temp1.addDays(i).toString("d/MM/yyyy"));
         Itm->setTextColor(Qt::gray);
-        Itm->setFlags(Itm->flags() xor Qt::ItemIsEditable);
         Items.append(Itm);
     }
     for (int i = 0; i < 42; i++) {
@@ -884,7 +895,6 @@ QList < uint >  qorgCalendar::checkEvR(QDate IN, char P) {
 QList  <QString>  qorgCalendar::checkBd(QDate D) {
     return AB->getBirthdays(D);
 }
-//slots
 void qorgCalendar::updateAll() {
     Incoming->clear();
     QList  <uint>  DUID;
@@ -1121,7 +1131,7 @@ void qorgCalendar::setNotification(bool first) {
     QDateTime Tmp = QDateTime::currentDateTime();
     QString cur = category;
     category="";
-    uint closest = 86400; //1 day
+    uint closest = 86400;
     if (first) {
         QList  <QString>  Immediate;
         for (char a = 0; a < 2; a++) {
@@ -1260,5 +1270,4 @@ void qorgCalendar::setNotification(bool first) {
     NTimer->setSingleShot(true);
     NTimer->start();
 }
-
 #include "qorgcalendar.moc"

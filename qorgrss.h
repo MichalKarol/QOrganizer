@@ -1,13 +1,28 @@
-#ifndef QORGRSS_H
-#define QORGRSS_H
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
 
-#include  <QtWidgets>
-#include  <QNetworkReply>
-#include  <QWebView>
-using namespace std;
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
 
-class RSSItem
-{
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef QORGRSS_H_
+#define QORGRSS_H_
+#include <qorgtools.h>
+#include <QtWidgets>
+#include <QNetworkReply>
+#include <QWebView>
+#include <vector>
+
+using std::vector;
+class RSSItem {
 public:
     RSSItem();
     ~RSSItem();
@@ -18,35 +33,32 @@ public:
     QString GUID;
     bool New;
 };
-class RSSChannel
-{
+class RSSChannel {
 public:
     RSSChannel();
     ~RSSChannel();
     QString Title;
     QString Link;
-    vector  < RSSItem* >  Itemv;
+    vector <RSSItem*> Itemv;
 };
 
-class qorgRSS : public QWidget
-{
+class qorgRSS : public QWidget {
     Q_OBJECT
 public:
-    qorgRSS(QWidget*);
+    explicit qorgRSS(QWidget*);
     ~qorgRSS();
     QString output();
     void input(QString);
     void setChannel(QString);
-    QList  < QString >  getChannels();
-    QString getCurrent()
-    {
+    QList <QString> getChannels();
+    QString getCurrent() {
         return currentChannel;
     }
     void getUpdate();
 private:
     QString currentChannel;
     int currentC;
-    vector  < RSSChannel >  RSSv;
+    vector <RSSChannel> RSSv;
     QGridLayout *Layout;
     QTreeWidget *List;
     QLabel *Lab;
@@ -70,11 +82,11 @@ private slots:
     void chooseItem(QModelIndex);
     void RefreshS();
     void UpdateS();
-    void HTTPSS(QNetworkReply*,QList <QSslError>);
+    void HTTPSS(QNetworkReply*, QList <QSslError>);
 signals:
     void updateTree();
     void doubleClick(QString);
     void sendUpdate(QString);
 };
 
-#endif // QORGRSS_H
+#endif  // QORGRSS_H_

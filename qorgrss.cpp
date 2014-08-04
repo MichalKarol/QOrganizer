@@ -1,8 +1,21 @@
-#include "qorgrss.h"
-#include "qorgtools.h"
-#include  <QNetworkAccessManager>
-#include  <QNetworkRequest>
-#include  <QNetworkReply>
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#include <qorgrss.h>
+#include <vector>
+
 RSSItem::RSSItem() {
     Title.clear();
     PubDate.setMSecsSinceEpoch(0);
@@ -33,7 +46,7 @@ RSSChannel::~RSSChannel() {
 class Download :public QThread {
     Q_OBJECT
 public:
-    Download(RSSChannel*);
+    explicit Download(RSSChannel*);
     RSSChannel *Ch;
     void run();
 private:
@@ -51,7 +64,7 @@ Download::Download(RSSChannel *C) {
 }
 void Download::run() {
     bool SSLFeed = false;
-    if(URL.contains("https://"))    {
+    if (URL.contains("https://"))    {
         URL.remove("https://");
         SSLFeed = true;
     } else {
@@ -59,8 +72,8 @@ void Download::run() {
     }
     QString server = URL.mid(0, URL.indexOf("/"));
     QSslSocket *S = new QSslSocket();
-    if(SSLFeed) {
-        S->connectToHostEncrypted(server,443);
+    if (SSLFeed) {
+        S->connectToHostEncrypted(server, 443);
     } else {
         S->connectToHost(server, 80);
     }
@@ -104,7 +117,7 @@ void Download::run() {
 }
 QByteArray Download::SubDownload(QString I) {
     bool SSLFeed = false;
-    if(I.contains("https://"))    {
+    if (I.contains("https://"))    {
         I.remove("https://");
         SSLFeed = true;
     } else {
@@ -112,8 +125,8 @@ QByteArray Download::SubDownload(QString I) {
     }
     QString server = I.mid(0, I.indexOf("/"));
     QSslSocket *S = new QSslSocket();
-    if(SSLFeed) {
-        S->connectToHostEncrypted(server,443);
+    if (SSLFeed) {
+        S->connectToHostEncrypted(server, 443);
     } else {
         S->connectToHost(server, 80);
     }
@@ -162,16 +175,16 @@ QString stringBetween(QString Tag, QString Text) {
     Text.replace("&amp;", "&");
     Text.replace("&quot;", "\"");
     QString Output;
-    for (int i = 0; i < Text.length()-4 ; i++) {
-        if(Text[i] == '&' && Text[i+1] == '#' && Text[i+4] == ';') {
-            QChar C(Text.mid(i+2,2).toInt());
+    for (int i = 0; i < Text.length()-4; i++) {
+        if (Text[i] == '&' && Text[i+1] == '#' && Text[i+4] == ';') {
+            QChar C(Text.mid(i+2, 2).toInt());
             Output.append(C);
             i+=4;
         } else {
             Output.append(Text[i]);
         }
     }
-    Output.append(Text.mid(Text.length()-4,4));
+    Output.append(Text.mid(Text.length()-4, 4));
     return Output;
 }
 
@@ -199,8 +212,8 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     Titles->setColumnWidth(1, 120);
     connect(Titles, SIGNAL(clicked(QModelIndex)), this, SLOT(chooseItem(QModelIndex)));
     View = new QWebView(this);
-    connect(View->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError> )),
-            this, SLOT(HTTPSS(QNetworkReply*,QList <QSslError>)));
+    connect(View->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError>)),
+            this, SLOT(HTTPSS(QNetworkReply*, QList <QSslError>)));
     Link = new QLabel(this);
     Link->setTextFormat(Qt::RichText);
     UpdateQuene = 0;
@@ -445,7 +458,7 @@ void qorgRSS::DownloadedS(QString Rep) {
             Link = Link.mid(Link.indexOf("href=\"")+6, Link.indexOf("\"", Link.indexOf("href=\"")+6)-6);
             item->Link = Link;
             QString Des;
-            if(Rep.contains("summary")) {
+            if (Rep.contains("summary")) {
                 Des = stringBetween("summary", Rep);
             } else {
                 Des = stringBetween("content", Rep);
@@ -457,7 +470,7 @@ void qorgRSS::DownloadedS(QString Rep) {
             Rep.remove(0, Rep.indexOf("</entry>")+8);
         }
     } else {
-        if (UpdateQuene == 0 ) {
+        if (UpdateQuene == 0) {
         QMessageBox::critical(this, "Error", "Error during reading feed.");
         }
     }
@@ -475,8 +488,7 @@ void qorgRSS::DownloadedS(QString Rep) {
                 }
             }
         }
-        if(!NewChannel)
-        {
+        if (!NewChannel) {
             for (uint i = 0; i < Channel->Itemv.size(); i++) {
                 for (uint j = 0; j < Itm.size(); j++) {
                     if (Channel->Itemv[i]->GUID == Itm[j]->GUID) {
