@@ -7,5 +7,6 @@ By using Qt QOrganizer is multiplatform and AES128 encryption is a great way to 
 I would be very thankful for reporting every issue and sharing every useful tip.
 
 Ready packages for Debian and Windows will be released soon on Sourceforge.
+https://sourceforge.net/p/qorganizerbymkarol
 
 Michał Karol <mailto:mkarol@linux.pl>
