@@ -1,19 +1,35 @@
-#ifndef QORGCALENDAR_H
-#define QORGCALENDAR_H
-#include  <QtWidgets>
-#include  "qorgtools.h"
-#include  "qorgab.h"
-using namespace std;
-struct CalNor
-{
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef QORGCALENDAR_H_
+#define QORGCALENDAR_H_
+#include <qorgtools.h>
+#include <qorgab.h>
+#include <QtWidgets>
+#include <vector>
+
+using std::vector;
+using std::swap;
+struct CalNor {
     QString name;
     QString category;
     unsigned char priority;
     QDateTime datet;
     QDateTime edatet;
 };
-struct CalRec
-{
+struct CalRec {
     QString name;
     QString category;
     unsigned char priority;
@@ -23,11 +39,10 @@ struct CalRec
     QDate edate;
 };
 
-class qorgCalendar: public QWidget
-{
+class qorgCalendar: public QWidget {
     Q_OBJECT
 public:
-    qorgCalendar(QWidget*,qorgAB*);
+    qorgCalendar(QWidget*, qorgAB*);
     QString output();
     void input(QString);
     QStringList getCategories();
@@ -38,14 +53,12 @@ public:
     QString category;
 private:
     qorgAB *AB;
-    //Calendar
     void setCalendar();
       void updateAll();
       void sort();
-    QList <uint> checkEvN(QDate,char);
-    QList <uint> checkEvR(QDate,char);
+    QList <uint> checkEvN(QDate, char);
+    QList <uint> checkEvR(QDate, char);
     QList <QString> checkBd(QDate);
-    //Widget elements
     QDate currentDate;
     QGridLayout* Layout;
 
@@ -60,18 +73,17 @@ private:
     QList <uint> NotifiedR;
     QTimer *NTimer;
 private slots:
-
     void Add(QDate);
     void Edit(uint);
     void Delete(uint);
     void dayChanged(QTableWidgetItem*);
     void monthChanged(int);
-    void yearChanged(QString IN="");
+    void yearChanged(QString IN = "");
     void MidnightChange();
-    void setNotification(bool first=false);
+    void setNotification(bool first = false);
 signals:
     void updateTree();
     void Notification(QString);
 };
 
-#endif // QORGCALENDAR_H
+#endif  // QORGCALENDAR_H_

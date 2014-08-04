@@ -1,10 +1,27 @@
-#ifndef QORGPASSWD_H
-#define QORGPASSWD_H
-#include  <QtWidgets>
-#include "qorgtools.h"
-using namespace std;
-class Password
-{
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef QORGPASSWD_H_
+#define QORGPASSWD_H_
+#include <qorgtools.h>
+#include <QtWidgets>
+#include <vector>
+
+using std::vector;
+using std::swap;
+class Password {
 public:
     Password();
     ~Password();
@@ -12,25 +29,23 @@ public:
     QString Passwd;
 };
 
-class Program
-{
+class Program {
 public:
     Program();
     ~Program();
     QString Name;
-    vector  < Password* >  Passwordv;
+    vector  <Password*>  Passwordv;
 };
 
-class qorgPasswd : public QWidget
-{
+class qorgPasswd : public QWidget {
     Q_OBJECT
 public:
-    qorgPasswd(QWidget*);
+    explicit qorgPasswd(QWidget*);
     ~qorgPasswd();
     QString output();
     void input(QString);
 private:
-    vector  < Program >  Programv;
+    vector  <Program>  Programv;
     QGridLayout *La;
     QTreeWidgetItem *lastitem;
     QPoint Last;
@@ -54,8 +69,6 @@ private slots:
     void Delete(QPoint);
     void OK();
     void Can();
-
-    
 };
 
-#endif // QORGPASSWD_H
+#endif  // QORGPASSWD_H_

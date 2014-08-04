@@ -1,19 +1,33 @@
-#ifndef QORGMAIL_H
-#define QORGMAIL_H
-#include  <QtWidgets>
-#include  <QWebView>
-#include  <QSslSocket>
-#include "qorgtools.h"
-#include  "qorgab.h"
-using namespace std;
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
 
-class Structure
-{
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef QORGMAIL_H_
+#define QORGMAIL_H_
+#include <qorgtools.h>
+#include <qorgab.h>
+#include <QtWidgets>
+#include <QWebView>
+#include <QNetworkReply>
+#include <vector>
+
+using std::vector;
+class Structure {
 public:
     Structure();
     ~Structure();
-    struct Attrybutes
-    {
+    struct Attrybutes    {
         QString Charset;
         QString Name;
     };
@@ -31,21 +45,18 @@ public:
     QString Structure_Language;
     QString Structure_Location;
 };
-class Email
-{
+class Email {
 public:
     Email();
     ~Email();
-    enum Flags
-    {
-        Answered=1,
-        Flagged=2,
-        Draft=4,
-        Deleted=8,
-        Seen=16,
+    enum Flags    {
+        Answered = 1,
+        Flagged = 2,
+        Draft = 4,
+        Deleted = 8,
+        Seen = 16,
     };
-    struct EUser
-    {
+    struct EUser    {
         QString Name;
         QString EMailA;
     };
@@ -55,36 +66,33 @@ public:
     QString Email_Body[2];
     uint Email_UID;
     char Email_Flags;
-    vector  < Structure* > Structurev;
+    vector  <Structure*> Structurev;
 };
-class Mailbox
-{
+class Mailbox {
 public:
     Mailbox();
     ~Mailbox();
-    enum Att
-    {
-        HasChildren=1,
-        HasNoChildren=2,
-        Noselect=4,
-        Trash=8,
-        Flagged=16,
-        Important=32,
-        Drafts=64,
-        All=128,
-        Sent=256,
-        INBOX=512
+    enum Att    {
+        HasChildren = 1,
+        HasNoChildren = 2,
+        Noselect = 4,
+        Trash = 8,
+        Flagged = 16,
+        Important = 32,
+        Drafts = 64,
+        All = 128,
+        Sent = 256,
+        INBOX = 512
     };
     QString Mbox_Name;
     QString Mbox_Showname;
     unsigned char Mbox_Attrybutes;
-    vector  < Mailbox* >  Mbox_Children;
-    vector  < Email* >  Emailv;
+    vector  <Mailbox*>  Mbox_Children;
+    vector  <Email*>  Emailv;
     bool Mbox_Refresh;
     bool Mbox_Top;
 };
-class Mail
-{
+class Mail {
 public:
     Mail();
     ~Mail();
@@ -93,27 +101,25 @@ public:
     QString SMTPserver;
     QString User;
     QString Password;
-    vector  < Mailbox* >  Mboxv;
+    vector  <Mailbox*>  Mboxv;
 };
 
-class qorgMail: public QWidget
-{
+class qorgMail: public QWidget {
     Q_OBJECT
 public:
-    qorgMail(QWidget*,qorgAB*);
+    qorgMail(QWidget*, qorgAB*);
     ~qorgMail();
     QString output();
     void input(QString);
     void setMail(QString);
     QStringList getCategories();
-    QString getCurrent()
-    {
+    QString getCurrent()    {
      return MailCat;
     }
     void getUpdate();
 private:
     qorgAB *AB;
-    vector  < Mail >  Mailv;
+    vector  <Mail>  Mailv;
     QString MailCat;
     QGridLayout *Layout;
     void setMailbox(int);
@@ -122,7 +128,7 @@ private:
     uint currentMailbox;
     int currentEmail;
     void setLayoutF();
-    void addChildren(Mailbox* I,QTreeWidgetItem* W);
+    void addChildren(Mailbox*, QTreeWidgetItem*);
     QTreeWidget *Mailboxes;
     QTreeWidget *MailView;
     QSplitter *Split;
@@ -135,7 +141,7 @@ private:
     QPushButton *Delete;
     QPushButton *Forward;
     QPushButton *Reply;
-    QList  < QWidget* >  F;
+    QList  <QWidget*>  F;
 
     void setLayoutC();
     QTreeWidget *List;
@@ -148,7 +154,7 @@ private:
     QPushButton *AddB;
     QList  <QWidget*>  C;
 private slots:
-    //CAT
+    // CAT
     void testInput();
     void row(QString);
     void change(int);
@@ -157,14 +163,14 @@ private slots:
     void EditMailS(bool);
     void DeleteMail(uint);
 
-    //MAIN
+    // MAIN
     void chooseMbox(QTreeWidgetItem*);
     void chooseEmail(QModelIndex);
     void LoginS(bool);
     void MailboxesS(bool);
     void EmailS(bool);
     void downloadAttachment(QModelIndex);
-    void downloadAttachment(uint,QString);
+    void downloadAttachment(uint, QString);
     void AttachmentS(bool);
     void RefreshS();
     void RefreshS(bool);
@@ -174,11 +180,11 @@ private slots:
     void DeleteEmailS(bool);
     void UpdateEmail(bool);
     void UpdateS();
-    void HTTPSS(QNetworkReply*,QList <QSslError>);
+    void HTTPSS(QNetworkReply*, QList <QSslError>);
 signals:
     void updateTree();
     void doubleClick(QString);
     void sendUpdate(QString);
 };
 
-#endif // QORGMAIL_H
+#endif  // QORGMAIL_H_

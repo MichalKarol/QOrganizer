@@ -1,8 +1,20 @@
-#include "qorganizer.h"
-#include "qorgio.h"
-#include "qorglogin.h"
-#include  <QtWidgets>
-using namespace std;
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#include <qorganizer.h>
+
 QOrganizer::QOrganizer() {
     setWindowIcon(QIcon(":/main/QOrganizer.png"));
     setWindowTitle("QOrganizer");
@@ -25,11 +37,11 @@ QOrganizer::QOrganizer() {
     connect(TreeWidget, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(launchFunction(QTreeWidgetItem*)));
     layout->addWidget(TreeWidget, 0, 0, Qt::AlignLeft);
     Stacked = new QStackedWidget();
-    //Home widget
+    // Home widget
     QTextBrowser *Label = new QTextBrowser(this);
     Label->setText("QOrganizer 1.0\nCreated by: Mkarol (mkarol@linux.pl)\n01.08.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK\nLitecoins: LbDEkiQQJ8XzGoqf4oJE3UfJmW5qzPsK3i");
-    //Timers and tray
+    // Timers and tray
     UInterval = 30;
     UTimer = new QTimer(this);
     connect(UTimer, SIGNAL(timeout()), this, SLOT(updateTime()));
@@ -40,7 +52,7 @@ QOrganizer::QOrganizer() {
     Tray->show();
     connect(Tray, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(TrayClick(QSystemTrayIcon::ActivationReason)));
     closing = false;
-    //Options widget
+    // Options widget
     QLabel *L[6];
     CP = new QLineEdit(this);
     CP->setEchoMode(QLineEdit::Password);
@@ -84,7 +96,7 @@ QOrganizer::QOrganizer() {
     G->addWidget(ChangeInterval, 2, 1);
     G->addItem(new QSpacerItem(1, 1), 3, 0, 3, 1);
     G->addItem(new QSpacerItem(1, 1), 2, 1, 3, 1);
-    //Block widget
+    // Block widget
     BlockL = new QLineEdit(this);
     BlockL->setEchoMode(QLineEdit::Password);
     OKB = new QPushButton(QIcon(":/main/Lock.png"), "", this);
@@ -98,7 +110,7 @@ QOrganizer::QOrganizer() {
     Gr->addWidget(OKB, 2, 1);
     Gr->addItem(new QSpacerItem(1, 1), 3, 1);
     Gr->addItem(new QSpacerItem(1, 1), 0, 2, 4, 1);
-    //Set layout
+    // Set layout
     Stacked->addWidget(Label);
     Stacked->addWidget(Calendar);
     Stacked->addWidget(Mail);

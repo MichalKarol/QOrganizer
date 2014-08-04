@@ -1,5 +1,21 @@
-#include "qorgmail.h"
-#include  <qnetworkreply.h>
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#include <qorgmail.h>
+#include <vector>
+
 Structure::Structure() {
     this->Structure_Number.clear();
     this->Structure_Type.clear();
@@ -102,7 +118,7 @@ public:
         Delete,
         Stop,
     };
-    SSLCON(Mail*);
+    explicit SSLCON(Mail*);
     ~SSLCON() {
         M = NULL;
         To.clear();
@@ -235,7 +251,7 @@ void SSLCON::SecureLogin() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors(); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    S.ignoreSslErrors();
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit LoginS(false);
@@ -339,7 +355,7 @@ void SSLCON::DownloadMBoxVector() {
     }
     for (uint i = 0; i < M->Mboxv.size(); i++) {
         if (M->Mboxv[i]->Mbox_Name.contains(Split)) {
-            for (uint j = 0; j < M->Mboxv.size();j++) {
+            for (uint j = 0; j < M->Mboxv.size(); j++) {
                 if (M->Mboxv[j]->Mbox_Name == M->Mboxv[i]->Mbox_Name.mid(0, M->Mboxv[i]->Mbox_Name.lastIndexOf(Split))&&i != j) {
                     M->Mboxv[j]->Mbox_Children.push_back(M->Mboxv[i]);
                     break;
@@ -384,7 +400,7 @@ void SSLCON::DownloadEmails() {
                 return;
             }
             QStringList A = Reply.split("*", QString::SkipEmptyParts);
-            for (int j = 0; j < A.size();j++) {
+            for (int j = 0; j < A.size(); j++) {
                 if (A[j].contains("EXISTS")) {
                     Bar->setValue(30);
                     vector  <Email*> *Vec=&M->Mboxv[i]->Emailv;
@@ -404,10 +420,10 @@ void SSLCON::DownloadEmails() {
                             QStringList UIDL = UIDS.split("UID ", QString::SkipEmptyParts);
                             QList  <uint>  UIDLi;
                             UIDL.removeFirst();
-                            for (int k = 0; k < UIDL.size();k++) {
+                            for (int k = 0; k < UIDL.size(); k++) {
                                 UIDLi.append(UIDL[k].mid(0, UIDL[k].indexOf(")")).toInt());
                             }
-                            for (uint k = 0; k < Vec->size();k++) {
+                            for (uint k = 0; k < Vec->size(); k++) {
                                 if (UIDLi.size()-1 < static_cast<int>(k) || (*Vec)[k]->Email_UID != UIDLi[k]) {
                                     Vec->erase(Vec->begin()+k);
                                     k--;
@@ -442,7 +458,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     QString Sub = SubL[k].mid(0, SubL[k].indexOf("\r\n)"));
                                     Sub.remove("\r\n");
-                                    Sub.replace("?= =?","?==?");
+                                    Sub.replace("?= =?", "?==?");
                                     while (Sub.contains("=?")) {
                                         int St = Sub.indexOf("=?");
                                         int Se = Sub.indexOf("?", St+2);
@@ -526,7 +542,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     QString From = FromsL[k].mid(0, FromsL[k].indexOf("\r\n)"));
                                     QString Name = From.mid(0, From.indexOf("<"));
-                                    Name.replace("?= =?","?==?");
+                                    Name.replace("?= =?", "?==?");
                                     while (Name.contains("=?")) {
                                         int St = Name.indexOf("=?");
                                         int Se = Name.indexOf("?", St+2);
@@ -607,7 +623,7 @@ void SSLCON::DownloadEmails() {
                                         int S = 0;
                                         int F = 0;
                                         int L = 0;
-                                        for (int l = 0; l < I.length();l++) {
+                                        for (int l = 0; l < I.length(); l++) {
                                             if (I[l] == '(') {
                                                 if (L == 0) {
                                                     S = l;
@@ -624,7 +640,7 @@ void SSLCON::DownloadEmails() {
                                                         int F = 0;
                                                         int L = 0;
                                                         int subpart = 1;
-                                                        for (int m = 0; m < P.length();m++) {
+                                                        for (int m = 0; m < P.length(); m++) {
                                                             if (P[m] == '(') {
                                                                 if (L == 0) {
                                                                     S = m;
@@ -642,7 +658,7 @@ void SSLCON::DownloadEmails() {
                                                                         QList <QString> IL;
                                                                         int L = 0;
                                                                         QString Data;
-                                                                        for (int n = 0; n < I.length();n++) {
+                                                                        for (int n = 0; n < I.length(); n++) {
                                                                             if (I[n] == ' '&&L == 0) {
                                                                                 IL.append(Data);
                                                                                 Data.clear();
@@ -657,7 +673,7 @@ void SSLCON::DownloadEmails() {
                                                                             }
                                                                         }
                                                                         IL.append(Data);
-                                                                        for (int n = 0; n < IL.size();n++) {
+                                                                        for (int n = 0; n < IL.size(); n++) {
                                                                             IL[n].remove("\"");
                                                                             IL[n].remove("(");
                                                                             IL[n].remove(")");
@@ -731,7 +747,7 @@ void SSLCON::DownloadEmails() {
                                                             QList <QString> IL;
                                                             int L = 0;
                                                             QString Data;
-                                                            for (int n = 0; n < I.length();n++) {
+                                                            for (int n = 0; n < I.length(); n++) {
                                                                 if (I[n] == ' '&&L == 0) {
                                                                     IL.append(Data);
                                                                     Data.clear();
@@ -746,7 +762,7 @@ void SSLCON::DownloadEmails() {
                                                                 }
                                                             }
                                                             IL.append(Data);
-                                                            for (int n = 0; n < IL.size();n++) {
+                                                            for (int n = 0; n < IL.size(); n++) {
                                                                 IL[n].remove("\"");
                                                                 IL[n].remove("(");
                                                                 IL[n].remove(")");
@@ -817,7 +833,7 @@ void SSLCON::DownloadEmails() {
                                         QList <QString> IL;
                                         int L = 0;
                                         QString Data;
-                                        for (int n = 0; n < I.length();n++) {
+                                        for (int n = 0; n < I.length(); n++) {
                                             if (I[n] == ' '&&L == 0) {
                                                 IL.append(Data);
                                                 Data.clear();
@@ -832,7 +848,7 @@ void SSLCON::DownloadEmails() {
                                             }
                                         }
                                         IL.append(Data);
-                                        for (int n = 0; n < IL.size();n++) {
+                                        for (int n = 0; n < IL.size(); n++) {
                                             IL[n].remove("\"");
                                             IL[n].remove("(");
                                             IL[n].remove(")");
@@ -956,7 +972,7 @@ void SSLCON::DownloadAttachment() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors(); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    S.ignoreSslErrors();
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit AttachmentS(false);
@@ -1009,7 +1025,7 @@ void SSLCON::SendEmail() {
     QByteArray P = calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512));
     QString Reply;
     QSslSocket S;
-    S.ignoreSslErrors(); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    S.ignoreSslErrors();
     Email* EM;
     if (E == -1) {
         EM = new Email;
@@ -1161,7 +1177,7 @@ void SSLCON::DeleteEmail() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors(); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    S.ignoreSslErrors();
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit DeleteS(false);
@@ -1212,8 +1228,7 @@ void SSLCON::DeleteEmail() {
     emit DeleteS(true);
 }
 
-class Services
-{
+class Services {
 public:
     Services(QString A, QString B, QString C) {
         Name = A;
@@ -1226,8 +1241,7 @@ public:
 };
 QList  <Services>  AvailableServices;
 
-class QItemCheckBox :public QCheckBox
-{
+class QItemCheckBox :public QCheckBox {
     Q_OBJECT
 public:
     QItemCheckBox(QWidget *parent, uint IID) :QCheckBox(parent) {
@@ -1235,8 +1249,7 @@ public:
     }
     uint ItemID;
 };
-class MailboxTree : public QDialog
-{
+class MailboxTree : public QDialog {
     Q_OBJECT
 public:
     MailboxTree(Mail *M, QWidget *parent) :QDialog(parent) {
@@ -1318,8 +1331,7 @@ private slots:
         this->reject();
     }
 };
-class EditDialog :public QDialog
-{
+class EditDialog :public QDialog {
     Q_OBJECT
 public:
     EditDialog(Mail *A, QWidget *parent) :QDialog(parent) {
@@ -1413,12 +1425,10 @@ private slots:
         }
     }
 };
-class Sender :public QDialog
-{
+class Sender :public QDialog {
     Q_OBJECT
 public:
-    enum Type
-    {
+    enum Type {
         Normal,
         Forward,
         Reply
@@ -1621,7 +1631,7 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     MailView->setColumnWidth(2, 120);
     connect(MailView, SIGNAL(clicked(QModelIndex)), this, SLOT(chooseEmail(QModelIndex)));
     ReadMail = new QWebView(this);
-    connect(ReadMail->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError> )),
+    connect(ReadMail->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError>)),
             this, SLOT(HTTPSS(QNetworkReply*, QList <QSslError>)));
     Quene=-1;
     AttachmentList = new QListWidget(this);
@@ -1703,7 +1713,7 @@ QString qorgMail::output() {
         work.append(OutputTools(Mailv[i].User, "USER"));
         work.append(OutputTools(Mailv[i].Password, "PWD"));
         QString Mailboxes;
-        for (uint j = 0; j < Mailv[i].Mboxv.size();j++) {
+        for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
             QString work1;
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Name, "MBOX_NAME"));
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Showname, "MBOX_SHOWNAME"));
@@ -1711,8 +1721,8 @@ QString qorgMail::output() {
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Refresh, "MBOX_REFRESH"));
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Top, "MBOX_TOP"));
             QString Childrens;
-            for (uint k = 0; k < Mailv[i].Mboxv[j]->Mbox_Children.size();k++) {
-                for (uint l = 0; l < Mailv[i].Mboxv.size();l++) {
+            for (uint k = 0; k < Mailv[i].Mboxv[j]->Mbox_Children.size(); k++) {
+                for (uint l = 0; l < Mailv[i].Mboxv.size(); l++) {
                     if (Mailv[i].Mboxv[j]->Mbox_Children[k] == Mailv[i].Mboxv[l]) {
                         Childrens.append(OutputTools(static_cast<int>(l), "MBOX_CHILDINT"));
                         break;
@@ -1721,7 +1731,7 @@ QString qorgMail::output() {
             }
             work1.append(OutputToolsS(Childrens, "MBOX_CHILDREN"));
             QString Emails;
-            for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size();k++) {
+            for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size(); k++) {
                 QString work2;
                 work2.append(OutputTools(Mailv[i].Mboxv[j]->Emailv[k]->Email_Subject, "EMAIL_SUBJECT"));
                 work2.append(OutputTools(Mailv[i].Mboxv[j]->Emailv[k]->Email_From.Name, "EMAIL_FROM_NAME"));
@@ -1732,7 +1742,7 @@ QString qorgMail::output() {
                 work2.append(OutputTools(static_cast<int>(Mailv[i].Mboxv[j]->Emailv[k]->Email_UID), "EMAIL_UID"));
                 work2.append(OutputTools(Mailv[i].Mboxv[j]->Emailv[k]->Email_Flags, "EMAIL_FLAGS"));
                 QString Structures;
-                for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Structurev.size();l++) {
+                for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
                     QString work3;
                     work3.append(OutputTools(Mailv[i].Mboxv[j]->Emailv[k]->Structurev[l]->Structure_Number, "STRUCTURE_NUMBER"));
                     work3.append(OutputTools(Mailv[i].Mboxv[j]->Emailv[k]->Structurev[l]->Structure_Type, "STRUCTURE_TYPE"));
@@ -1828,7 +1838,7 @@ void qorgMail::input(QString IN) {
             Mailboxes.remove(Mailboxes.indexOf("<MAILBOX>"), Mailboxes.indexOf("</MAILBOX>")-Mailboxes.indexOf("<MAILBOX>")+10);
         }
         for (int i = 0; i < ConnectPointer.size(); i++) {
-            for (uint j = 0; j < ConnectPointer[i].size();j++) {
+            for (uint j = 0; j < ConnectPointer[i].size(); j++) {
                 M.Mboxv[i]->Mbox_Children.push_back(M.Mboxv[ConnectPointer[i][j]]);
             }
         }
@@ -1959,7 +1969,6 @@ void qorgMail::addChildren(Mailbox *I, QTreeWidgetItem *W) {
         W->addChild(Itm);
     }
 }
-//SLOTS
 void qorgMail::testInput() {
     if (Username->text().isEmpty()) {
         if (Username->styleSheet() != "QLineEdit{background: #FF8888;}") {
@@ -2073,7 +2082,7 @@ void qorgMail::EditMailS(bool I) {
             vector  <Mailbox*>  B = T->M->Mboxv;
             for (uint i = 0; i < A.size(); i++) {
                 bool found = false;
-                for (uint j = 0; j < B.size();j++) {
+                for (uint j = 0; j < B.size(); j++) {
                     if (A[i]->Mbox_Name == B[j]->Mbox_Name&&(A[i]->Mbox_Attrybutes/4) == (B[j]->Mbox_Attrybutes/4)) {
                         B[j]->Emailv = A[i]->Emailv;
                         B[j]->Mbox_Refresh = A[i]->Mbox_Refresh;
@@ -2082,8 +2091,8 @@ void qorgMail::EditMailS(bool I) {
                     }
                 }
                 if (!found) {
-                    for (uint j = 0; j < A[i]->Emailv.size();j++) {
-                        for (uint k = 0; k < A[i]->Emailv[j]->Structurev.size();k++) {
+                    for (uint j = 0; j < A[i]->Emailv.size(); j++) {
+                        for (uint k = 0; k < A[i]->Emailv[j]->Structurev.size(); k++) {
                             delete A[i]->Emailv[j]->Structurev[k];
                         }
                         delete A[i]->Emailv[j];
@@ -2116,9 +2125,9 @@ void qorgMail::EditMailS(bool I) {
 }
 void qorgMail::DeleteMail(uint IID) {
     Mail *I=&Mailv[IID];
-    for (uint j = 0; j < I->Mboxv.size();j++) {
-        for (uint k = 0; k < I->Mboxv[j]->Emailv.size();k++) {
-            for (uint l = 0; l < I->Mboxv[j]->Emailv[k]->Structurev.size();l++) {
+    for (uint j = 0; j < I->Mboxv.size(); j++) {
+        for (uint k = 0; k < I->Mboxv[j]->Emailv.size(); k++) {
+            for (uint l = 0; l < I->Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
                 delete I->Mboxv[j]->Emailv[k]->Structurev[l];
             }
             delete I->Mboxv[j]->Emailv[k];
@@ -2319,7 +2328,7 @@ void qorgMail::RefreshS(bool I) {
             vector  <Mailbox*>  B = T->M->Mboxv;
             for (uint i = 0; i < A.size(); i++) {
                 bool found = false;
-                for (uint j = 0; j < B.size();j++) {
+                for (uint j = 0; j < B.size(); j++) {
                     if (A[i]->Mbox_Name == B[j]->Mbox_Name&&(A[i]->Mbox_Attrybutes/4) == (B[j]->Mbox_Attrybutes/4)) {
                         B[j]->Emailv = A[i]->Emailv;
                         B[j]->Mbox_Refresh = A[i]->Mbox_Refresh;
@@ -2328,8 +2337,8 @@ void qorgMail::RefreshS(bool I) {
                     }
                 }
                 if (!found) {
-                    for (uint j = 0; j < A[i]->Emailv.size();j++) {
-                        for (uint k = 0; k < A[i]->Emailv[j]->Structurev.size();k++) {
+                    for (uint j = 0; j < A[i]->Emailv.size(); j++) {
+                        for (uint k = 0; k < A[i]->Emailv[j]->Structurev.size(); k++) {
                             delete A[i]->Emailv[j]->Structurev[k];
                         }
                         delete A[i]->Emailv[j];
@@ -2366,7 +2375,7 @@ void qorgMail::SendMail() {
     QStringList Z;
     Z.append(AB->getEmails());
     for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
-        for (uint j = 0; j < Mailv[currentMail].Mboxv[i]->Emailv.size();j++) {
+        for (uint j = 0; j < Mailv[currentMail].Mboxv[i]->Emailv.size(); j++) {
             if (!Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.EMailA.contains("noreply")) {
                 QString S = Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.EMailA+" "+Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.Name;
                 if (!Z.contains(S)) {
@@ -2432,9 +2441,9 @@ void qorgMail::UpdateS() {
     if (UpdateQuene == 1) {
         uint unread = 0;
         for (uint i = 0; i < Mailv.size(); i++) {
-            for (uint j = 0; j < Mailv[i].Mboxv.size();j++) {
+            for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
                 if (Mailv[i].Mboxv[j]->Mbox_Attrybutes&Mailbox::INBOX) {
-                    for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size();k++) {
+                    for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size(); k++) {
                         if (!(Mailv[i].Mboxv[j]->Emailv[k]->Email_Flags&Email::Seen)) {
                             unread++;
                         }
@@ -2460,7 +2469,7 @@ void qorgMail::getUpdate() {
             M->User = Mailv[i].User;
             M->Password = Mailv[i].Password;
             M->IMAPserver = Mailv[i].IMAPserver;
-            for (uint j = 0; j < Mailv[i].Mboxv.size();j++) {
+            for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
                 if (Mailv[i].Mboxv[j]->Mbox_Attrybutes&Mailbox::INBOX) {
                     M->Mboxv.push_back(Mailv[i].Mboxv[j]);
                     break;
