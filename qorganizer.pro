@@ -8,7 +8,7 @@ QT       += core gui network webkitwidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = qorganizer
+TARGET = QOrganizer
 TEMPLATE = app
 
 
