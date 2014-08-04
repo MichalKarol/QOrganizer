@@ -223,6 +223,7 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     connect(Refresh, SIGNAL(clicked()), this, SLOT(RefreshS()));
     QWidget *W = new QWidget(this);
     QVBoxLayout *V = new QVBoxLayout(W);
+    V->setMargin(0);
     V->addWidget(View);
     QHBoxLayout *H = new QHBoxLayout();
     H->addWidget(Link);

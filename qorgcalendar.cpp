@@ -537,7 +537,7 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     LayoutFx->addWidget(Year, 0, 2);
     LayoutFx->addWidget(Yplus, 0, 3);
     LayoutFx->addWidget(Calendar, 1, 0, 1, 4);
-    Layout->addLayout(LayoutFx, 0, 0, 1, 1, Qt::AlignLeft);
+    Layout->addLayout(LayoutFx, 0, 0);
     Layout->addWidget(Incoming, 1, 0, 1, 1);
     Layout->addWidget(DayView, 0, 1, 2, 1);
     Layout->setMargin(0);
