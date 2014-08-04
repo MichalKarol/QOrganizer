@@ -1617,6 +1617,7 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     AvailableServices.append(Services("Wp.pl", "imap.wp.pl", "smtp.wp.pl"));
     AvailableServices.append(Services("Linux.pl", "imap.linux.pl", "smtp.linux.pl"));
     Layout = new QGridLayout(this);
+    Layout->setMargin(0);
     Mailboxes = new QTreeWidget(this);
     Mailboxes->header()->hide();
     Mailboxes->setFixedWidth(110);
@@ -1717,7 +1718,7 @@ QString qorgMail::output() {
             QString work1;
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Name, "MBOX_NAME"));
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Showname, "MBOX_SHOWNAME"));
-            work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Attrybutes, "MBOX_ATTRYBUTES"));
+            work1.append(OutputTools(static_cast<int>(Mailv[i].Mboxv[j]->Mbox_Attrybutes), "MBOX_ATTRYBUTES"));
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Refresh, "MBOX_REFRESH"));
             work1.append(OutputTools(Mailv[i].Mboxv[j]->Mbox_Top, "MBOX_TOP"));
             QString Childrens;

@@ -482,7 +482,7 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     currentDate = QDate::currentDate();
     Layout = new QGridLayout(this);
     Month = new QComboBox(this);
-    Month->setMinimumWidth(400);
+    Month->setMinimumWidth(300);
     Month->addItems(QStringList() << "January" << "February" << "March" << "April" << "May" << "June" << "July" << "August" << "September" << "October" << "November" << "December");
     Month->setCurrentIndex(currentDate.month()-1);
     connect(Month, SIGNAL(currentIndexChanged(int)), this, SLOT(monthChanged(int)));
@@ -506,18 +506,19 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     Calendar->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     Calendar->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     Calendar->setSelectionMode(QAbstractItemView::NoSelection);
-    Calendar->setMinimumWidth(569);
+    Calendar->setMinimumWidth(400);
     Calendar->setFixedHeight(225);
     connect(Calendar, SIGNAL(itemActivated(QTableWidgetItem*)), this, SLOT(dayChanged(QTableWidgetItem*)));
     DayView = new QTreeWidget(this);
     DayView->header()->hide();
     DayView->setColumnCount(5);
     DayView->header()->setStretchLastSection(false);
-    DayView->setColumnWidth(0, 120);
+    DayView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    //DayView->setColumnWidth(0, 128);
     DayView->setColumnWidth(1, 45);
     DayView->setColumnWidth(2, 45);
-    DayView->setColumnWidth(3, 50);
-    DayView->setColumnWidth(4, 50);
+    DayView->setColumnWidth(3, 20);
+    DayView->setColumnWidth(4, 20);
 
     Incoming = new QTreeWidget(this);
     Incoming->header()->hide();
@@ -536,9 +537,10 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     LayoutFx->addWidget(Year, 0, 2);
     LayoutFx->addWidget(Yplus, 0, 3);
     LayoutFx->addWidget(Calendar, 1, 0, 1, 4);
-    Layout->addLayout(LayoutFx, 0, 0);
+    Layout->addLayout(LayoutFx, 0, 0, 1, 1, Qt::AlignLeft);
     Layout->addWidget(Incoming, 1, 0, 1, 1);
     Layout->addWidget(DayView, 0, 1, 2, 1);
+    Layout->setMargin(0);
     setCalendar();
     NTimer = new QTimer(this);
     connect(NTimer, SIGNAL(timeout()), this, SLOT(setNotification()));

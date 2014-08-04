@@ -18,6 +18,7 @@
 
 qorgNotes::qorgNotes(QWidget *parent) :QWidget(parent) {
     Layout = new QGridLayout(this);
+    Layout->setMargin(0);
     TLabel = new QLabel("Topic: ", this);
     Topic = new QLineEdit(this);
     Topic->setReadOnly(true);
