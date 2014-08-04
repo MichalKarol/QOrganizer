@@ -443,7 +443,7 @@ void SSLCON::DownloadEmails() {
                                 (*Vec)[Fn+k-1]->Email_UID = UIDLi[Fn+k-1];
                             }
                         }
-                        if (Fn < En) {
+                        if (Fn <= En) {
                             Bar->setValue(35);
                             QString Subjects;
                             {
