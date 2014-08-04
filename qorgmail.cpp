@@ -1639,6 +1639,7 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     connect(AttachmentList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(downloadAttachment(QModelIndex)));
     QWidget *Wi = new QWidget(this);
     QVBoxLayout *V = new QVBoxLayout(Wi);
+    V->setMargin(0);
     V->addWidget(ReadMail);
     V->addWidget(AttachmentList);
     Split = new QSplitter(Qt::Vertical, this);
