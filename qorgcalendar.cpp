@@ -544,7 +544,8 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     setCalendar();
     NTimer = new QTimer(this);
     connect(NTimer, SIGNAL(timeout()), this, SLOT(setNotification()));
-    QTimer::singleShot(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))), this, SLOT(MidnightChange()));
+    Midnight=new QTimer(this);
+    MidnightChange();
 }
 QString qorgCalendar::output() {
     QString out;
@@ -621,13 +622,18 @@ void qorgCalendar::setCategory(QString cat) {
     updateAll();
 }
 QString qorgCalendar::getUpdate() {
+    if (Midnight->remainingTime() != QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00)))) {
+        Midnight->stop();
+        MidnightChange();
+        setNotification();
+    }
     if (Normal.size()+Recurrent.size() != 0) {
         uint hour = 0;
         uint today = 0;
         uint tomorrow = 0;
         for (char i = 5; i > 0; i--) {
-            QList  <uint>  N = checkEvN(QDate::currentDate(), i);
-            QList  <uint>  R = checkEvR(QDate::currentDate(), i);
+            QList <uint> N = checkEvN(QDate::currentDate(), i);
+            QList <uint> R = checkEvR(QDate::currentDate(), i);
             for (int j = 0; j < N.size(); j++) {
                 if (QDateTime::currentDateTime().secsTo(Normal[N[j]].datet) < 3600&&QDateTime::currentDateTime().secsTo(Normal[N[j]].datet) >= 0) {
                     hour++;
@@ -641,8 +647,20 @@ QString qorgCalendar::getUpdate() {
             }
             today+=N.size();
             today+=R.size();
-            N = checkEvN(QDate::currentDate().addDays(1), i);
-            R = checkEvR(QDate::currentDate().addDays(1), i);
+            QList <uint> Nt = checkEvN(QDate::currentDate().addDays(1), i);
+            for (int j = 0;j<Nt.size(); j++) {
+                if (N.contains(Nt[j])) {
+                    Nt.removeAt(j);
+                    j--;
+                }
+            }
+            QList <uint> Rt = checkEvR(QDate::currentDate().addDays(1), i);
+            for (int j = 0;j<Rt.size(); j++) {
+                if (R.contains(Rt[j])) {
+                    Rt.removeAt(j);
+                    j--;
+                }
+            }
             tomorrow+=N.size();
             tomorrow+=R.size();
         }
@@ -849,7 +867,7 @@ void qorgCalendar::setCalendar() {
     }
     Calendar->setVerticalHeaderLabels(labels);
 }
-QList < uint >  qorgCalendar::checkEvN(QDate IN, char P) {
+QList <uint> qorgCalendar::checkEvN(QDate IN, char P) {
     QList  <uint>  Output;
     for (uint i = 0; i < Normal.size(); i++) {
         if (IN >= Normal[i].datet.date()&&IN <= Normal[i].edatet.date()) {
@@ -860,7 +878,7 @@ QList < uint >  qorgCalendar::checkEvN(QDate IN, char P) {
     }
     return Output;
 }
-QList < uint >  qorgCalendar::checkEvR(QDate IN, char P) {
+QList <uint> qorgCalendar::checkEvR(QDate IN, char P) {
     QList  <uint>  Output;
     for (uint i = 0; i < Recurrent.size(); i++) {
         if (IN >= Recurrent[i].datet.date()&&IN <= Recurrent[i].edate) {
@@ -1127,7 +1145,8 @@ void qorgCalendar::MidnightChange() {
     currentDate = QDate::currentDate();
     updateAll();
     setNotification();
-    QTimer::singleShot(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))), this, SLOT(MidnightChange()));
+    Midnight->setInterval(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))));
+    Midnight->start();
 }
 void qorgCalendar::setNotification(bool first) {
     QDateTime Tmp = QDateTime::currentDateTime();
