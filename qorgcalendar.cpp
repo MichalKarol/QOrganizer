@@ -660,8 +660,8 @@ QString qorgCalendar::getUpdate() {
                     j--;
                 }
             }
-            tomorrow+=N.size();
-            tomorrow+=R.size();
+            tomorrow+=Nt.size();
+            tomorrow+=Rt.size();
         }
         QString M1;
         QString M2;
