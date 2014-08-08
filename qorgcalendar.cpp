@@ -1296,7 +1296,7 @@ void qorgCalendar::checkMidnight() {
         Midnight->stop();
         Midnight->setInterval(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))));
         Midnight->start();
-        setNotification();
+        setNotification(true);
     }
 }
 #include "qorgcalendar.moc"
