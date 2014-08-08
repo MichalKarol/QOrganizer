@@ -1384,6 +1384,7 @@ public:
     };
     Sender(Email *E, Type I, QCompleter *C, SSLCON *SSL, QWidget *parent) :QDialog(parent) {
         setWindowTitle("Send Mail");
+        setMinimumWidth(600);
         this->SSL = SSL;
         S = new QLabel("Subject: ", this);
         T = new QLabel("To: ", this);
@@ -1818,7 +1819,7 @@ void qorgMail::setMail(QString currentMbox) {
                 if (Mailv[currentMail].Mboxv[i]->Mbox_Top) {
                     QTreeWidgetItem* Itm = new QTreeWidgetItem();
                     Itm->setText(0, Mailv[currentMail].Mboxv[i]->Mbox_Showname);
-                    Itm->setToolTip(0, Mailv[currentMail].Mboxv[i]->Mbox_Name);
+                    Itm->setToolTip(0, Bit7ToBit8(Mailv[currentMail].Mboxv[i]->Mbox_Name));
                     if (Mailv[currentMail].Mboxv[i]->Mbox_Children.size() != 0) {
                         addChildren(Mailv[currentMail].Mboxv[i], Itm);
                     }
@@ -1915,7 +1916,7 @@ void qorgMail::addChildren(Mailbox *I, QTreeWidgetItem *W) {
     for (uint i = 0; i < I->Mbox_Children.size(); i++) {
         QTreeWidgetItem* Itm = new QTreeWidgetItem();
         Itm->setText(0, I->Mbox_Children[i]->Mbox_Showname);
-        Itm->setToolTip(0, I->Mbox_Children[i]->Mbox_Name);
+        Itm->setToolTip(0, Bit7ToBit8(I->Mbox_Children[i]->Mbox_Name));
         if (I->Mbox_Children[i]->Mbox_Children.size() != 0) {
             addChildren(I->Mbox_Children[i], Itm);
         }
@@ -2057,14 +2058,14 @@ void qorgMail::EditMailS(bool I) {
         }
         T->setMethod(SSLCON::Stop);
         delete T->M;
-        while ((new MailboxTree(&Mailv[currentMail], this))->exec() != QDialog::Accepted) {
+        if((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
+            T = new SSLCON(&Mailv[currentMail]);
+            connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateEmail(bool)));
+            T->Bar->deleteLater();
+            T->Bar = new QProgressBar();
+            T->start();
+            T->setMethod(SSLCON::Emails);
         }
-        T = new SSLCON(&Mailv[currentMail]);
-        connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateEmail(bool)));
-        T->Bar->deleteLater();
-        T->Bar = new QProgressBar();
-        T->start();
-        T->setMethod(SSLCON::Emails);
     } else {
         QMessageBox::critical(this, "Error", "Wrong settings.");
     }
@@ -2096,7 +2097,7 @@ void qorgMail::chooseMbox(QTreeWidgetItem *I) {
     int Int = 0;
     currentEmail=-1;
     for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
-        if (Mailv[currentMail].Mboxv[i]->Mbox_Name == I->toolTip(0)) {
+        if (Bit7ToBit8(Mailv[currentMail].Mboxv[i]->Mbox_Name) == I->toolTip(0)) {
             Int = i;
         }
     }
