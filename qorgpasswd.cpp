@@ -147,9 +147,9 @@ QString qorgPasswd::output() {
     out = OutputToolsS(out, "PROGRAMV");
     return out;
 }
-void qorgPasswd::input(QString IN) {
-    while (IN.contains("<PROGRAM>")) {
-        QString PS = InputSS(IN, "PROGRAM");
+void qorgPasswd::input(QString Input) {
+    while (Input.contains("<PROGRAM>")) {
+        QString PS = InputSS(Input, "PROGRAM");
         Program P;
         P.Name = InputS(PS, "NAME");
         QString Passwords = InputSS(PS, "PASSWORDV");
@@ -162,7 +162,7 @@ void qorgPasswd::input(QString IN) {
             Passwords.remove(Passwords.indexOf("<PASSWORD>"), Passwords.indexOf("</PASSWORD>")-Passwords.indexOf("<PASSWORD>")+11);
         }
         Programv.push_back(P);
-        IN.remove(IN.indexOf("<PROGRAM>"), IN.indexOf("</PROGRAM>")-IN.indexOf("<PROGRAM>")+10);
+        Input.remove(Input.indexOf("<PROGRAM>"), Input.indexOf("</PROGRAM>")-Input.indexOf("<PROGRAM>")+10);
     }
     UpdateTree();
 }
@@ -215,7 +215,7 @@ void qorgPasswd::UpdateTree() {
             }
         }
         Tree->expandAll();
-        delete C;
+        C->deleteLater();
         C = new QCompleter(A, this);
         ProgramL->setCompleter(C);
     }
@@ -283,9 +283,9 @@ void qorgPasswd::AddB() {
         PasswordL->setEchoMode(QLineEdit::Password);
     }
 }
-void qorgPasswd::row(QString IN) {
+void qorgPasswd::row(QString Input) {
     QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
-    if (IN.isEmpty()) {
+    if (Input.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
         I->setStyleSheet("QQLineEdit{background: white;}");
@@ -293,7 +293,7 @@ void qorgPasswd::row(QString IN) {
 }
 void qorgPasswd::clicked(QTreeWidgetItem* W) {
     if (W->parent() != NULL) {
-        TreeWidget *Wi = qobject_cast  < TreeWidget* > (Tree->itemWidget(W, 0));
+        TreeWidget *Wi = qobject_cast  <TreeWidget*> (Tree->itemWidget(W, 0));
         if (W != lastitem) {
             W->setText(0, "");
             W->setSizeHint(0, QSize(W->sizeHint(0).width(), 130));

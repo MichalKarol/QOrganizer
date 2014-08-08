@@ -50,7 +50,7 @@ public:
     QString output();
     void input(QString);
     void setChannel(QString);
-    QList <QString> getChannels();
+    QStringList getChannels();
     QString getCurrent() {
         return currentChannel;
     }

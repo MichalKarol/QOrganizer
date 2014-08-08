@@ -122,8 +122,8 @@ public:
     ~SSLCON() {
         M = NULL;
         To.clear();
-        delete Bar;
-        delete Downloading;
+        Bar->deleteLater();
+        Downloading->deleteLater();
     }
     void setMethod(Method);
     void DownloadAttachmentData(int B, int E, int A, QString P) {
@@ -458,34 +458,8 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     QString Sub = SubL[k].mid(0, SubL[k].indexOf("\r\n)"));
                                     Sub.remove("\r\n");
-                                    Sub.replace("?= =?", "?==?");
-                                    while (Sub.contains("=?")) {
-                                        int St = Sub.indexOf("=?");
-                                        int Se = Sub.indexOf("?", St+2);
-                                        int Th = Sub.indexOf("?", Se+1);
-                                        int La = Sub.indexOf("?=", Th+1);
-                                        QString Charset = Sub.mid(St+2, Se-St-2);
-                                        QString Type = Sub.mid(Se+1, Th-Se-1);
-                                        QString Data = Sub.mid(Th+1, La-Th-1);
-                                        Data.replace("_", " ");
-                                        if (Type.toUpper() == "B") {
-                                            if (Charset.toUpper() != "UTF-8") {
-                                                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
-                                                Data = A->toUnicode(QPDecode(QByteArray::fromBase64(Data.toUtf8())));
-                                            } else {
-                                                Data = QString(QByteArray::fromBase64(Data.toUtf8()));
-                                            }
-                                        } else if (Type.toUpper() == "Q") {
-                                            if (Charset.toUpper() != "UTF-8") {
-                                                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
-                                                Data = A->toUnicode(QPDecode(Data.toUtf8()));
-                                            } else {
-                                                Data = QPDecode(Data.toUtf8());
-                                            }
-                                        }
-                                        Sub = Sub.mid(0, St)+Data+Sub.mid(La+2, Sub.length()-La-2);
-                                    }
-                                    if (Sub.simplified() == "") {
+                                    Sub = NameFilter(Sub);
+                                    if (Sub.simplified().isEmpty()) {
                                         Sub="(no subject)";
                                     }
                                     (*Vec)[Fn+k-1]->Email_Subject = Sub.simplified();
@@ -542,32 +516,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     QString From = FromsL[k].mid(0, FromsL[k].indexOf("\r\n)"));
                                     QString Name = From.mid(0, From.indexOf("<"));
-                                    Name.replace("?= =?", "?==?");
-                                    while (Name.contains("=?")) {
-                                        int St = Name.indexOf("=?");
-                                        int Se = Name.indexOf("?", St+2);
-                                        int Th = Name.indexOf("?", Se+1);
-                                        int La = Name.indexOf("?=", Th+1);
-                                        QString Charset = Name.mid(St+2, Se-St-2);
-                                        QString Type = Name.mid(Se+1, Th-Se-1);
-                                        QString Data = Name.mid(Th+1, La-Th-1);
-                                        if (Type.toUpper() == "B") {
-                                            if (Charset.toUpper() != "UTF-8") {
-                                                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
-                                                Data = A->toUnicode(QByteArray::fromBase64(Data.toUtf8()));
-                                            } else {
-                                                Data = QString(QByteArray::fromBase64(Data.toUtf8()));
-                                            }
-                                        } else if (Type.toUpper() == "Q") {
-                                            if (Charset.toUpper() != "UTF-8") {
-                                                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
-                                                Data = A->toUnicode(QPDecode(Data.toUtf8()));
-                                            } else {
-                                                Data = QPDecode(Data.toUtf8());
-                                            }
-                                        }
-                                        Name = Name.mid(0, St)+Data+Name.mid(La+2, Name.length()-La-2);
-                                    }
+                                    Name = NameFilter(Name);
                                     QString EMA = From.mid(From.indexOf("<")+1, From.indexOf(">")-From.indexOf("<")-1).simplified();
                                     (*Vec)[Fn+k-1]->Email_From.Name = Name.simplified();
                                     (*Vec)[Fn+k-1]->Email_From.EMailA = EMA;
@@ -912,7 +861,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     for (uint l = 0; l < (*Vec)[Fn+k-1]->Structurev.size()&&l < 2; l++) {
                                         int t = 0;
-                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Type == "TEXT"&&(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Name == "") {
+                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Type == "TEXT"&&(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Name.isEmpty()) {
                                             if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Subtype == "HTML") {
                                                 t = 1;
                                             }
@@ -1018,7 +967,7 @@ void SSLCON::DownloadAttachment() {
     F.open(QIODevice::WriteOnly);
     F.write(Array);
     F.close();
-    delete L;
+    L->deleteLater();
     emit AttachmentS(true);
 }
 void SSLCON::SendEmail() {
@@ -1416,9 +1365,9 @@ private slots:
     void Can() {
         this->reject();
     }
-    void row(QString IN) {
+    void row(QString Input) {
         QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
-        if (IN.isEmpty()) {
+        if (Input.isEmpty()) {
             I->setStyleSheet("QLineEdit{background: #FF8888;}");
         } else {
             I->setStyleSheet("QQLineEdit{background: white;}");
@@ -1487,7 +1436,7 @@ public:
                     Itm = new QListWidgetItem(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower(), Attachments);
                 }
             } else {
-                Itm = new QListWidgetItem(E->Structurev[i]->Structure_Attrybutes.Name, Attachments);
+                Itm = new QListWidgetItem(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name), Attachments);
             }
             Itm->setToolTip(QString::number(i));
         }
@@ -1601,9 +1550,9 @@ private slots:
     void DelAt(QModelIndex I) {
         delete Attachments->item(I.row());
     }
-    void row(QString IN) {
+    void row(QString Input) {
         QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
-        if (IN.isEmpty()) {
+        if (Input.isEmpty()) {
             I->setStyleSheet("QLineEdit{background: #FF8888;}");
         } else {
             I->setStyleSheet("QQLineEdit{background: white;}");
@@ -1703,7 +1652,7 @@ qorgMail::~qorgMail() {
             delete Mailv[i].Mboxv[j];
         }
     }
-    delete ReadMail->page();
+    ReadMail->page()->deleteLater();
 }
 QString qorgMail::output() {
     QString out;
@@ -1774,17 +1723,17 @@ QString qorgMail::output() {
     out = OutputToolsS(out, "MAILV");
     return out;
 }
-void qorgMail::input(QString IN) {
-    while (IN.contains("<MAIL>")) {
-        QString MS = InputSS(IN, "MAIL");
+void qorgMail::input(QString Input) {
+    while (Input.contains("<MAIL>")) {
+        QString MS = InputSS(Input, "MAIL");
         Mail M;
         M.Name = InputS(MS, "NAME");
         M.IMAPserver = InputS(MS, "IMAP");
         M.SMTPserver = InputS(MS, "SMTP");
         M.User = InputS(MS, "USER");
         M.Password = InputS(MS, "PWD");
-        QString Mailboxes = InputSS(MS, "MAILBOXV");
-        QList  <vector <int > > ConnectPointer;
+        QString Mailboxes = InputSS(MS, "MBOXV");
+        QList  <vector <int> > ConnectPointer;
         while (Mailboxes.contains("<MAILBOX>")) {
             QString MBS = InputSS(Mailboxes, "MAILBOX");
             Mailbox* MB = new Mailbox();
@@ -1845,14 +1794,14 @@ void qorgMail::input(QString IN) {
             }
         }
         Mailv.push_back(M);
-        IN.remove(IN.indexOf("<MAIL>"), IN.indexOf("</MAIL>")-IN.indexOf("<MAIL>")+7);
+        Input.remove(Input.indexOf("<MAIL>"), Input.indexOf("</MAIL>")-Input.indexOf("<MAIL>")+7);
     }
     setLayoutC();
 }
 void qorgMail::setMail(QString currentMbox) {
     if (currentMbox != MailCat) {
         MailCat = currentMbox;
-        if (MailCat == "") {
+        if (MailCat.isEmpty()) {
             setLayoutC();
         } else {
             currentEmail=-1;
@@ -1901,12 +1850,14 @@ void qorgMail::setMailbox(int I) {
         Itm->setText(2, Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_Date.toString("dd/MM/yyyy hh:mm"));
         MailView->addTopLevelItem(Itm);
     }
+    MailView->scrollToTop();
 }
 QStringList qorgMail::getCategories() {
     QStringList list;
     for (uint i = 0; i < Mailv.size(); i++) {
         list.append(Mailv[i].Name);
     }
+    list.sort();
     return list;
 }
 void qorgMail::setLayoutC() {
@@ -2025,9 +1976,9 @@ void qorgMail::testInput() {
     Username->clear();
     Passwd->clear();
 }
-void qorgMail::row(QString IN) {
+void qorgMail::row(QString Input) {
     QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
-    if (IN.isEmpty()) {
+    if (Input.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
         I->setStyleSheet("QQLineEdit{background: white;}");
@@ -2110,7 +2061,7 @@ void qorgMail::EditMailS(bool I) {
         }
         T = new SSLCON(&Mailv[currentMail]);
         connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateEmail(bool)));
-        delete T->Bar;
+        T->Bar->deleteLater();
         T->Bar = new QProgressBar();
         T->start();
         T->setMethod(SSLCON::Emails);
@@ -2205,7 +2156,7 @@ void qorgMail::chooseEmail(QModelIndex I) {
                 Itm->setText("text."+E->Structurev[i]->Structure_Subtype.toLower());
             }
         } else {
-            Itm->setText(E->Structurev[i]->Structure_Attrybutes.Name);
+            Itm->setText(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name));
         }
     }
 }
@@ -2251,7 +2202,7 @@ void qorgMail::EmailS(bool I) {
     }
 }
 void qorgMail::downloadAttachment(QModelIndex I) {
-    QString name = Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I.row()+1]->Structure_Attrybutes.Name;
+    QString name = NameFilter(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I.row()+1]->Structure_Attrybutes.Name);
     if (name.isEmpty()) {
         if (Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I.row()+1]->Structure_CID == "NIL") {
             name="text."+Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I.row()+1]->Structure_Subtype.toLower();
@@ -2360,7 +2311,7 @@ void qorgMail::RefreshS(bool I) {
         T->setMethod(SSLCON::Stop);
         delete T->M;
         T = new SSLCON(&Mailv[currentMail]);
-        delete T->Bar;
+        T->Bar->deleteLater();
         T->Bar = new QProgressBar();
         T->start();
         T->setMethod(SSLCON::Emails);
@@ -2400,7 +2351,7 @@ void qorgMail::SendMail() {
             (new Sender(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail], Sender::Reply, Completer, S, this))->exec();
         }
     }
-    delete Completer;
+    Completer->deleteLater();
 }
 void qorgMail::SendEmailS(bool I) {
     if (I) {
@@ -2490,6 +2441,6 @@ void qorgMail::getUpdate() {
 void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
-    delete QNR;
+    QNR->deleteLater();
 }
 #include "qorgmail.moc"

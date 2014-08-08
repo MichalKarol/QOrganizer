@@ -68,6 +68,7 @@ private slots:
     void updateCalendar();
     void Notification(QString);
     void updateMail();
+    void updateAdressBook();
     void updateRSS();
     void doubleClick(QString);
     void TrayClick(QSystemTrayIcon::ActivationReason);

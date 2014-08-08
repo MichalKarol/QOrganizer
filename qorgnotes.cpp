@@ -73,23 +73,23 @@ QString qorgNotes::output() {
     QString out;
     for (uint i = 0; i < Notes.size(); i++) {
         QString work;
-        work.append(OutputTools(Notes[i].topic, "TOPIC"));
-        work.append(OutputTools(Notes[i].priority, "PRIORITY"));
-        work.append(OutputTools(Notes[i].text, "TEXT"));
+        work.append(OutputTools(Notes[i].Topic, "TOPIC"));
+        work.append(OutputTools(Notes[i].Priority, "PRIORITY"));
+        work.append(OutputTools(Notes[i].Text, "TEXT"));
         out.append(OutputToolsS(work, "NOTE"));
     }
     out = OutputToolsS(out, "NOTES");
     return out;
 }
-void qorgNotes::input(QString IN) {
-    while (IN.contains("<NOTE>")) {
-        QString NS = InputSS(IN, "NOTE");
+void qorgNotes::input(QString Input) {
+    while (Input.contains("<NOTE>")) {
+        QString NS = InputSS(Input, "NOTE");
         Note tmp;
-        tmp.topic = InputS(NS, "TOPIC");
-        tmp.priority = InputI(NS, "PRIORITY");
-        tmp.text = InputS(NS, "TEXT");
+        tmp.Topic = InputS(NS, "TOPIC");
+        tmp.Priority = InputI(NS, "PRIORITY");
+        tmp.Text = InputS(NS, "TEXT");
         Notes.push_back(tmp);
-       IN.remove(IN.indexOf("<NOTE>"), IN.indexOf("</NOTE>")-IN.indexOf("<NOTE>")+7);
+       Input.remove(Input.indexOf("<NOTE>"), Input.indexOf("</NOTE>")-Input.indexOf("<NOTE>")+7);
     }
     updateList();
 }
@@ -98,11 +98,11 @@ void qorgNotes::updateList() {
         while (1) {
             bool Sorted = true;
             for (uint i = 0; i < Notes.size()-1; i++) {
-                if (Notes[i].priority < Notes[i+1].priority) {
+                if (Notes[i].Priority < Notes[i+1].Priority) {
                     swap(Notes[i], Notes[i+1]);
                     Sorted = false;
                 } else {
-                    if (Notes[i].priority == Notes[i+1].priority&&Notes[i].topic > Notes[i+1].topic) {
+                    if (Notes[i].Priority == Notes[i+1].Priority&&Notes[i].Topic > Notes[i+1].Topic) {
                         swap(Notes[i], Notes[i+1]);
                         Sorted = false;
                     }
@@ -116,8 +116,8 @@ void qorgNotes::updateList() {
     List->clear();
     for (uint i = 0; i < Notes.size(); i++) {
         QTreeWidgetItem *Itm = new QTreeWidgetItem(List);
-        Itm->setText(0, Notes[i].topic);
-        Itm->setToolTip(0, Notes[i].topic);
+        Itm->setText(0, Notes[i].Topic);
+        Itm->setToolTip(0, Notes[i].Topic);
         Itm->setText(1, "");
         Itm->setText(2, "");
         QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i);
@@ -126,7 +126,7 @@ void qorgNotes::updateList() {
         QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i);
         connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
         List->setItemWidget(Itm, 2, Delete);
-        colorItem(Itm, Notes[i].priority);
+        colorItem(Itm, Notes[i].Priority);
     }
 }
 void qorgNotes::Add() {
@@ -170,9 +170,9 @@ void qorgNotes::Edit(uint IID) {
         Layout->addWidget(List, 0, 2, 3, 1);
         Layout->addWidget(AddB, 3, 2);
     }
-    Topic->setText(Notes[IID].topic);
-    Priority->setSliderPosition(Notes[IID].priority);
-    Text->setText(Notes[IID].text);
+    Topic->setText(Notes[IID].Topic);
+    Priority->setSliderPosition(Notes[IID].Priority);
+    Text->setText(Notes[IID].Text);
     edited = IID;
 }
 void qorgNotes::Delete(uint IID) {
@@ -194,14 +194,14 @@ void qorgNotes::EOK() {
     }
     if (edited == -1) {
         Note str;
-        str.topic = Topic->text();
-        str.priority = Priority->value();
-        str.text = Text->document()->toPlainText();
+        str.Topic = Topic->text();
+        str.Priority = Priority->value();
+        str.Text = Text->document()->toPlainText();
         Notes.push_back(str);
     } else {
-        Notes[edited].topic = Topic->text();
-        Notes[edited].priority = Priority->value();
-        Notes[edited].text = Text->document()->toPlainText();
+        Notes[edited].Topic = Topic->text();
+        Notes[edited].Priority = Priority->value();
+        Notes[edited].Text = Text->document()->toPlainText();
     }
     EC();
     updateList();
@@ -226,10 +226,10 @@ void qorgNotes::EC() {
     Text->clear();
     Text->setReadOnly(true);
 }
-void qorgNotes::EClicked(QModelIndex IN) {
-    Topic->setText(Notes[IN.row()].topic);
-    Priority->setValue(Notes[IN.row()].priority);
-    Text->setText(Notes[IN.row()].text);
+void qorgNotes::EClicked(QModelIndex Input) {
+    Topic->setText(Notes[Input.row()].Topic);
+    Priority->setValue(Notes[Input.row()].Priority);
+    Text->setText(Notes[Input.row()].Text);
 }
 void qorgNotes::ChangeT() {
     if (!Topic->text().isEmpty()) {
