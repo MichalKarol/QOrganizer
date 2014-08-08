@@ -1563,9 +1563,15 @@ private slots:
 
 qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     this->AB = AB;
+    AvailableServices.append(Services("AOL", "imap.aol.com", "smtp.aol.com"));
     AvailableServices.append(Services("Gmail", "imap.gmail.com", "smtp.gmail.com"));
-    AvailableServices.append(Services("Wp.pl", "imap.wp.pl", "smtp.wp.pl"));
+    AvailableServices.append(Services("Interia.pl", "imap.interia.pl", "smtp.interia.pl"));
     AvailableServices.append(Services("Linux.pl", "imap.linux.pl", "smtp.linux.pl"));
+    AvailableServices.append(Services("Mail.ru", "imap.mail.ru", "smtp.mail.ru"));
+    AvailableServices.append(Services("o2.pl", "poczta.o2.pl", "poczta.o2.pl"));
+    AvailableServices.append(Services("Outlook.com", "imap.outlook.com", "none"));
+    AvailableServices.append(Services("Wp.pl", "imap.wp.pl", "smtp.wp.pl"));
+    AvailableServices.append(Services("Yahoo!", "imap.mail.yahoo.com", "smtp.mail.yahoo.com"));
     Layout = new QGridLayout(this);
     Layout->setMargin(0);
     Mailboxes = new QTreeWidget(this);
