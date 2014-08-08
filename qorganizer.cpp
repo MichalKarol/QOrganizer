@@ -20,6 +20,7 @@ QOrganizer::QOrganizer() {
     setWindowTitle("QOrganizer");
     this->setMinimumWidth(1024);
     AdressBook = new qorgAB(this);
+    connect(AdressBook, SIGNAL(updateTree()), this, SLOT(updateAdressBook()));
     Calendar = new qorgCalendar(this, AdressBook);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
     connect(Calendar, SIGNAL(Notification(QString)), this, SLOT(Notification(QString)));
@@ -169,7 +170,12 @@ void QOrganizer::setTree() {
     QTreeWidgetItem *ADTI = new QTreeWidgetItem(TreeWidget);
     ADTI->setText(0, "Adress Book");
     ADTI->setIcon(0, QIcon(":/main/AdressBook.png"));
-    ADTI->setExpanded(true);
+    categories = AdressBook->getCategories();
+    for (int i = 0; i < categories.size(); i++) {
+        QTreeWidgetItem *Itm = new QTreeWidgetItem(ADTI);
+        Itm->setText(0, categories[i]);
+        Itm->setToolTip(0, categories[i]);
+    }
 
     QTreeWidgetItem *RSSTI = new QTreeWidgetItem(TreeWidget);
     RSSTI->setText(0, "Feeds Reader");
@@ -195,39 +201,43 @@ void QOrganizer::setTree() {
     SaveTI->setFlags(SaveTI->flags()^Qt::ItemIsSelectable);
     TreeWidget->expandAll();
 }
-void QOrganizer::launchFunction(QTreeWidgetItem * IN) {
-    if (IN->parent() == NULL) {
-        if (IN->text(0) == "Calendar") {
+void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
+    if (Input->parent() == NULL) {
+        if (Input->text(0) == "Calendar") {
             Calendar->setCategory("");
             Stacked->setCurrentIndex(1);
-        } else if (IN->text(0) == "Mail") {
+        } else if (Input->text(0) == "Mail") {
             Mail->setMail("");
             Stacked->setCurrentIndex(2);
-        } else if (IN->text(0) == "Notes") {
+        } else if (Input->text(0) == "Notes") {
             Stacked->setCurrentIndex(3);
-        } else if (IN->text(0) == "Adress Book") {
+        } else if (Input->text(0) == "Adress Book") {
+            AdressBook->setCategory("");
             Stacked->setCurrentIndex(4);
-        } else if (IN->text(0) == "Feeds Reader") {
+        } else if (Input->text(0) == "Feeds Reader") {
             RSS->setChannel("");
             Stacked->setCurrentIndex(5);
-        } else if (IN->text(0) == "Password Manager") {
+        } else if (Input->text(0) == "Password Manager") {
             Stacked->setCurrentIndex(6);
-        } else if (IN->text(0) == "Options") {
+        } else if (Input->text(0) == "Options") {
             Stacked->setCurrentIndex(7);
-        } else if (IN->text(0) == "Save") {
+        } else if (Input->text(0) == "Save") {
             qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
             QMessageBox::information(this, "Saved", "Saved.");
             Stacked->setCurrentIndex(0);
         }
     } else {
-        if (IN->parent()->text(0) == "Calendar") {
-            Calendar->setCategory(IN->text(0));
+        if (Input->parent()->text(0) == "Calendar") {
+            Calendar->setCategory(Input->text(0));
             Stacked->setCurrentIndex(1);
-        } else if (IN->parent()->text(0) == "Mail") {
-            Mail->setMail(IN->text(0));
+        } else if (Input->parent()->text(0) == "Mail") {
+            Mail->setMail(Input->text(0));
             Stacked->setCurrentIndex(2);
-        } else if (IN->parent()->text(0) == "Feeds Reader") {
-            RSS->setChannel(IN->text(0));
+        } else if (Input->parent()->text(0) == "Adress Book") {
+            AdressBook->setCategory(Input.text(0));
+            Stacked->setCurrentIndex(4);
+        } else if (Input->parent()->text(0) == "Feeds Reader") {
+            RSS->setChannel(Input->text(0));
             Stacked->setCurrentIndex(5);
         }
     }
@@ -273,6 +283,35 @@ void QOrganizer::updateMail() {
     QString currentCategory = Mail->getCurrent();
     bool selected = false;
     QStringList categories = Mail->getCategories();
+    for (int i = Itm->childCount(); i > 0; i--) {
+        Itm->removeChild(Itm->child(i-1));
+    }
+    if (categories.size() > 0) {
+        Itm->setExpanded(true);
+        for (int i = 0; i < categories.size(); i++) {
+            QTreeWidgetItem *Itmc = new QTreeWidgetItem(Itm);
+            Itmc->setText(0, categories[i]);
+            Itmc->setToolTip(0, categories[i]);
+            if (categories[i] == currentCategory) {
+                Itm->child(i)->setSelected(true);
+                selected = true;
+            }
+        }
+        if (!selected) {
+            Itm->setSelected(true);
+        } else {
+            Itm->setSelected(false);
+        }
+    }
+}
+void QOrganizer::updateAdressBook() {
+    QTreeWidgetItem *Itm = TreeWidget->currentItem();
+    if (Itm->parent() != NULL) {
+        Itm = Itm->parent();
+    }
+    QString currentCategory = AdressBook->getCurrent();
+    bool selected = false;
+    QStringList categories = AdressBook->getCategories();
     for (int i = Itm->childCount(); i > 0; i--) {
         Itm->removeChild(Itm->child(i-1));
     }

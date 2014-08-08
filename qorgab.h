@@ -24,6 +24,7 @@ using std::swap;
 struct Person {
     QString Name;
     QString Surname;
+    QString Category;
     QString Town;
     QString Street;
     uint HouseNumber;
@@ -36,18 +37,28 @@ class qorgAB : public QWidget {
     Q_OBJECT
 public:
     explicit qorgAB(QWidget*);
+    void setCategory(QString I) {
+        if (I != currentCategory) {
+         currentCategory=I;
+         UpdateList();
+        }
+    }
+    QString getCurrent()    {
+     return currentCategory;
+    }
+    QStringList getCategories();
     QString output();
     void input(QString);
     QList  <QString>  getBirthdays(QDate);
     QList  <QString>  getEmails();
 private:
     vector  <Person>  Personv;
-    QListWidgetItem *lastitem;
     uint lastIID;
+    QString currentCategory;
     QGridLayout *La;
     QListWidget *List;
-    QLabel *L[8];
-    QLineEdit *E[8];
+    QLabel *L[9];
+    QLineEdit *E[9];
     QDateEdit *D;
     QPushButton *Add;
     QPushButton *OKB;
@@ -61,6 +72,8 @@ private slots:
     void OK();
     void Can();
     void UpdateList();
+signals:
+    void updateTree();
 };
 
 #endif  // QORGAB_H_

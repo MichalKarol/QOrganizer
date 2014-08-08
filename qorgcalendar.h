@@ -71,6 +71,8 @@ private:
     QTreeWidget *Incoming;
     QList <uint> NotifiedN;
     QList <uint> NotifiedR;
+    QTimer *MidnightTester;
+    QTimer *Midnight;
     QTimer *NTimer;
 private slots:
     void Add(QDate);
@@ -78,9 +80,10 @@ private slots:
     void Delete(uint);
     void dayChanged(QTableWidgetItem*);
     void monthChanged(int);
-    void yearChanged(QString IN = "");
+    void yearChanged(QString Input = "");
     void MidnightChange();
     void setNotification(bool first = false);
+    void checkMidnight();
 signals:
     void updateTree();
     void Notification(QString);

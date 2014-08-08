@@ -129,24 +129,40 @@ QString OutputTools(bool I, QString TAG) {
     }
     return "<"+TAG+">0</"+TAG+">\n";
 }
-QString InputS(QString IN, QString TAG) {
+QString InputS(QString Input, QString TAG) {
+    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
     return QString(QByteArray::fromBase64(
-                       IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
-                              IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2).toUtf8()));
+                       Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
+                              Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")-TAG.length()-2).toUtf8()));
+    } else {
+        return QString();
+    }
 }
-QString InputSS(QString IN, QString TAG) {
-    return IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
-                  IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")-TAG.length()-2);
+QString InputSS(QString Input, QString TAG) {
+    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
+    return Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
+                  Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")-TAG.length()-2);
+    } else {
+        return QString();
+    }
 }
-int InputI(QString IN, QString TAG) {
-    return IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
-                  IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")
+int InputI(QString Input, QString TAG) {
+    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
+    return Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
+                  Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")
                   -TAG.length()-2).toInt();
+    } else {
+        return 0;
+    }
 }
-bool InputB(QString IN, QString TAG) {
-    return (IN.mid(IN.indexOf("<"+TAG+">")+TAG.length()+2,
-                   IN.indexOf("</"+TAG+">")-IN.indexOf("<"+TAG+">")
+bool InputB(QString Input, QString TAG) {
+    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
+    return (Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
+                   Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")
                    -TAG.length()-2) == "1");
+    } else {
+        return false;
+    }
 }
 void colorItem(QTreeWidgetItem *Itm, char P) {
     switch (P) {
@@ -230,4 +246,34 @@ QString salting(QString A) {
     }break;
     }
     return output;
+}
+QString NameFilter(QString Input) {
+    Input.replace("?= =?", "?==?");
+    while (Input.contains("=?")) {
+        int St = Input.indexOf("=?");
+        int Se = Input.indexOf("?", St+2);
+        int Th = Input.indexOf("?", Se+1);
+        int La = Input.indexOf("?=", Th+1);
+        QString Charset = Input.mid(St+2, Se-St-2);
+        QString Type = Input.mid(Se+1, Th-Se-1);
+        QString Data = Input.mid(Th+1, La-Th-1);
+        Data.replace("_", " ");
+        if (Type.toUpper() == "B") {
+            if (Charset.toUpper() != "UTF-8") {
+                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
+                Data = A->toUnicode(QPDecode(QByteArray::fromBase64(Data.toUtf8())));
+            } else {
+                Data = QString(QByteArray::fromBase64(Data.toUtf8()));
+            }
+        } else if (Type.toUpper() == "Q") {
+            if (Charset.toUpper() != "UTF-8") {
+                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
+                Data = A->toUnicode(QPDecode(Data.toUtf8()));
+            } else {
+                Data = QPDecode(Data.toUtf8());
+            }
+        }
+        Input = Input.mid(0, St)+Data+Input.mid(La+2, Input.length()-La-2);
+    }
+    return Input;
 }

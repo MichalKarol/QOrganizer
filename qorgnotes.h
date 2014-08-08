@@ -22,9 +22,9 @@
 using std::vector;
 using std::swap;
 struct Note {
-    QString topic;
-    unsigned char priority;
-    QString text;
+    QString Topic;
+    unsigned char Priority;
+    QString Text;
 };
 
 class qorgNotes : public QWidget {

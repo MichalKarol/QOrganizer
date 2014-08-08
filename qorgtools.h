@@ -30,6 +30,7 @@ int InputI(QString, QString);
 bool InputB(QString, QString);
 void colorItem(QTreeWidgetItem*, char);
 QString salting(QString);
+QString NameFilter(QString);
 
 class QItemPushButton :public QPushButton {
     Q_OBJECT

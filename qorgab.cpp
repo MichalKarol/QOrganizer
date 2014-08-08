@@ -22,6 +22,7 @@ public:
     ListItem(Person* P, uint IID, QWidget *parent) :QWidget(parent) {
         ItemID = IID;
         L[0]=new QLabel(P->Name+" "+P->Surname, this);
+        L[1]=new QLabel(P->Category, this);
         QString N[2];
         if (P->HouseNumber == 0) {
             N[0]="-";
@@ -33,11 +34,11 @@ public:
         } else {
             N[1]=QString::number(P->Apartment);
         }
-        L[1]=new QLabel(P->Street+" "+N[0]+"/"+N[1], this);
-        L[2]=new QLabel(P->Town, this);
-        L[3]=new QLabel(P->Email, this);
-        L[4]=new QLabel(P->Mobile, this);
-        L[5]=new QLabel("Birthday: "+P->Birthday.toString("dd/MM"), this);
+        L[2]=new QLabel(P->Street+" "+N[0]+"/"+N[1], this);
+        L[3]=new QLabel(P->Town, this);
+        L[4]=new QLabel(P->Email, this);
+        L[5]=new QLabel(P->Mobile, this);
+        L[6]=new QLabel("Birthday: "+P->Birthday.toString("dd/MM"), this);
         Edit = new QPushButton(QIcon(":/main/Edit.png"), "", this);
         Edit->setStyleSheet("QPushButton {border: 0px solid white;}");
         connect(Edit, SIGNAL(clicked()), this, SLOT(EditIN()));
@@ -46,21 +47,21 @@ public:
         connect(Delete, SIGNAL(clicked()), this, SLOT(DeleteIN()));
         QGridLayout *La = new QGridLayout(this);
         La->addWidget(L[0], 0, 0);
+        La->addWidget(L[1], 1, 0);
         QHBoxLayout *H = new QHBoxLayout();
         H->addWidget(Edit);
         H->addWidget(Delete);
         La->addLayout(H, 0, 1);
-        La->addWidget(L[1], 1, 0);
-        La->addWidget(L[2], 1, 1);
-        La->addWidget(L[3], 2, 0);
-        La->addWidget(L[4], 2, 1);
-        La->addWidget(L[5], 3, 0);
+        La->addWidget(L[2], 2, 0);
+        La->addWidget(L[3], 2, 1);
+        La->addWidget(L[4], 3, 0);
+        La->addWidget(L[5], 3, 1);
+        La->addWidget(L[6], 4, 0);
         P = NULL;
     }
-
-private:
     uint ItemID;
-    QLabel *L[6];
+private:
+    QLabel *L[7];
     QPushButton *Edit;
     QPushButton *Delete;
 private slots:
@@ -79,18 +80,18 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     List = new QListWidget(this);
     connect(List, SIGNAL(clicked(QModelIndex)), this, SLOT(Click(QModelIndex)));
     QStringList A;
-    A << "Name: " << "Surname: " << "Town: " << "Street: " << "/" << "Email: " << "Mobile: " << "Birthday: ";
-    for (uint i = 0; i < 8; i++) {
+    A << "Name: " << "Surname: " << "Category: " << "Town: " << "Street: " << "/" << "Email: " << "Mobile: " << "Birthday: ";
+    for (uint i = 0; i < 9; i++) {
         L[i]=new QLabel(A[i], this);
     }
-    for (uint i = 0; i < 8; i++) {
+    for (uint i = 0; i < 9; i++) {
         E[i]=new QLineEdit(this);
     }
     QIntValidator *V = new QIntValidator(this);
-    E[4]->setValidator(V);
     E[5]->setValidator(V);
-    E[7]->setInputMask("+00 000 000 000");
-    E[7]->setText("00000000000");
+    E[6]->setValidator(V);
+    E[8]->setInputMask("+00 000 000 000");
+    E[8]->setText("00000000000");
     D = new QDateEdit(QDate(2012, QDate::currentDate().month(), QDate::currentDate().day()), this);
     D->setDisplayFormat("dd/MM");
     Add = new QPushButton(QIcon(":/main/Add.png"), "Add", this);
@@ -104,7 +105,6 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     Cancel->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     connect(Cancel, SIGNAL(clicked()), this, SLOT(Can()));
     Cancel->hide();
-    lastitem = NULL;
     QGridLayout *Layout = new QGridLayout(this);
     Layout->addWidget(List, 0, 0, 2, 1);
     Layout->setMargin(0);
@@ -116,23 +116,36 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     La->addWidget(L[2], 2, 0);
     La->addWidget(E[2], 2, 1);
     La->addWidget(L[3], 3, 0);
+    La->addWidget(E[3], 3, 1);
+    La->addWidget(L[4], 4, 0);
     QHBoxLayout *H = new QHBoxLayout();
-    H->addWidget(E[3]);
-    H->addSpacing(15);
-    E[4]->setMaximumWidth(30);
     H->addWidget(E[4]);
-    H->addWidget(L[4]);
+    H->addSpacing(15);
     E[5]->setMaximumWidth(30);
     H->addWidget(E[5]);
-    La->addLayout(H, 3, 1);
-    La->addWidget(L[5], 4, 0);
-    La->addWidget(E[6], 4, 1);
+    H->addWidget(L[5]);
+    E[6]->setMaximumWidth(30);
+    H->addWidget(E[6]);
+    La->addLayout(H, 4, 1);
     La->addWidget(L[6], 5, 0);
     La->addWidget(E[7], 5, 1);
     La->addWidget(L[7], 6, 0);
-    La->addWidget(D, 6, 1);
-    La->addWidget(Add, 7, 0, 1, 2);
+    La->addWidget(E[8], 6, 1);
+    La->addWidget(L[8], 7, 0);
+    La->addWidget(D, 7, 1);
+    La->addWidget(Add, 8, 0, 1, 2);
     Layout->addLayout(La, 1, 1);
+}
+QStringList qorgAB::getCategories()
+{
+    QStringList list;
+    for (uint i = 0; i < Personv.size(); i++) {
+        if (Personv[i].Category != ""&&!(list.contains(Personv[i].Category))) {
+            list.append(Personv[i].Category);
+        }
+    }
+    list.sort();
+    return list;
 }
 QString qorgAB::output() {
     QString out;
@@ -140,6 +153,7 @@ QString qorgAB::output() {
         QString work;
         work.append(OutputTools(Personv[i].Name, "NAME"));
         work.append(OutputTools(Personv[i].Surname, "SURNAME"));
+        work.append(OutputTools(Personv[i].Category, "CATEGORY"));
         work.append(OutputTools(Personv[i].Town, "TOWN"));
         work.append(OutputTools(Personv[i].Street, "STREET"));
         work.append(OutputTools(static_cast<int>(Personv[i].HouseNumber), "HOUSENUMBER"));
@@ -152,12 +166,13 @@ QString qorgAB::output() {
     out = OutputToolsS(out, "PERSONV");
     return out;
 }
-void qorgAB::input(QString IN) {
-    while (IN.contains("<PERSON>")) {
-        QString PS = InputSS(IN, "PERSON");
+void qorgAB::input(QString Input) {
+    while (Input.contains("<PERSON>")) {
+        QString PS = InputSS(Input, "PERSON");
         Person tmp;
         tmp.Name = InputS(PS, "NAME");
         tmp.Surname = InputS(PS, "SURNAME");
+        tmp.Category = InputS(PS, "CATEGORY");
         tmp.Town = InputS(PS, "TOWN");
         tmp.Street = InputS(PS, "STREET");
         tmp.HouseNumber = InputI(PS, "HOUSENUMBER");
@@ -166,7 +181,7 @@ void qorgAB::input(QString IN) {
         tmp.Mobile = InputS(PS, "MOBILE");
         tmp.Birthday = QDate::fromString(InputS(PS, "BIRTHDAY"), Qt::ISODate);
         Personv.push_back(tmp);
-        IN.remove(IN.indexOf("<PERSON>"), IN.indexOf("</PERSON>")-IN.indexOf("<PERSON>")+9);
+        Input.remove(Input.indexOf("<PERSON>"), Input.indexOf("</PERSON>")-Input.indexOf("<PERSON>")+9);
     }
     UpdateList();
 }
@@ -205,25 +220,27 @@ void qorgAB::AddS() {
         Person temp;
         temp.Name = E[0]->text().simplified();
         temp.Surname = E[1]->text().simplified();
-        temp.Town = E[2]->text().simplified();
-        temp.Street = E[3]->text().simplified();
-        temp.HouseNumber = E[4]->text().toInt();
-        temp.Apartment = E[5]->text().toInt();
-        temp.Email = E[6]->text().simplified();
-        temp.Mobile = E[7]->text();
+        temp.Category = E[2]->text().simplified();
+        temp.Town = E[3]->text().simplified();
+        temp.Street = E[4]->text().simplified();
+        temp.HouseNumber = E[5]->text().toInt();
+        temp.Apartment = E[6]->text().toInt();
+        temp.Email = E[7]->text().simplified();
+        temp.Mobile = E[8]->text();
         temp.Birthday = D->date();
-        for (uint i = 0; i < 8; i++) {
+        for (uint i = 0; i < 9; i++) {
             E[i]->clear();
         }
         E[7]->setText("00000000000");
         D->setDate(QDate(2012, QDate::currentDate().month(), QDate::currentDate().day()));
         Personv.push_back(temp);
+        emit updateTree();
         UpdateList();
     }
 }
-void qorgAB::row(QString IN) {
+void qorgAB::row(QString Input) {
     QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
-    if (IN.isEmpty()) {
+    if (Input.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
         I->setStyleSheet("QQLineEdit{background: white;}");
@@ -231,49 +248,56 @@ void qorgAB::row(QString IN) {
 }
 void qorgAB::Click(QModelIndex I) {
     QListWidgetItem *Itm = List->item(I.row());
-    if (Itm != lastitem) {
+    if (List->itemWidget(Itm) == NULL) {
+        Itm->setSizeHint(QSize(Itm->sizeHint().width(), 120));
+        for (uint i = 0; i < Personv.size(); i++) {
+            if (Personv[i].Name+" "+Personv[i].Surname == Itm->text()) {
+                ListItem *W = new ListItem(&Personv[i], i, this);
+                connect(W, SIGNAL(EditOUT(uint)), this, SLOT(Edit(uint)));
+                connect(W, SIGNAL(DeleteOUT(uint)), this, SLOT(Delete(uint)));
+                List->setItemWidget(Itm, W);
+                break;
+            }
+        }
         Itm->setText("");
-        Itm->setSizeHint(QSize(Itm->sizeHint().width(), 100));
-        ListItem *W = new ListItem(&Personv[I.row()], I.row(), this);
-        connect(W, SIGNAL(EditOUT(uint)), this, SLOT(Edit(uint)));
-        connect(W, SIGNAL(DeleteOUT(uint)), this, SLOT(Delete(uint)));
-        List->setItemWidget(Itm, W);
-        lastitem = Itm;
     } else {
-        Itm->setSizeHint(QSize(Itm->sizeHint().width(), 20));
+        Itm->setSizeHint(QSize(Itm->sizeHint().width(), 15));
+        ListItem *W = qobject_cast <ListItem*>(List->itemWidget(Itm));
+        Itm->setText(Personv[W->ItemID].Name+" "+Personv[W->ItemID].Surname);
+        Itm->setToolTip(Personv[W->ItemID].Name+" "+Personv[W->ItemID].Surname);
         List->removeItemWidget(Itm);
-        Itm->setText(Personv[I.row()].Name+" "+Personv[I.row()].Surname);
-        lastitem = NULL;
     }
 }
 void qorgAB::Edit(uint IID) {
     Person *I=&Personv[IID];
     E[0]->setText(I->Name);
     E[1]->setText(I->Surname);
-    E[2]->setText(I->Town);
-    E[3]->setText(I->Street);
-    E[4]->setText(QString::number(I->HouseNumber));
+    E[2]->setText(I->Category);
+    E[3]->setText(I->Town);
+    E[4]->setText(I->Street);
+    E[5]->setText(QString::number(I->HouseNumber));
     if (I->HouseNumber == 0) {
-        E[4]->setText("");
-    }
-    E[5]->setText(QString::number(I->Apartment));
-    if (I->Apartment == 0) {
         E[5]->setText("");
     }
-    E[6]->setText(I->Email);
-    E[7]->setText(I->Mobile);
+    E[6]->setText(QString::number(I->Apartment));
+    if (I->Apartment == 0) {
+        E[6]->setText("");
+    }
+    E[7]->setText(I->Email);
+    E[8]->setText(I->Mobile);
     D->setDate(I->Birthday);
     Add->hide();
     QHBoxLayout *H = new QHBoxLayout();
     H->addWidget(Cancel);
     H->addWidget(OKB);
-    La->addLayout(H, 7, 0, 1, 2);
+    La->addLayout(H, 8, 0, 1, 2);
     Cancel->show();
     OKB->show();
     lastIID = IID;
 }
 void qorgAB::Delete(uint IID) {
     Personv.erase(Personv.begin()+IID);
+    emit updateTree();
     Can();
     UpdateList();
 }
@@ -291,13 +315,15 @@ void qorgAB::OK() {
     } else {
         Personv[lastIID].Name = E[0]->text().simplified();
         Personv[lastIID].Surname = E[1]->text().simplified();
-        Personv[lastIID].Town = E[2]->text().simplified();
-        Personv[lastIID].Street = E[3]->text().simplified();
-        Personv[lastIID].HouseNumber = E[4]->text().toInt();
-        Personv[lastIID].Apartment = E[5]->text().toInt();
-        Personv[lastIID].Email = E[6]->text().simplified();
-        Personv[lastIID].Mobile = E[7]->text();
+        Personv[lastIID].Category = E[2]->text().simplified();
+        Personv[lastIID].Town = E[3]->text().simplified();
+        Personv[lastIID].Street = E[4]->text().simplified();
+        Personv[lastIID].HouseNumber = E[5]->text().toInt();
+        Personv[lastIID].Apartment = E[6]->text().toInt();
+        Personv[lastIID].Email = E[7]->text().simplified();
+        Personv[lastIID].Mobile = E[8]->text();
         Personv[lastIID].Birthday = D->date();
+        emit updateTree();
         UpdateList();
         Can();
     }
@@ -305,7 +331,7 @@ void qorgAB::OK() {
 void qorgAB::Can() {
     disconnect(E[0], SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
     disconnect(E[1], SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
-    for (uint i = 0; i < 8; i++) {
+    for (uint i = 0; i < 9; i++) {
         E[i]->clear();
     }
     E[7]->setText("00000000000");
@@ -337,8 +363,11 @@ void qorgAB::UpdateList() {
         }
     }
     for (uint i = 0; i < Personv.size(); i++) {
-        QListWidgetItem *Itm = new QListWidgetItem(List);
-        Itm->setText(Personv[i].Name+" "+Personv[i].Surname);
+        if (Personv[i].Category == currentCategory || currentCategory.isEmpty()) {
+            QListWidgetItem *Itm = new QListWidgetItem(List);
+            Itm->setText(Personv[i].Name+" "+Personv[i].Surname);
+            Itm->setToolTip(Personv[i].Name+" "+Personv[i].Surname);
+        }
     }
 }
 

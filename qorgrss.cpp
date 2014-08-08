@@ -71,24 +71,24 @@ void Download::run() {
         URL.remove("http://");
     }
     QString server = URL.mid(0, URL.indexOf("/"));
-    QSslSocket *S = new QSslSocket();
+    QSslSocket S;
     if (SSLFeed) {
-        S->connectToHostEncrypted(server, 443);
+        S.connectToHostEncrypted(server, 443);
     } else {
-        S->connectToHost(server, 80);
+        S.connectToHost(server, 80);
     }
     QString Output;
-    if (S->waitForConnected()) {
+    if (S.waitForConnected()) {
         QString Req = URL.mid(URL.indexOf("/"), URL.length()-URL.indexOf("/"));
         if (Req == server) {
             Req="/";
         }
-        S->write(QString("GET "+Req+" HTTP/1.1\nUser-Agent: QOrganizer\nHost: "+server+"\nConnection:close\n\n").toUtf8());
-        if (S->waitForReadyRead()) {
-            QByteArray Reply = S->readAll();
-            while (S->state() == QTcpSocket::ConnectedState) {
-                if (S->waitForReadyRead()) {
-                    Reply.append(S->readAll());
+        S.write(QString("GET "+Req+" HTTP/1.1\nUser-Agent: QOrganizer\nHost: "+server+"\nConnection:close\n\n").toUtf8());
+        if (S.waitForReadyRead()) {
+            QByteArray Reply = S.readAll();
+            while (S.state() == QTcpSocket::ConnectedState) {
+                if (S.waitForReadyRead()) {
+                    Reply.append(S.readAll());
                 }
             }
             if (Reply.contains("HTTP/1.1 301")) {
@@ -111,8 +111,7 @@ void Download::run() {
             }
         }
     }
-    S->close();
-    delete S;
+    S.close();
     emit Downloaded(Output);
 }
 QByteArray Download::SubDownload(QString I) {
@@ -124,24 +123,24 @@ QByteArray Download::SubDownload(QString I) {
         I.remove("http://");
     }
     QString server = I.mid(0, I.indexOf("/"));
-    QSslSocket *S = new QSslSocket();
+    QSslSocket S;
     if (SSLFeed) {
-        S->connectToHostEncrypted(server, 443);
+        S.connectToHostEncrypted(server, 443);
     } else {
-        S->connectToHost(server, 80);
+        S.connectToHost(server, 80);
     }
     QByteArray Reply;
-    if (S->waitForConnected()) {
+    if (S.waitForConnected()) {
         QString Req = I.mid(I.indexOf("/"), I.length()-I.indexOf("/"));
         if (Req == server) {
             Req="/";
         }
-        S->write(QString("GET "+Req+" HTTP/1.1\nUser-Agent: QOrganizer\nHost: "+server+"\nConnection:close\n\n").toUtf8());
-        if (S->waitForReadyRead()) {
-            Reply = S->readAll();
-            while (S->state() == QTcpSocket::ConnectedState) {
-                if (S->waitForReadyRead()) {
-                    Reply.append(S->readAll());
+        S.write(QString("GET "+Req+" HTTP/1.1\nUser-Agent: QOrganizer\nHost: "+server+"\nConnection:close\n\n").toUtf8());
+        if (S.waitForReadyRead()) {
+            Reply = S.readAll();
+            while (S.state() == QTcpSocket::ConnectedState) {
+                if (S.waitForReadyRead()) {
+                    Reply.append(S.readAll());
                 }
             }
             if (Reply.contains("HTTP/1.1 301")) {
@@ -153,7 +152,7 @@ QByteArray Download::SubDownload(QString I) {
             }
         }
     }
-    delete S;
+    S.close();
     return Reply;
 }
 
@@ -263,9 +262,9 @@ QString qorgRSS::output() {
     out = OutputToolsS(out, "CHANNELV");
     return out;
 }
-void qorgRSS::input(QString IN) {
-    while (IN.contains("<CHANNEL>")) {
-        QString CS = InputSS(IN, "CHANNEL");
+void qorgRSS::input(QString Input) {
+    while (Input.contains("<CHANNEL>")) {
+        QString CS = InputSS(Input, "CHANNEL");
         RSSChannel C;
         C.Title = InputS(CS, "TITLE");
         C.Link = InputS(CS, "LINK");
@@ -283,13 +282,13 @@ void qorgRSS::input(QString IN) {
             Items.remove(Items.indexOf("<ITEM>"), Items.indexOf("</ITEM>")-Items.indexOf("<ITEM>")+7);
         }
         RSSv.push_back(C);
-        IN.remove(IN.indexOf("<CHANNEL>"), IN.indexOf("</CHANNEL>")-IN.indexOf("<CHANNEL>")+10);
+        Input.remove(Input.indexOf("<CHANNEL>"), Input.indexOf("</CHANNEL>")-Input.indexOf("<CHANNEL>")+10);
     }
     setLayoutC();
 }
 void qorgRSS::setChannel(QString I) {
     if (I != currentChannel) {
-        if (I == "") {
+        if (I.isEmpty()) {
             setLayoutC();
             currentChannel = I;
         } else {
@@ -308,6 +307,7 @@ void qorgRSS::setChannel(QString I) {
                         Itm->setToolTip(0, RSSv[i].Itemv[j]->Title);
                         Itm->setText(1, RSSv[i].Itemv[j]->PubDate.toString("dd/MM/yyyy hh:mm"));
                     }
+                    Titles->scrollToTop();
                     break;
                 }
             }
@@ -316,11 +316,12 @@ void qorgRSS::setChannel(QString I) {
         }
     }
 }
-QList  <QString>  qorgRSS::getChannels() {
-    QList  <QString>  List;
+QStringList qorgRSS::getChannels() {
+    QStringList  List;
     for (uint i = 0; i < RSSv.size(); i++) {
         List.append(RSSv[i].Title);
     }
+    List.sort();
     return List;
 }
 void qorgRSS::getUpdate() {
@@ -527,8 +528,8 @@ void qorgRSS::DeleteS(uint IID) {
     setLayoutC();
     emit updateTree();
 }
-void qorgRSS::row(QString IN) {
-    if (IN.isEmpty()) {
+void qorgRSS::row(QString Input) {
+    if (Input.isEmpty()) {
         URL->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
         URL->setStyleSheet("QQLineEdit{background: white;}");
@@ -573,6 +574,6 @@ void qorgRSS::UpdateS() {
 void qorgRSS::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
-    delete QNR;
+    QNR->deleteLater();
 }
 #include "qorgrss.moc"

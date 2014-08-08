@@ -48,8 +48,8 @@ qorgLogin::qorgLogin(QOrganizer* p) :QDialog(p) {
     L->addWidget(PassLabel, 3, 0, 1, 2);
 }
 void qorgLogin::clear() {
-    delete Line[0];
-    delete Line[1];
+    Line[0]->deleteLater();
+    Line[1]->deleteLater();
 }
 void qorgLogin::UserInputValidation(QString input) {
     bool whitespaces = false;
