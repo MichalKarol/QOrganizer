@@ -39,7 +39,7 @@ public:
     explicit qorgAB(QWidget*);
     void setCategory(QString I) {
         if (I != currentCategory) {
-         currentCategory=I;
+         currentCategory = I;
          UpdateList();
         }
     }

@@ -544,7 +544,7 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     setCalendar();
     NTimer = new QTimer(this);
     connect(NTimer, SIGNAL(timeout()), this, SLOT(setNotification()));
-    Midnight=new QTimer(this);
+    Midnight = new QTimer(this);
     MidnightChange();
     MidnightTester = new QTimer(this);
     MidnightTester->setInterval(60000);
@@ -647,14 +647,14 @@ QString qorgCalendar::getUpdate() {
             today+=N.size();
             today+=R.size();
             QList <uint> Nt = checkEvN(QDate::currentDate().addDays(1), i);
-            for (int j = 0;j<Nt.size(); j++) {
+            for (int j = 0; j < Nt.size(); j++) {
                 if (N.contains(Nt[j])) {
                     Nt.removeAt(j);
                     j--;
                 }
             }
             QList <uint> Rt = checkEvR(QDate::currentDate().addDays(1), i);
-            for (int j = 0;j<Rt.size(); j++) {
+            for (int j = 0; j < Rt.size(); j++) {
                 if (R.contains(Rt[j])) {
                     Rt.removeAt(j);
                     j--;

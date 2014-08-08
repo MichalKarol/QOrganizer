@@ -136,8 +136,7 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     La->addWidget(Add, 8, 0, 1, 2);
     Layout->addLayout(La, 1, 1);
 }
-QStringList qorgAB::getCategories()
-{
+QStringList qorgAB::getCategories() {
     QStringList list;
     for (uint i = 0; i < Personv.size(); i++) {
         if (Personv[i].Category != ""&&!(list.contains(Personv[i].Category))) {
