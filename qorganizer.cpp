@@ -234,7 +234,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
             Mail->setMail(Input->text(0));
             Stacked->setCurrentIndex(2);
         } else if (Input->parent()->text(0) == "Adress Book") {
-            AdressBook->setCategory(Input.text(0));
+            AdressBook->setCategory(Input->text(0));
             Stacked->setCurrentIndex(4);
         } else if (Input->parent()->text(0) == "Feeds Reader") {
             RSS->setChannel(Input->text(0));

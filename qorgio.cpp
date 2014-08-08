@@ -64,7 +64,7 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     return true;
 }
 void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString path) {
-    QString OUT="QOrganizer 1.00";
+    QString Output="QOrganizer 1.01";
     QString data;
     data.append(main->Calendar->output());
     data.append(main->Mail->output());
@@ -87,13 +87,13 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     const size_t encslength = ((data.length() + AES_BLOCK_SIZE) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
     unsigned char IV[AES_BLOCK_SIZE+1]={0};
     RAND_bytes(IV, AES_BLOCK_SIZE);
-    OUT.append(QByteArray((const char*)IV, AES_BLOCK_SIZE+1).toBase64());
+    Output.append(QByteArray((const char*)IV, AES_BLOCK_SIZE+1).toBase64());
     unsigned char* aOUT;
     aOUT = new unsigned char[encslength];
     memset(aOUT, 0, sizeof(encslength));
     AES_cbc_encrypt((unsigned char*)data.toUtf8().data(), aOUT, data.length(), aesKey, IV, AES_ENCRYPT);
-    OUT+="\n";
-    OUT.append(QByteArray((const char*)aOUT, encslength).toBase64());
+    Output+="\n";
+    Output.append(QByteArray((const char*)aOUT, encslength).toBase64());
     Passwd.clear();
     memset(aOUT, 0, sizeof(encslength));
     delete[] aOUT;
@@ -101,7 +101,7 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     QFile file(path);
     QTextStream stream(&file);
     file.open(QIODevice::WriteOnly | QIODevice::Text);
-    stream << OUT;
+    stream << Output;
     file.close();
-    OUT.clear();
+    Output.clear();
 }
