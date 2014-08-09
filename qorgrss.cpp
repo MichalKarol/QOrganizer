@@ -231,6 +231,7 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     Split->addWidget(Titles);
     Split->addWidget(W);
     setLayoutC();
+    connect(this,SIGNAL(updateTree()),this,SLOT(sortRSS()));
 }
 qorgRSS::~qorgRSS() {
     for (uint i = 0; i < RSSv.size(); i++) {
@@ -321,7 +322,6 @@ QStringList qorgRSS::getChannels() {
     for (uint i = 0; i < RSSv.size(); i++) {
         List.append(RSSv[i].Title);
     }
-    List.sort();
     return List;
 }
 void qorgRSS::getUpdate() {
@@ -575,5 +575,21 @@ void qorgRSS::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
     QNR->deleteLater();
+}
+void qorgRSS::sortRSS() {
+    if (RSSv.size() > 1) {
+        while (true) {
+            bool OKL = true;
+            for (uint i = 0; i < RSSv.size()-1; i++) {
+                if ( RSSv[i].Title > RSSv[i+1].Title ) {
+                    swap(RSSv[i], RSSv[i+1]);
+                    OKL = false;
+                }
+            }
+            if (OKL) {
+                break;
+            }
+        }
+    }
 }
 #include "qorgrss.moc"

@@ -122,8 +122,7 @@ public:
     ~SSLCON() {
         M = NULL;
         To.clear();
-        Bar->deleteLater();
-        Downloading->deleteLater();
+        emit end();
     }
     void setMethod(Method);
     void DownloadAttachmentData(int B, int E, int A, QString P) {
@@ -143,11 +142,8 @@ public:
         this->Data = data;
         this->Att = Att;
     }
-    QDialog *Downloading;
-    QProgressBar *Bar;
     Mail *M;
 private:
-    QLabel *L;
     Method Current;
     int B;
     int E;
@@ -167,6 +163,8 @@ private:
     QByteArray readAll(QSslSocket*);
     QByteArray readIMAP(QSslSocket*);
 signals:
+    void changeValue(int);
+    void end();
     void LoginS(bool);
     void MailboxesS(bool);
     void EmailS(bool);
@@ -176,12 +174,6 @@ signals:
 };
 SSLCON::SSLCON(Mail* I) {
     M = I;
-    Downloading = new QDialog();
-    Bar = new QProgressBar();
-    QHBoxLayout *L = new QHBoxLayout(Downloading);
-    L->addWidget(Bar);
-    Downloading->setLayout(L);
-    Downloading->setWindowTitle("Progress bar");
     Current = Sleep;
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }
@@ -222,7 +214,6 @@ void SSLCON::run() {
             this->msleep(100);
         }
     }
-    Bar->hide();
 }
 QByteArray SSLCON::readAll(QSslSocket *S) {
     QByteArray Reply;
@@ -267,7 +258,7 @@ void SSLCON::SecureLogin() {
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
     S.close();
     if (Reply.contains("TAG OK")) {
-        Bar->setValue(12);
+        emit changeValue(12);
         emit LoginS(true);
     } else {
         emit LoginS(false);
@@ -366,10 +357,9 @@ void SSLCON::DownloadMBoxVector() {
         }
     }
     emit MailboxesS(true);
-    Bar->setValue(25);
+    emit changeValue(25);
 }
 void SSLCON::DownloadEmails() {
-    Bar->show();
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
     QString Reply;
     QSslSocket S;
@@ -402,7 +392,7 @@ void SSLCON::DownloadEmails() {
             QStringList A = Reply.split("*", QString::SkipEmptyParts);
             for (int j = 0; j < A.size(); j++) {
                 if (A[j].contains("EXISTS")) {
-                    Bar->setValue(30);
+                    emit changeValue(30);
                     vector  <Email*> *Vec=&M->Mboxv[i]->Emailv;
                     QString Fnu="1";
                     uint Fn = 1;
@@ -444,7 +434,7 @@ void SSLCON::DownloadEmails() {
                             }
                         }
                         if (Fn <= En) {
-                            Bar->setValue(35);
+                            emit changeValue(35);
                             QString Subjects;
                             {
                                 S.write(QString("TAG FETCH "+Fnu+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
@@ -465,7 +455,7 @@ void SSLCON::DownloadEmails() {
                                     (*Vec)[Fn+k-1]->Email_Subject = Sub.simplified();
                                 }
                             }
-                            Bar->setValue(40);
+                            emit changeValue(40);
                             QString Dates;
                             {
                                 S.write(QString("TAG FETCH "+Fnu+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Date)]\r\n").toUtf8());
@@ -502,7 +492,7 @@ void SSLCON::DownloadEmails() {
                                     (*Vec)[Fn+k-1]->Email_Date = Tmp.toLocalTime();
                                 }
                             }
-                            Bar->setValue(45);
+                            emit changeValue(45);
                             QString Froms;
                             {
                                 S.write(QString("TAG FETCH "+Fnu+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
@@ -522,7 +512,7 @@ void SSLCON::DownloadEmails() {
                                     (*Vec)[Fn+k-1]->Email_From.EMailA = EMA;
                                 }
                             }
-                            Bar->setValue(50);
+                            emit changeValue(50);
                             QString Flags;
                             {
                                 S.write(QString("TAG FETCH "+Fnu+":"+Enu+" FLAGS\r\n").toUtf8());
@@ -554,7 +544,7 @@ void SSLCON::DownloadEmails() {
                                     (*Vec)[Fn+k-1]->Email_Flags = Flag;
                                 }
                             }
-                            Bar->setValue(55);
+                            emit changeValue(55);
                             QString BS;
                             {
                                 S.write(QString("TAG FETCH "+Fnu+":"+Enu+" BODYSTRUCTURE\r\n").toUtf8());
@@ -854,7 +844,7 @@ void SSLCON::DownloadEmails() {
                                     }
                                 }
                             }
-                            Bar->setValue(60);
+                            emit changeValue(60);
                             QByteArray Text;
                             {
                                 double VA=(static_cast<double>(40)/static_cast<double>(En-Fn+1));
@@ -890,7 +880,7 @@ void SSLCON::DownloadEmails() {
                                             (*Vec)[Fn+k-1]->Email_Body[t]=Tmp;
                                         }
                                     }
-                                    Bar->setValue(static_cast<int>(60+(k+1)*VA));
+                                    emit changeValue(static_cast<int>(60+(k+1)*VA));
                                 }
                             }
                         }
@@ -903,20 +893,8 @@ void SSLCON::DownloadEmails() {
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
     S.close();
     emit EmailS(true);
-    Bar->hide();
 }
 void SSLCON::DownloadAttachment() {
-    L = new QLabel("Downloading...");
-    L->setStyleSheet("background-color: #FF8888;");
-    L->setWindowTitle(M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Attrybutes.Name);
-    L->show();
-    if (M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Attrybutes.Name.isEmpty()) {
-        if (M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_CID == "NIL") {
-            L->setWindowTitle("text."+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Subtype.toLower());
-        } else {
-            L->setWindowTitle(M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Subtype.toLower());
-        }
-    }
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
     QString Reply;
     QSslSocket S;
@@ -967,7 +945,6 @@ void SSLCON::DownloadAttachment() {
     F.open(QIODevice::WriteOnly);
     F.write(Array);
     F.close();
-    L->deleteLater();
     emit AttachmentS(true);
 }
 void SSLCON::SendEmail() {
@@ -1646,6 +1623,7 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     connect(AddB, SIGNAL(clicked()), this, SLOT(testInput()));
     C << List << Labels[0] << Labels[1] << Labels[2] << Labels[3] << Labels[4] << Labels[5] << Username << Passwd << IMAPS << SMTPS << Choose << AddB;
     setLayoutC();
+    connect(this,SIGNAL(updateTree()),this,SLOT(sortMail()));
 }
 qorgMail::~qorgMail() {
     for (uint i = 0; i < Mailv.size(); i++) {
@@ -1864,7 +1842,6 @@ QStringList qorgMail::getCategories() {
     for (uint i = 0; i < Mailv.size(); i++) {
         list.append(Mailv[i].Name);
     }
-    list.sort();
     return list;
 }
 void qorgMail::setLayoutC() {
@@ -1975,7 +1952,19 @@ void qorgMail::testInput() {
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(EmailS(bool)));
             T->start();
             T->setMethod(SSLCON::Login);
-            T->Downloading->exec();
+            QDialog *Downloading = new QDialog();
+            Downloading->setAttribute(Qt::WA_DeleteOnClose);
+            QProgressBar *Bar = new QProgressBar();
+            Bar->setAttribute(Qt::WA_DeleteOnClose);
+            connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
+            connect(T,SIGNAL(end()),Bar,SLOT(close()));
+            connect(T,SIGNAL(end()),Downloading,SLOT(close()));
+            QHBoxLayout *L = new QHBoxLayout(Downloading);
+            L->addWidget(Bar);
+            Downloading->setLayout(L);
+            Downloading->setWindowTitle("Progress bar");
+            connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
+            Downloading->exec();
         } else {
             QMessageBox::critical(this, "Mail error", "Mail already exist.");
         }
@@ -2014,6 +2003,10 @@ void qorgMail::EditMail(uint IID) {
         currentMail = IID;
         SSLCON *T = new SSLCON(A);
         connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(EditMailS(bool)));
+        QProgressBar *Bar = new QProgressBar();
+        Bar->setAttribute(Qt::WA_DeleteOnClose);
+        connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
+        connect(T,SIGNAL(end()),Bar,SLOT(close()));
         T->start();
         T->setMethod(SSLCON::Mailboxes);
     }
@@ -2067,8 +2060,12 @@ void qorgMail::EditMailS(bool I) {
         if((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
             T = new SSLCON(&Mailv[currentMail]);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateEmail(bool)));
-            T->Bar->deleteLater();
-            T->Bar = new QProgressBar();
+            QProgressBar *Bar = new QProgressBar();
+            Bar->setWindowTitle("Progress bar");
+            Bar->setAttribute(Qt::WA_DeleteOnClose);
+            connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
+            connect(T,SIGNAL(end()),Bar,SLOT(close()));
+            Bar->show();
             T->start();
             T->setMethod(SSLCON::Emails);
         }
@@ -2172,7 +2169,6 @@ void qorgMail::LoginS(bool I) {
     if (I) {
         T->setMethod(SSLCON::Mailboxes);
     } else {
-        T->Downloading->reject();
         delete T->M;
         T->setMethod(SSLCON::Stop);
         QMessageBox::critical(this, "Login error", "Wrong username or password.");
@@ -2184,7 +2180,6 @@ void qorgMail::MailboxesS(bool I) {
         if ((new MailboxTree(T->M, this))->exec() == QDialog::Accepted) {
             T->setMethod(SSLCON::Emails);
         } else {
-            T->Downloading->reject();
             for (uint i = 0; i < T->M->Mboxv.size(); i++) {
                 delete T->M->Mboxv[i];
             }
@@ -2192,20 +2187,16 @@ void qorgMail::MailboxesS(bool I) {
             T->setMethod(SSLCON::Stop);
         }
     } else {
-        T->Downloading->reject();
         T->setMethod(SSLCON::Stop);
     }
 }
 void qorgMail::EmailS(bool I) {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
-        T->Downloading->accept();
         Mailv.push_back((*T->M));
         setMail(T->M->Name);
         delete T->M;
         emit updateTree();
-    } else {
-        T->Downloading->reject();
     }
 }
 void qorgMail::downloadAttachment(QModelIndex I) {
@@ -2218,9 +2209,15 @@ void qorgMail::downloadAttachment(QModelIndex I) {
     QString path = QFileDialog::getSaveFileName(this, "Save attachment to:", QDir::homePath()+"/"+name);
     if (!path.isEmpty()) {
         SSLCON *T = new SSLCON(&Mailv[currentMail]);
-        T->start();
+        QLabel *L = new QLabel("Downloading...");
+        L->setAttribute(Qt::WA_DeleteOnClose);
+        L->setStyleSheet("background-color: #FF8888;");
+        L->setWindowTitle(name);
+        connect(T,SIGNAL(end()),L,SLOT(close()));
+        L->show();
         T->DownloadAttachmentData(currentMailbox, currentEmail, I.row()+1, path);
         T->setMethod(SSLCON::Attachment);
+        T->start();
     }
 }
 void qorgMail::downloadAttachment(uint I, QString path) {
@@ -2318,8 +2315,12 @@ void qorgMail::RefreshS(bool I) {
         T->setMethod(SSLCON::Stop);
         delete T->M;
         T = new SSLCON(&Mailv[currentMail]);
-        T->Bar->deleteLater();
-        T->Bar = new QProgressBar();
+        QProgressBar *Bar = new QProgressBar();
+        Bar->setWindowTitle("Progress bar");
+        Bar->setAttribute(Qt::WA_DeleteOnClose);
+        Bar->show();
+        connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
+        connect(T,SIGNAL(end()),Bar,SLOT(close()));
         T->start();
         T->setMethod(SSLCON::Emails);
         connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateEmail(bool)));
@@ -2449,5 +2450,21 @@ void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
     QNR->deleteLater();
+}
+void qorgMail::sortMail() {
+    if (Mailv.size() > 1) {
+        while (true) {
+            bool OKL = true;
+            for (uint i = 0; i < Mailv.size()-1; i++) {
+                if ( Mailv[i].Name > Mailv[i+1].Name ) {
+                    swap(Mailv[i], Mailv[i+1]);
+                    OKL = false;
+                }
+            }
+            if (OKL) {
+                break;
+            }
+        }
+    }
 }
 #include "qorgmail.moc"

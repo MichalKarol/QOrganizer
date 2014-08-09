@@ -75,9 +75,7 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     data.append(OutputTools(static_cast<int>(main->UInterval), "UINTERVAL"));
     data.append(OutputTools(static_cast<int>(main->BInterval), "BINTERVAL"));
     data = OutputToolsS(data, "ORG");
-    if (data.length()%AES_BLOCK_SIZE == 0) {
-        data+=".";
-    }
+    data.append(QString(AES_BLOCK_SIZE,'.'));
     QString Passwd = QString(calculateXOR(hashed->toUtf8(), hash->toUtf8()));
     if (Passwd.length() <  32) {
         Passwd.append(QString(32-Passwd.length(), '\0'));

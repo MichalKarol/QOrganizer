@@ -40,7 +40,7 @@ public:
     void setCategory(QString I) {
         if (I != currentCategory) {
          currentCategory = I;
-         UpdateList();
+         setList();
         }
     }
     QString getCurrent()    {
@@ -63,6 +63,7 @@ private:
     QPushButton *Add;
     QPushButton *OKB;
     QPushButton *Cancel;
+    QCompleter *C;
 private slots:
     void AddS();
     void row(QString);
@@ -72,6 +73,7 @@ private slots:
     void OK();
     void Can();
     void UpdateList();
+    void setList();
 signals:
     void updateTree();
 };

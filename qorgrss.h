@@ -22,6 +22,7 @@
 #include <vector>
 
 using std::vector;
+using std::swap;
 class RSSItem {
 public:
     RSSItem();
@@ -83,6 +84,7 @@ private slots:
     void RefreshS();
     void UpdateS();
     void HTTPSS(QNetworkReply*, QList <QSslError>);
+    void sortRSS();
 signals:
     void updateTree();
     void doubleClick(QString);
