@@ -683,9 +683,9 @@ QString qorgCalendar::getUpdate() {
             M3 = QString::number(tomorrow)+" events tommorow.\n";
         }
         if (checkBd(QDate::currentDate()).size() == 1) {
-            M4="1 person has birhday today.";
+            M4="1 person has birthday today.";
         } else {
-            M4 = QString::number(checkBd(QDate::currentDate()).size())+" people have birhday today.";
+            M4 = QString::number(checkBd(QDate::currentDate()).size())+" people have birthday today.";
         }
         return "Calendar: "+M1+QString(16, ' ')+M2+QString(16, ' ')+M3+QString(16, ' ')+M4;
     } else {
