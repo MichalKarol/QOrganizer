@@ -626,7 +626,7 @@ void qorgCalendar::setCategory(QString cat) {
     updateAll();
 }
 QString qorgCalendar::getUpdate() {
-    if (Normal.size()+Recurrent.size() != 0) {
+    if (Normal.size()+Recurrent.size()+checkBd(QDate::currentDate()).size() != 0) {
         uint hour = 0;
         uint today = 0;
         uint tomorrow = 0;

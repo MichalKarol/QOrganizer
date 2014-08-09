@@ -23,6 +23,7 @@
 #include <vector>
 
 using std::vector;
+using std::swap;
 class Structure {
 public:
     Structure();
@@ -181,6 +182,7 @@ private slots:
     void UpdateEmail(bool);
     void UpdateS();
     void HTTPSS(QNetworkReply*, QList <QSslError>);
+    void sortMail();
 signals:
     void updateTree();
     void doubleClick(QString);
