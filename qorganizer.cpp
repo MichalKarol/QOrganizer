@@ -41,7 +41,7 @@ QOrganizer::QOrganizer() {
     Stacked = new QStackedWidget();
     // Home widget
     QTextBrowser *Label = new QTextBrowser(this);
-    Label->setText("QOrganizer 1.01\nCreated by: Mkarol (mkarol@linux.pl)\n08.08.2014\nYou could help in developing this software by donating:"
+    Label->setText("QOrganizer 1.02\nCreated by: Mkarol (mkarol@linux.pl)\n29.08.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK\nLitecoins: LbDEkiQQJ8XzGoqf4oJE3UfJmW5qzPsK3i");
     // Timers and tray
     UInterval = 30;
@@ -52,7 +52,6 @@ QOrganizer::QOrganizer() {
     connect(BTimer, SIGNAL(timeout()), this, SLOT(Block()));
     Tray = new QSystemTrayIcon(QIcon(":/main/QOrganizer.png"), this);
     Tray->show();
-    connect(Tray, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(TrayClick(QSystemTrayIcon::ActivationReason)));
     closing = false;
     // Options widget
     QLabel *L[6];
@@ -133,6 +132,7 @@ void QOrganizer::setUser(QString useri, QString *hashedi, QString *hashi) {
     user = useri;
     hashed = hashedi;
     hash = hashi;
+    connect(Tray, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(TrayClick(QSystemTrayIcon::ActivationReason)));
     setTree();
     UpdateInterval->setValue(UInterval);
     BlockInterval->setValue(BInterval);
@@ -207,7 +207,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
             Calendar->setCategory("");
             Stacked->setCurrentIndex(1);
         } else if (Input->text(0) == "Mail") {
-            Mail->setMail("");
+            Mail->setMail(-1);
             Stacked->setCurrentIndex(2);
         } else if (Input->text(0) == "Notes") {
             Stacked->setCurrentIndex(3);
@@ -215,7 +215,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
             AdressBook->setCategory("");
             Stacked->setCurrentIndex(4);
         } else if (Input->text(0) == "Feeds Reader") {
-            RSS->setChannel("");
+            RSS->setChannel(-1);
             Stacked->setCurrentIndex(5);
         } else if (Input->text(0) == "Password Manager") {
             Stacked->setCurrentIndex(6);
@@ -231,13 +231,23 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
             Calendar->setCategory(Input->text(0));
             Stacked->setCurrentIndex(1);
         } else if (Input->parent()->text(0) == "Mail") {
-            Mail->setMail(Input->text(0));
+            for (int i = 0;i<Input->parent()->childCount(); i++) {
+                if (Input->parent()->child(i) == Input) {
+                    Mail->setMail(i);
+                    break;
+                }
+            }
             Stacked->setCurrentIndex(2);
         } else if (Input->parent()->text(0) == "Adress Book") {
             AdressBook->setCategory(Input->text(0));
             Stacked->setCurrentIndex(4);
         } else if (Input->parent()->text(0) == "Feeds Reader") {
-            RSS->setChannel(Input->text(0));
+            for (int i = 0;i<Input->parent()->childCount(); i++) {
+                if (Input->parent()->child(i) == Input) {
+                    RSS->setChannel(i);
+                    break;
+                }
+            }
             Stacked->setCurrentIndex(5);
         }
     }
@@ -280,8 +290,7 @@ void QOrganizer::updateMail() {
     if (Itm->parent() != NULL) {
         Itm = Itm->parent();
     }
-    QString currentCategory = Mail->getCurrent();
-    bool selected = false;
+    int currentMail = Mail->getCurrent();
     QStringList categories = Mail->getCategories();
     for (int i = Itm->childCount(); i > 0; i--) {
         Itm->removeChild(Itm->child(i-1));
@@ -292,15 +301,12 @@ void QOrganizer::updateMail() {
             QTreeWidgetItem *Itmc = new QTreeWidgetItem(Itm);
             Itmc->setText(0, categories[i]);
             Itmc->setToolTip(0, categories[i]);
-            if (categories[i] == currentCategory) {
-                Itm->child(i)->setSelected(true);
-                selected = true;
-            }
         }
-        if (!selected) {
-            Itm->setSelected(true);
-        } else {
+        if (currentMail != -1) {
             Itm->setSelected(false);
+            Itm->child(currentMail)->setSelected(true);
+        } else {
+            Itm->setSelected(true);
         }
     }
 }
@@ -338,8 +344,7 @@ void QOrganizer::updateRSS() {
     if (Itm->parent() != NULL) {
         Itm = Itm->parent();
     }
-    QString currentCategory = RSS->getCurrent();
-    bool selected = false;
+    int currentChannel = RSS->getCurrent();
     QStringList categories = RSS->getChannels();
     for (int i = Itm->childCount(); i > 0; i--) {
         Itm->removeChild(Itm->child(i-1));
@@ -350,15 +355,12 @@ void QOrganizer::updateRSS() {
             QTreeWidgetItem *Itmc = new QTreeWidgetItem(Itm);
             Itmc->setText(0, categories[i]);
             Itmc->setToolTip(0, categories[i]);
-            if (categories[i] == currentCategory) {
-                Itm->child(i)->setSelected(true);
-                selected = true;
-            }
         }
-        if (!selected) {
-            Itm->setSelected(true);
-        } else {
+        if (currentChannel != -1) {
+            Itm->child(currentChannel)->setSelected(true);
             Itm->setSelected(false);
+        } else {
+            Itm->setSelected(true);
         }
     }
 }
@@ -389,8 +391,8 @@ void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
             UTimer->start();
             BTimer->start();
             Calendar->setCategory("");
-            Mail->setMail("");
-            RSS->setChannel("");
+            Mail->setMail(-1);
+            RSS->setChannel(-1);
             if (Stacked->currentIndex() != 8) {
                 Stacked->setCurrentIndex(0);
             }
@@ -409,23 +411,23 @@ void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
 void QOrganizer::MailNews(QString I) {
     Updates[1]=I;
     if (!Updates[2].isEmpty()) {
+        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
         Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         Updates[0]="";
         Updates[1]="";
         Updates[2]="";
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
     }
 }
 void QOrganizer::RSSNews(QString I) {
     Updates[2]=I;
     if (!Updates[1].isEmpty()) {
+        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
         Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         Updates[0]="";
         Updates[1]="";
         Updates[2]="";
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
     }
 }
 void QOrganizer::closeEvent(QCloseEvent *E) {
@@ -445,8 +447,8 @@ void QOrganizer::closeEvent(QCloseEvent *E) {
         UTimer->start();
         BTimer->start();
         Calendar->setCategory("");
-        Mail->setMail("");
-        RSS->setChannel("");
+        Mail->setMail(-1);
+        RSS->setChannel(-1);
         Stacked->setCurrentIndex(0);
         if (TreeWidget->selectedItems().size() != 0) {
             TreeWidget->selectedItems().first()->setSelected(false);
@@ -469,7 +471,6 @@ void QOrganizer::Block() {
         Stacked->setCurrentIndex(8);
     }
 }
-
 void QOrganizer::Validator(QString input) {
     if (input.length() < 8&&!input.isEmpty()) {
         NP->setStyleSheet("QLineEdit{background: #FF8888;}");

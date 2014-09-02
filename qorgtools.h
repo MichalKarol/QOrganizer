@@ -20,14 +20,20 @@ QByteArray calculateXOR(QByteArray A, QByteArray B);
 QString Bit7ToBit8(QString);
 QString QPEncode(QByteArray);
 QByteArray QPDecode(QByteArray);
-QString OutputTools(QString, QString);
-QString OutputToolsS(QString, QString);
-QString OutputTools(int, QString);
-QString OutputTools(bool, QString);
-QString InputS(QString, QString);
-QString InputSS(QString, QString);
-int InputI(QString, QString);
-bool InputB(QString, QString);
+QString Output(QString);
+QString Output(uint);
+QString Output(uchar);
+QString Output(bool);
+QString Output(QDateTime);
+QString Output(QDate);
+
+QString InputS(QString);
+uint InputI(QString);
+uchar InputC(QString);
+bool InputB(QString);
+QDateTime InputDT(QString);
+QDate InputD(QString);
+
 void colorItem(QTreeWidgetItem*, char);
 QString salting(QString);
 QString NameFilter(QString);

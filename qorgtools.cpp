@@ -104,8 +104,8 @@ QByteArray QPDecode(QByteArray I) {
     QByteArray BA;
     for (int i = 0; i < I.length(); i++) {
         if (I[i] == '=') {
-            int A = HEX.indexOf(I.at(i+1));
-            int B = HEX.indexOf(I.at(i+2));
+            int A = HEX.indexOf(I.at(i+1),Qt::CaseInsensitive);
+            int B = HEX.indexOf(I.at(i+2),Qt::CaseInsensitive);
             BA.append(static_cast<char>(A*16+B));
             i+=2;
         } else {
@@ -114,56 +114,47 @@ QByteArray QPDecode(QByteArray I) {
     }
     return BA;
 }
-QString OutputTools(QString I, QString TAG) {
-    return "<"+TAG+">"+I.toUtf8().toBase64()+"</"+TAG+">\n";
+QString Output(QString I) {
+    return QString(I.toUtf8().toBase64());
 }
-QString OutputToolsS(QString I, QString TAG) {
-    return "<"+TAG+">"+I+"</"+TAG+">\n";
+QString Output(uint I) {
+    return QString::number(I);
 }
-QString OutputTools(int I, QString TAG) {
-    return "<"+TAG+">"+QString::number(I)+"</"+TAG+">\n";
+QString Output(uchar I) {
+    return Output(static_cast<uint>(I));
 }
-QString OutputTools(bool I, QString TAG) {
+QString Output(bool I) {
     if (I) {
-        return "<"+TAG+">1</"+TAG+">\n";
+        return "1";
     }
-    return "<"+TAG+">0</"+TAG+">\n";
+    return "0";
 }
-QString InputS(QString Input, QString TAG) {
-    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
-    return QString(QByteArray::fromBase64(
-                       Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
-                              Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")-TAG.length()-2).toUtf8()));
-    } else {
-        return QString();
-    }
+QString Output(QDateTime I) {
+    return I.toString(Qt::ISODate);
 }
-QString InputSS(QString Input, QString TAG) {
-    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
-    return Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
-                  Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")-TAG.length()-2);
-    } else {
-        return QString();
-    }
+QString Output(QDate I) {
+    return I.toString(Qt::ISODate);
 }
-int InputI(QString Input, QString TAG) {
-    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
-    return Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
-                  Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")
-                  -TAG.length()-2).toInt();
-    } else {
-        return 0;
-    }
+
+QString InputS(QString Input) {
+    return QString(QByteArray::fromBase64(Input.toUtf8()));
 }
-bool InputB(QString Input, QString TAG) {
-    if (Input.contains("<"+TAG+">")&&Input.contains("</"+TAG+">")) {
-    return (Input.mid(Input.indexOf("<"+TAG+">")+TAG.length()+2,
-                   Input.indexOf("</"+TAG+">")-Input.indexOf("<"+TAG+">")
-                   -TAG.length()-2) == "1");
-    } else {
-        return false;
-    }
+uint InputI(QString Input) {
+    return static_cast<uint>(Input.toInt());
 }
+uchar InputC(QString Input) {
+    return static_cast<uchar>(Input.toInt());
+}
+bool InputB(QString Input) {
+    return (Input == "1");
+}
+QDateTime InputDT(QString Input) {
+    return QDateTime::fromString(Input,Qt::ISODate);
+}
+QDate InputD(QString Input) {
+    return QDate::fromString(Input,Qt::ISODate);
+}
+
 void colorItem(QTreeWidgetItem *Itm, char P) {
     switch (P) {
     case 5:

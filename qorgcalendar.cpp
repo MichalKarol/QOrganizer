@@ -554,52 +554,50 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
 QString qorgCalendar::output() {
     QString out;
     for (uint i = 0; i < Normal.size(); i++) {
-        QString work;
-        work.append(OutputTools(Normal[i].name, "NAME"));
-        work.append(OutputTools(Normal[i].category, "CAT"));
-        work.append(OutputTools(Normal[i].priority, "PRIO"));
-        work.append(OutputTools(Normal[i].datet.toString(Qt::ISODate), "DATE"));
-        work.append(OutputTools(Normal[i].edatet.toString(Qt::ISODate), "EDATE"));
-        out.append(OutputToolsS(work, "NOR"));
+        out.append(Output(Normal[i].name)+" ");
+        out.append(Output(Normal[i].category)+" ");
+        out.append(Output(Normal[i].priority)+" ");
+        out.append(Output(Normal[i].datet)+" ");
+        out.append(Output(Normal[i].edatet)+" \n");
     }
     for (uint i = 0; i < Recurrent.size(); i++) {
-        QString work;
-        work.append(OutputTools(Recurrent[i].name, "NAME"));
-        work.append(OutputTools(Recurrent[i].category, "CAT"));
-        work.append(OutputTools(Recurrent[i].priority, "PRIO"));
-        work.append(OutputTools(Recurrent[i].type, "TYPE"));
-        work.append(OutputTools(Recurrent[i].datet.toString(Qt::ISODate), "DATE"));
-        work.append(OutputTools(Recurrent[i].edatet.toString(Qt::ISODate), "EDATE"));
-        work.append(OutputTools(Recurrent[i].edate.toString(Qt::ISODate), "EDAT"));
-        out.append(OutputToolsS(work, "REC"));
+        out.append(Output(Recurrent[i].name)+" ");
+        out.append(Output(Recurrent[i].category)+" ");
+        out.append(Output(Recurrent[i].priority)+" ");
+        out.append(Output(Recurrent[i].type)+" ");
+        out.append(Output(Recurrent[i].datet)+" ");
+        out.append(Output(Recurrent[i].edatet)+" ");
+        out.append(Output(Recurrent[i].edate)+" \n");
     }
-    out = OutputToolsS(out, "CALENDAR");
+    out.append("\n\n");
     return out;
 }
 void qorgCalendar::input(QString Input) {
-    while (Input.contains("<NOR>")) {
-        CalNor nor;
-        QString work = InputSS(Input, "NOR");
-        nor.name = InputS(work, "NAME");
-        nor.category = InputS(work, "CAT");
-        nor.priority = InputI(work, "PRIO");
-        nor.datet = QDateTime::fromString(InputS(work, "DATE"), Qt::ISODate);
-        nor.edatet = QDateTime::fromString(InputS(work, "EDATE"), Qt::ISODate);
-        Normal.push_back(nor);
-        Input.remove(Input.indexOf("<NOR>"), Input.indexOf("</NOR>")-Input.indexOf("<NOR>")+6);
-    }
-    while (Input.contains("<REC>")) {
-        CalRec rec;
-        QString work = InputSS(Input, "REC");;
-        rec.name = InputS(work, "NAME");
-        rec.category = InputS(work, "CAT");
-        rec.priority = InputI(work, "PRIO");
-        rec.type = InputI(work, "TYPE");
-        rec.datet = QDateTime::fromString(InputS(work, "DATE"), Qt::ISODate);
-        rec.edatet = QDateTime::fromString(InputS(work, "EDATE"), Qt::ISODate);
-        rec.edate = QDate::fromString(InputS(work, "EDAT"), Qt::ISODate);
-        Recurrent.push_back(rec);
-        Input.remove(Input.indexOf("<REC>"), Input.indexOf("</REC>")-Input.indexOf("<REC>")+6);
+    QStringList A = Input.split("\n");
+    for (int i = 0; i<A.size(); i++) {
+        QStringList B = A[i].split(" ");
+        switch (B.size()-1) {
+        case 5: {
+          CalNor Nor;
+          Nor.name = InputS(B[0]);
+          Nor.category = InputS(B[1]);
+          Nor.priority = InputC(B[2]);
+          Nor.datet = InputDT(B[3]);
+          Nor.edatet = InputDT(B[4]);
+          Normal.push_back(Nor);
+        } break;
+        case 7: {
+          CalRec Rec;
+          Rec.name = InputS(B[0]);
+          Rec.category = InputS(B[1]);
+          Rec.priority = InputC(B[2]);
+          Rec.type = InputC(B[3]);
+          Rec.datet = InputDT(B[4]);
+          Rec.edatet = InputDT(B[5]);
+          Rec.edate = InputD(B[6]);
+          Recurrent.push_back(Rec);
+        } break;
+        }
     }
     sort();
     updateAll();

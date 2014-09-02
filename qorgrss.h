@@ -50,14 +50,13 @@ public:
     ~qorgRSS();
     QString output();
     void input(QString);
-    void setChannel(QString);
+    void setChannel(int);
     QStringList getChannels();
-    QString getCurrent() {
-        return currentChannel;
+    int getCurrent() {
+        return currentC;
     }
     void getUpdate();
 private:
-    QString currentChannel;
     int currentC;
     vector <RSSChannel> RSSv;
     QGridLayout *Layout;

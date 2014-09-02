@@ -157,7 +157,6 @@ QByteArray Download::SubDownload(QString I) {
 }
 
 QString stringBetween(QString Tag, QString Text) {
-
     Text = Text.mid(Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1,
                     Text.indexOf(Tag+">", Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1, Qt::CaseInsensitive)
                     - Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) - Tag.length()-1);
@@ -169,10 +168,11 @@ QString stringBetween(QString Tag, QString Text) {
     if (Text.contains("<")) {
         Text = Text.mid(0, Text.lastIndexOf("<"));
     }
-    Text.replace("&lt;", "<");
-    Text.replace("&gt;", ">");
-    Text.replace("&amp;", "&");
-    Text.replace("&quot;", "\"");
+    Text.replace("<","&lt;");
+    Text.replace(">","&gt;");
+    QTextDocument D;
+    D.setHtml(Text);
+    Text = D.toPlainText();
     QString Output;
     for (int i = 0; i < Text.length()-4; i++) {
         if (Text[i] == '&' && Text[i+1] == '#' && Text[i+4] == ';') {
@@ -188,6 +188,7 @@ QString stringBetween(QString Tag, QString Text) {
 }
 
 qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
+    currentC = -1;
     Layout = new QGridLayout(this);
     Layout->setMargin(0);
     List = new QTreeWidget(this);
@@ -243,77 +244,66 @@ qorgRSS::~qorgRSS() {
 QString qorgRSS::output() {
     QString out;
     for (uint i = 0; i < RSSv.size(); i++) {
-        QString work;
-        work.append(OutputTools(RSSv[i].Title, "TITLE"));
-        work.append(OutputTools(RSSv[i].Link, "LINK"));
-        QString Items;
+        out.append(Output(RSSv[i].Title)+" ");
+        out.append(Output(RSSv[i].Link)+" \n");
         for (uint j = 0; j < RSSv[i].Itemv.size(); j++) {
-            QString work2;
-            work2.append(OutputTools(RSSv[i].Itemv[j]->Title, "ITEM_TITLE"));
-            work2.append(OutputTools(RSSv[i].Itemv[j]->PubDate.toString(Qt::ISODate), "ITEM_PUBDATE"));
-            work2.append(OutputTools(RSSv[i].Itemv[j]->Link, "ITEM_LINK"));
-            work2.append(OutputTools(RSSv[i].Itemv[j]->Description, "ITEM_DESCRIPTION"));
-            work2.append(OutputTools(RSSv[i].Itemv[j]->GUID, "ITEM_GUID"));
-            work2.append(OutputTools(RSSv[i].Itemv[j]->New, "ITEM_NEW"));
-            Items.append(OutputToolsS(work2, "ITEM"));
+            out.append(Output(RSSv[i].Itemv[j]->Title)+" ");
+            out.append(Output(RSSv[i].Itemv[j]->PubDate)+" ");
+            out.append(Output(RSSv[i].Itemv[j]->Link)+" ");
+            out.append(Output(RSSv[i].Itemv[j]->Description)+" ");
+            out.append(Output(RSSv[i].Itemv[j]->GUID)+" ");
+            out.append(Output(RSSv[i].Itemv[j]->New)+" \n");
         }
-        work.append(OutputToolsS(Items, "ITEMV"));
-        out.append(OutputToolsS(work, "CHANNEL"));
     }
-    out = OutputToolsS(out, "CHANNELV");
+    out.append("\n\n");
     return out;
 }
 void qorgRSS::input(QString Input) {
-    while (Input.contains("<CHANNEL>")) {
-        QString CS = InputSS(Input, "CHANNEL");
-        RSSChannel C;
-        C.Title = InputS(CS, "TITLE");
-        C.Link = InputS(CS, "LINK");
-        QString Items = InputSS(CS, "ITEMV");
-        while (Items.contains("<ITEM>")) {
-            QString IS = InputSS(Items, "ITEM");
-            RSSItem *I = new RSSItem();
-            I->Title = InputS(IS, "ITEM_TITLE");
-            I->PubDate = QDateTime::fromString(InputS(IS, "ITEM_PUBDATE"), Qt::ISODate);
-            I->Link = InputS(IS, "ITEM_LINK");
-            I->Description = InputS(IS, "ITEM_DESCRIPTION");
-            I->GUID = InputS(IS, "ITEM_GUID");
-            I->New = InputB(IS, "ITEM_NEW");
-            C.Itemv.push_back(I);
-            Items.remove(Items.indexOf("<ITEM>"), Items.indexOf("</ITEM>")-Items.indexOf("<ITEM>")+7);
+    QStringList A = Input.split("\n");
+    RSSChannel *cChannel;
+    for (int i = 0; i<A.size(); i++) {
+        QStringList B = A[i].split(" ");
+        switch (B.size()-1) {
+        case 2: {
+            RSSv.push_back(RSSChannel());
+            cChannel = &RSSv.back();
+            cChannel->Title = InputS(B[0]);
+            cChannel->Link = InputS(B[1]);
+        }break;
+        case 6: {
+            RSSItem *cItem = new RSSItem();
+            cChannel->Itemv.push_back(cItem);
+            cItem->Title = InputS(B[0]);
+            cItem->PubDate = InputDT(B[1]);
+            cItem->Link = InputS(B[2]);
+            cItem->Description = InputS(B[3]);
+            cItem->GUID = InputS(B[4]);
+            cItem->New = InputB(B[5]);
+        }break;
         }
-        RSSv.push_back(C);
-        Input.remove(Input.indexOf("<CHANNEL>"), Input.indexOf("</CHANNEL>")-Input.indexOf("<CHANNEL>")+10);
     }
     setLayoutC();
 }
-void qorgRSS::setChannel(QString I) {
-    if (I != currentChannel) {
-        if (I.isEmpty()) {
+void qorgRSS::setChannel(int I) {
+    if (I != currentC) {
+        currentC = I;
+        if (I == -1) {
             setLayoutC();
-            currentChannel = I;
         } else {
             Titles->clear();
             View->setHtml("");
             Link->clear();
-            for (uint i = 0; i < RSSv.size(); i++) {
-                if (I == RSSv[i].Title) {
-                    currentC = i;
-                    for (uint j = 0; j < RSSv[i].Itemv.size(); j++) {
-                        QTreeWidgetItem *Itm = new QTreeWidgetItem(Titles);
-                        if (RSSv[i].Itemv[j]->New) {
-                            Itm->setFont(0, QFont("", Itm->font(0).pixelSize(), QFont::Bold));
-                        }
-                        Itm->setText(0, RSSv[i].Itemv[j]->Title);
-                        Itm->setToolTip(0, RSSv[i].Itemv[j]->Title);
-                        Itm->setText(1, RSSv[i].Itemv[j]->PubDate.toString("dd/MM/yyyy hh:mm"));
-                    }
-                    Titles->scrollToTop();
-                    break;
+            for (uint j = 0; j < RSSv[currentC].Itemv.size(); j++) {
+                QTreeWidgetItem *Itm = new QTreeWidgetItem(Titles);
+                if (RSSv[currentC].Itemv[j]->New) {
+                    Itm->setFont(0, QFont("", Itm->font(0).pixelSize(), QFont::Bold));
                 }
+                Itm->setText(0, RSSv[currentC].Itemv[j]->Title);
+                Itm->setToolTip(0, RSSv[currentC].Itemv[j]->Title);
+                Itm->setText(1, RSSv[currentC].Itemv[j]->PubDate.toString("dd/MM/yyyy hh:mm"));
             }
+            Titles->scrollToTop();
             setLayoutF();
-            currentChannel = I;
         }
     }
 }
@@ -474,7 +464,7 @@ void qorgRSS::DownloadedS(QString Rep) {
         }
     } else {
         if (UpdateQuene == 0) {
-        QMessageBox::critical(this, "Error", "Error during reading feed.");
+            QMessageBox::critical(this, "Error", "Error during reading feed.");
         }
     }
     if (Itm.size() > 0) {
@@ -502,15 +492,16 @@ void qorgRSS::DownloadedS(QString Rep) {
             }
             Channel->Itemv.swap(Itm);
             if (UpdateQuene == 0) {
-                setChannel("");
-                setChannel(Channel->Title);
+                int tmp = currentC;
+                currentC = -1;
+                setChannel(tmp);
             }
         } else {
             Channel->Itemv.swap(Itm);
             RSSv.push_back((*Channel));
             if (UpdateQuene == 0) {
-                setChannel("");
-                setChannel(Channel->Title);
+                currentC = RSSv.size()-1;
+                qDebug()<<currentC;
             }
             delete Channel;
             emit updateTree();
@@ -536,7 +527,7 @@ void qorgRSS::row(QString Input) {
     }
 }
 void qorgRSS::chooseChannel(QModelIndex I) {
-    setChannel(RSSv[I.row()].Title);
+    setChannel(I.row());
     emit doubleClick(RSSv[I.row()].Title);
 }
 void qorgRSS::chooseItem(QModelIndex I) {
@@ -574,7 +565,7 @@ void qorgRSS::UpdateS() {
 void qorgRSS::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
-    QNR->deleteLater();
+    connect(QNR,SIGNAL(finished()),QNR,SLOT(deleteLater()));
 }
 void qorgRSS::sortRSS() {
     if (RSSv.size() > 1) {
@@ -582,6 +573,11 @@ void qorgRSS::sortRSS() {
             bool OKL = true;
             for (uint i = 0; i < RSSv.size()-1; i++) {
                 if ( RSSv[i].Title > RSSv[i+1].Title ) {
+                    if ( i == currentC) {
+                        currentC++;
+                    } else if ( i+1 == currentC) {
+                        currentC--;
+                    }
                     swap(RSSv[i], RSSv[i+1]);
                     OKL = false;
                 }
@@ -591,5 +587,8 @@ void qorgRSS::sortRSS() {
             }
         }
     }
+    int tmp = currentC;
+    currentC = -1;
+    setChannel(tmp);
 }
 #include "qorgrss.moc"

@@ -132,37 +132,33 @@ qorgPasswd::~qorgPasswd() {
 QString qorgPasswd::output() {
     QString out;
     for (uint i = 0; i < Programv.size(); i++) {
-        QString work;
-        work.append(OutputTools(Programv[i].Name, "NAME"));
-        QString Passwords;
+        out.append(Output(Programv[i].Name)+" \n");
         for (uint j = 0; j < Programv[i].Passwordv.size(); j++) {
-            QString work2;
-            work2.append(OutputTools(Programv[i].Passwordv[j]->Login, "LOGIN"));
-            work2.append(OutputTools(Programv[i].Passwordv[j]->Passwd, "PASSWD"));
-            Passwords.append(OutputToolsS(work2, "PASSWORD"));
+            out.append(Output(Programv[i].Passwordv[j]->Login)+" ");
+            out.append(Output(Programv[i].Passwordv[j]->Passwd)+" \n");
         }
-        work.append(OutputToolsS(Passwords, "PASSWORDV"));
-        out.append(OutputToolsS(work, "PROGRAM"));
     }
-    out = OutputToolsS(out, "PROGRAMV");
+    out.append("\n\n");
     return out;
 }
 void qorgPasswd::input(QString Input) {
-    while (Input.contains("<PROGRAM>")) {
-        QString PS = InputSS(Input, "PROGRAM");
-        Program P;
-        P.Name = InputS(PS, "NAME");
-        QString Passwords = InputSS(PS, "PASSWORDV");
-        while (Passwords.contains("<PASSWORD>")) {
-            QString PDS = InputSS(Passwords, "PASSWORD");
-            Password *PD = new Password();
-            PD->Login = InputS(PDS, "LOGIN");
-            PD->Passwd = InputS(PDS, "PASSWD");
-            P.Passwordv.push_back(PD);
-            Passwords.remove(Passwords.indexOf("<PASSWORD>"), Passwords.indexOf("</PASSWORD>")-Passwords.indexOf("<PASSWORD>")+11);
+    QStringList A = Input.split("\n");
+    Program *cProgram;
+    for (int i = 0; i<A.size(); i++) {
+        QStringList B = A[i].split(" ");
+        switch (B.size()-1) {
+        case 1: {
+            Programv.push_back(Program());
+            cProgram = &Programv.back();
+            cProgram->Name = InputS(B[0]);
+        }break;
+        case 2: {
+            Password *cPassword = new Password();
+            cProgram->Passwordv.push_back(cPassword);
+            cPassword->Login = InputS(B[0]);
+            cPassword->Passwd = InputS(B[1]);
+        }break;
         }
-        Programv.push_back(P);
-        Input.remove(Input.indexOf("<PROGRAM>"), Input.indexOf("</PROGRAM>")-Input.indexOf("<PROGRAM>")+10);
     }
     UpdateTree();
 }
