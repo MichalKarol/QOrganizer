@@ -47,34 +47,33 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     memset(Output, 0, sizeof(sizeofinput));
     delete[] Output;
     delete aesKey;
-    if ((!Decrypted.contains("<ORG>"))||(!Decrypted.contains("</ORG>"))||(!Decrypted.contains("QOrganizer"))) {
+    if (!Decrypted.contains("QOrganizer") || Decrypted.mid(Decrypted.length()-AES_BLOCK_SIZE,AES_BLOCK_SIZE) != QString(AES_BLOCK_SIZE,'.')) {
         QMessageBox::critical(main, "Error", "Invalid file of password!");
         return false;
     }
-    Decrypted = InputSS(Decrypted, "ORG");
-    main->UInterval = InputI(Decrypted, "UINTERVAL");
-    main->BInterval = InputI(Decrypted, "BINTERVAL");
-    main->Calendar->input(InputSS(Decrypted, "CALENDAR"));
-    main->Mail->input(InputSS(Decrypted, "MAILV"));
-    main->Notes->input(InputSS(Decrypted, "NOTES"));
-    main->AdressBook->input(InputSS(Decrypted, "PERSONV"));
-    main->RSS->input(InputSS(Decrypted, "CHANNELV"));
-    main->PasswordManager->input(InputSS(Decrypted, "PROGRAMV"));
+    QStringList L = Decrypted.split("\n\n");
+    QStringList O = L[1].split(" ");
+    main->UInterval = InputI(O[0]);
+    main->BInterval = InputI(O[1]);
+    main->Calendar->input(L[2]);
+    main->Mail->input(L[3]);
+    main->Notes->input(L[4]);
+    main->AdressBook->input(L[5]);
+    main->RSS->input(L[6]);
+    main->PasswordManager->input(L[7]);
     Decrypted.clear();
     return true;
 }
 void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString path) {
-    QString Output="QOrganizer 1.01";
+    QString Out="QOrganizer 1.02";
     QString data;
+    data.append(QString("\n\n"+Output(main->UInterval)+" "+Output(main->BInterval)+" \n\n"));
     data.append(main->Calendar->output());
     data.append(main->Mail->output());
     data.append(main->Notes->output());
     data.append(main->AdressBook->output());
     data.append(main->RSS->output());
     data.append(main->PasswordManager->output());
-    data.append(OutputTools(static_cast<int>(main->UInterval), "UINTERVAL"));
-    data.append(OutputTools(static_cast<int>(main->BInterval), "BINTERVAL"));
-    data = OutputToolsS(data, "ORG");
     data.append(QString(AES_BLOCK_SIZE,'.'));
     QString Passwd = QString(calculateXOR(hashed->toUtf8(), hash->toUtf8()));
     if (Passwd.length() <  32) {
@@ -85,13 +84,13 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     const size_t encslength = ((data.length() + AES_BLOCK_SIZE) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
     unsigned char IV[AES_BLOCK_SIZE+1]={0};
     RAND_bytes(IV, AES_BLOCK_SIZE);
-    Output.append(QByteArray((const char*)IV, AES_BLOCK_SIZE+1).toBase64());
+    Out.append(QByteArray((const char*)IV, AES_BLOCK_SIZE+1).toBase64());
     unsigned char* aOUT;
     aOUT = new unsigned char[encslength];
     memset(aOUT, 0, sizeof(encslength));
     AES_cbc_encrypt((unsigned char*)data.toUtf8().data(), aOUT, data.length(), aesKey, IV, AES_ENCRYPT);
-    Output+="\n";
-    Output.append(QByteArray((const char*)aOUT, encslength).toBase64());
+    Out+="\n";
+    Out.append(QByteArray((const char*)aOUT, encslength).toBase64());
     Passwd.clear();
     memset(aOUT, 0, sizeof(encslength));
     delete[] aOUT;
@@ -99,7 +98,7 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     QFile file(path);
     QTextStream stream(&file);
     file.open(QIODevice::WriteOnly | QIODevice::Text);
-    stream << Output;
+    stream << Out;
     file.close();
-    Output.clear();
+    Out.clear();
 }

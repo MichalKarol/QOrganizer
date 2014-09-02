@@ -92,8 +92,6 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     QIntValidator *V = new QIntValidator(this);
     E[5]->setValidator(V);
     E[6]->setValidator(V);
-    E[8]->setInputMask("+00 000 000 000");
-    E[8]->setText("00000000000");
     D = new QDateEdit(QDate(2012, QDate::currentDate().month(), QDate::currentDate().day()), this);
     D->setDisplayFormat("dd/MM");
     Add = new QPushButton(QIcon(":/main/Add.png"), "Add", this);
@@ -151,38 +149,38 @@ QStringList qorgAB::getCategories() {
 QString qorgAB::output() {
     QString out;
     for (uint i = 0; i < Personv.size(); i++) {
-        QString work;
-        work.append(OutputTools(Personv[i].Name, "NAME"));
-        work.append(OutputTools(Personv[i].Surname, "SURNAME"));
-        work.append(OutputTools(Personv[i].Category, "CATEGORY"));
-        work.append(OutputTools(Personv[i].Town, "TOWN"));
-        work.append(OutputTools(Personv[i].Street, "STREET"));
-        work.append(OutputTools(static_cast<int>(Personv[i].HouseNumber), "HOUSENUMBER"));
-        work.append(OutputTools(static_cast<int>(Personv[i].Apartment), "APARTMENT"));
-        work.append(OutputTools(Personv[i].Email, "EMAIL"));
-        work.append(OutputTools(Personv[i].Mobile, "MOBILE"));
-        work.append(OutputTools(Personv[i].Birthday.toString(Qt::ISODate), "BIRTHDAY"));
-        out.append(OutputToolsS(work, "PERSON"));
+        out.append(Output(Personv[i].Name)+" ");
+        out.append(Output(Personv[i].Surname)+" ");
+        out.append(Output(Personv[i].Category)+" ");
+        out.append(Output(Personv[i].Town)+" ");
+        out.append(Output(Personv[i].Street)+" ");
+        out.append(Output(Personv[i].HouseNumber)+" ");
+        out.append(Output(Personv[i].Apartment)+" ");
+        out.append(Output(Personv[i].Email)+" ");
+        out.append(Output(Personv[i].Mobile)+" ");
+        out.append(Output(Personv[i].Birthday)+" \n");
     }
-    out = OutputToolsS(out, "PERSONV");
+    out.append("\n\n");
     return out;
 }
 void qorgAB::input(QString Input) {
-    while (Input.contains("<PERSON>")) {
-        QString PS = InputSS(Input, "PERSON");
-        Person tmp;
-        tmp.Name = InputS(PS, "NAME");
-        tmp.Surname = InputS(PS, "SURNAME");
-        tmp.Category = InputS(PS, "CATEGORY");
-        tmp.Town = InputS(PS, "TOWN");
-        tmp.Street = InputS(PS, "STREET");
-        tmp.HouseNumber = InputI(PS, "HOUSENUMBER");
-        tmp.Apartment = InputI(PS, "APARTMENT");
-        tmp.Email = InputS(PS, "EMAIL");
-        tmp.Mobile = InputS(PS, "MOBILE");
-        tmp.Birthday = QDate::fromString(InputS(PS, "BIRTHDAY"), Qt::ISODate);
-        Personv.push_back(tmp);
-        Input.remove(Input.indexOf("<PERSON>"), Input.indexOf("</PERSON>")-Input.indexOf("<PERSON>")+9);
+    QStringList A = Input.split("\n");
+    for (int i = 0; i < A.size(); i++) {
+        QStringList B = A[i].split(" ");
+        if (B.size()-1 == 10) {
+            Person Per;
+            Per.Name = InputS(B[0]);
+            Per.Surname = InputS(B[1]);
+            Per.Category = InputS(B[2]);
+            Per.Town = InputS(B[3]);
+            Per.Street = InputS(B[4]);
+            Per.HouseNumber = InputI(B[5]);
+            Per.Apartment = InputI(B[6]);
+            Per.Email = InputS(B[7]);
+            Per.Mobile = InputS(B[8]);
+            Per.Birthday = InputD(B[9]);
+            Personv.push_back(Per);
+        }
     }
     UpdateList();
 }
@@ -232,7 +230,6 @@ void qorgAB::AddS() {
         for (uint i = 0; i < 9; i++) {
             E[i]->clear();
         }
-        E[7]->setText("00000000000");
         D->setDate(QDate(2012, QDate::currentDate().month(), QDate::currentDate().day()));
         Personv.push_back(temp);
         emit updateTree();
@@ -335,11 +332,10 @@ void qorgAB::Can() {
     for (uint i = 0; i < 9; i++) {
         E[i]->clear();
     }
-    E[7]->setText("00000000000");
     D->setDate(QDate::currentDate());
     Cancel->hide();
     OKB->hide();
-    La->addWidget(Add, 7, 0, 1, 2);
+    La->addWidget(Add, 8, 0, 1, 2);
     Add->show();
 }
 void qorgAB::UpdateList() {

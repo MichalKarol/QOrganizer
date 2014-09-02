@@ -25,15 +25,15 @@ using std::swap;
 struct CalNor {
     QString name;
     QString category;
-    unsigned char priority;
+    uchar priority;
     QDateTime datet;
     QDateTime edatet;
 };
 struct CalRec {
     QString name;
     QString category;
-    unsigned char priority;
-    unsigned char type;
+    uchar priority;
+    uchar type;
     QDateTime datet;
     QDateTime edatet;
     QDate edate;
@@ -54,8 +54,8 @@ public:
 private:
     qorgAB *AB;
     void setCalendar();
-      void updateAll();
-      void sort();
+    void updateAll();
+    void sort();
     QList <uint> checkEvN(QDate, char);
     QList <uint> checkEvR(QDate, char);
     QList <QString> checkBd(QDate);

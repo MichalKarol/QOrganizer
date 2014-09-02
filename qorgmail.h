@@ -66,7 +66,7 @@ public:
     QDateTime Email_Date;
     QString Email_Body[2];
     uint Email_UID;
-    char Email_Flags;
+    uchar Email_Flags;
     vector  <Structure*> Structurev;
 };
 class Mailbox {
@@ -87,7 +87,7 @@ public:
     };
     QString Mbox_Name;
     QString Mbox_Showname;
-    unsigned int Mbox_Attrybutes;
+    uint Mbox_Attrybutes;
     vector  <Mailbox*>  Mbox_Children;
     vector  <Email*>  Emailv;
     bool Mbox_Refresh;
@@ -112,20 +112,19 @@ public:
     ~qorgMail();
     QString output();
     void input(QString);
-    void setMail(QString);
+    void setMail(int);
     QStringList getCategories();
-    QString getCurrent()    {
-     return MailCat;
+    int getCurrent()    {
+     return currentMail;
     }
     void getUpdate();
 private:
     qorgAB *AB;
     vector  <Mail>  Mailv;
-    QString MailCat;
     QGridLayout *Layout;
     void setMailbox(int);
 
-    uint currentMail;
+    int currentMail;
     uint currentMailbox;
     int currentEmail;
     void setLayoutF();
@@ -175,11 +174,11 @@ private slots:
     void AttachmentS(bool);
     void RefreshS();
     void RefreshS(bool);
-    void SendMail();
+    void SendEmail();
     void SendEmailS(bool);
     void DeleteEmail();
     void DeleteEmailS(bool);
-    void UpdateEmail(bool);
+    void UpdateMail();
     void UpdateS();
     void HTTPSS(QNetworkReply*, QList <QSslError>);
     void sortMail();

@@ -72,24 +72,24 @@ qorgNotes::qorgNotes(QWidget *parent) :QWidget(parent) {
 QString qorgNotes::output() {
     QString out;
     for (uint i = 0; i < Notes.size(); i++) {
-        QString work;
-        work.append(OutputTools(Notes[i].Topic, "TOPIC"));
-        work.append(OutputTools(Notes[i].Priority, "PRIORITY"));
-        work.append(OutputTools(Notes[i].Text, "TEXT"));
-        out.append(OutputToolsS(work, "NOTE"));
+        out.append(Output(Notes[i].Topic)+" ");
+        out.append(Output(Notes[i].Priority)+" ");
+        out.append(Output(Notes[i].Text)+" \n");
     }
-    out = OutputToolsS(out, "NOTES");
+    out.append("\n\n");
     return out;
 }
 void qorgNotes::input(QString Input) {
-    while (Input.contains("<NOTE>")) {
-        QString NS = InputSS(Input, "NOTE");
-        Note tmp;
-        tmp.Topic = InputS(NS, "TOPIC");
-        tmp.Priority = InputI(NS, "PRIORITY");
-        tmp.Text = InputS(NS, "TEXT");
-        Notes.push_back(tmp);
-       Input.remove(Input.indexOf("<NOTE>"), Input.indexOf("</NOTE>")-Input.indexOf("<NOTE>")+7);
+    QStringList A = Input.split("\n");
+    for (int i = 0; i < A.size(); i++) {
+        QStringList B = A[i].split(" ");
+        if (B.size()-1 == 3) {
+            Note Not;
+            Not.Topic = InputS(B[0]);
+            Not.Priority = InputC(B[1]);
+            Not.Text = InputS(B[2]);
+            Notes.push_back(Not);
+        }
     }
     updateList();
 }
@@ -158,7 +158,7 @@ void qorgNotes::Edit(uint IID) {
         Priority->setEnabled(true);
         Text->setReadOnly(false);
         QHBoxLayout *L1 = new QHBoxLayout();
-         L1->addWidget(Cancel);
+        L1->addWidget(Cancel);
         L1->addWidget(OK);
         OK->show();
         Cancel->show();
