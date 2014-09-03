@@ -87,7 +87,7 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     for (uint i = 0; i < 9; i++) {
         E[i]=new QLineEdit(this);
     }
-    C=new QCompleter(E[2]);
+    C = new QCompleter(E[2]);
     E[2]->setCompleter(C);
     QIntValidator *V = new QIntValidator(this);
     E[5]->setValidator(V);
@@ -360,11 +360,10 @@ void qorgAB::UpdateList() {
     }
     setList();
     delete C;
-    C=new QCompleter(getCategories(),E[2]);
+    C = new QCompleter(getCategories(), E[2]);
     E[2]->setCompleter(C);
 }
-void qorgAB::setList()
-{
+void qorgAB::setList() {
     List->clear();
     for (uint i = 0; i < Personv.size(); i++) {
         if (Personv[i].Category == currentCategory || currentCategory.isEmpty()) {

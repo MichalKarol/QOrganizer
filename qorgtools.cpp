@@ -104,8 +104,8 @@ QByteArray QPDecode(QByteArray I) {
     QByteArray BA;
     for (int i = 0; i < I.length(); i++) {
         if (I[i] == '=') {
-            int A = HEX.indexOf(I.at(i+1),Qt::CaseInsensitive);
-            int B = HEX.indexOf(I.at(i+2),Qt::CaseInsensitive);
+            int A = HEX.indexOf(I.at(i+1), Qt::CaseInsensitive);
+            int B = HEX.indexOf(I.at(i+2), Qt::CaseInsensitive);
             BA.append(static_cast<char>(A*16+B));
             i+=2;
         } else {
@@ -149,10 +149,10 @@ bool InputB(QString Input) {
     return (Input == "1");
 }
 QDateTime InputDT(QString Input) {
-    return QDateTime::fromString(Input,Qt::ISODate);
+    return QDateTime::fromString(Input, Qt::ISODate);
 }
 QDate InputD(QString Input) {
-    return QDate::fromString(Input,Qt::ISODate);
+    return QDate::fromString(Input, Qt::ISODate);
 }
 
 void colorItem(QTreeWidgetItem *Itm, char P) {

@@ -14,6 +14,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <qorgmail.h>
+#include <algorithm>
 #include <vector>
 
 Structure::Structure() {
@@ -239,8 +240,7 @@ QByteArray SSLCON::readIMAP(QSslSocket *S) {
     }
     return Reply;
 }
-QList <QString> SSLCON::splitBS(QString I)
-{
+QList <QString> SSLCON::splitBS(QString I) {
     QList <QString> Output;
     if (I[0] != '\"') {
         QString P = "";
@@ -264,22 +264,22 @@ QList <QString> SSLCON::splitBS(QString I)
                 if (L == 0) {
                     if (SPB) {
                         V++;
-                        QString O = P+"."+QString::number(V)+" "+I.mid(S+1,i-S-1);
-                        if (I.mid(S+1,i-S-1)[0] != '\"') {
+                        QString O = P+"."+QString::number(V)+" "+I.mid(S+1, i-S-1);
+                        if (I.mid(S+1, i-S-1)[0] != '\"') {
                             Output.append(splitBS(O));
                         } else {
                             Output.append(O);
                         }
                     } else {
                         V++;
-                        QString O = QString::number(V)+" "+I.mid(S+1,i-S-1);
-                        if (I.mid(S+1,i-S-1)[0] != '\"') {
+                        QString O = QString::number(V)+" "+I.mid(S+1, i-S-1);
+                        if (I.mid(S+1, i-S-1)[0] != '\"') {
                             Output.append(splitBS(O));
                         } else {
                             Output.append(O);
                         }
                     }
-                    if ( I.at(i+1) == ' ') {
+                    if (I.at(i+1) == ' ') {
                         break;
                     }
                 }
@@ -468,7 +468,7 @@ void SSLCON::DownloadEmails() {
                             for (uint k = Fn; k + 100 < En; k += 100) {
                                 S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" UID\r\n").toUtf8());
                                 QString Tmp = readIMAP(&S);
-                                Tmp.remove(Tmp.indexOf("TAG OK"),Tmp.length()-Tmp.indexOf("TAG OK"));
+                                Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
                                 UIDS.append(Tmp);
                             }
                             S.write(QString("TAG FETCH "+QString::number(En - En%100 + 1)+":"+Enu+" UID\r\n").toUtf8());
@@ -509,7 +509,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = Fn; k + 100 < En; k +=100) {
                                     S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
                                     QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"),Tmp.length()-Tmp.indexOf("TAG OK"));
+                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
                                     Subjects.append(Tmp);
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
@@ -524,9 +524,8 @@ void SSLCON::DownloadEmails() {
                                 }
                                 QList <QString> SubL = Subjects.split(")\r\n*");
                                 for (uint k = 0; k < En-Fn+1; k++) {
-                                    if (SubL[k].contains("Subject:"))
-                                    {
-                                        QString Sub = SubL[k].mid(SubL[k].indexOf("Subject: ")+9, SubL[k].indexOf("\r\n)",SubL[k].indexOf("Subject: ")+9)-SubL[k].indexOf("Subject:")-9);
+                                    if (SubL[k].contains("Subject:")) {
+                                        QString Sub = SubL[k].mid(SubL[k].indexOf("Subject: ")+9, SubL[k].indexOf("\r\n)", SubL[k].indexOf("Subject: ")+9)-SubL[k].indexOf("Subject:")-9);
                                         Sub.remove("\r\n");
                                         Sub = NameFilter(Sub);
                                         if (Sub.simplified().isEmpty()) {
@@ -542,7 +541,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = Fn; k + 100 < En; k +=100) {
                                     S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Date)]\r\n").toUtf8());
                                     QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"),Tmp.length()-Tmp.indexOf("TAG OK"));
+                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
                                     Dates.append(Tmp);
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Date)]\r\n").toUtf8());
@@ -557,9 +556,8 @@ void SSLCON::DownloadEmails() {
                                 }
                                 QList <QString> DateL = Dates.split(")\r\n*");
                                 for (uint k = 0; k < En-Fn+1; k++) {
-                                    if (DateL[k].contains("Date:"))
-                                    {
-                                        QString Dat = DateL[k].mid(DateL[k].indexOf("Date: ")+6, DateL[k].indexOf("\r\n)",DateL[k].indexOf("Date: ")+6)-DateL[k].indexOf("Date: ")-6);
+                                    if (DateL[k].contains("Date:")) {
+                                        QString Dat = DateL[k].mid(DateL[k].indexOf("Date: ")+6, DateL[k].indexOf("\r\n)", DateL[k].indexOf("Date: ")+6)-DateL[k].indexOf("Date: ")-6);
                                         if (Dat.contains(", ")) {
                                             Dat = Dat.mid(Dat.indexOf(", ")+2, Dat.length()-Dat.indexOf(", ")-2);
                                         }
@@ -595,7 +593,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = Fn; k + 100 < En; k +=100) {
                                     S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
                                     QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"),Tmp.length()-Tmp.indexOf("TAG OK"));
+                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
                                     Froms.append(Tmp);
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
@@ -610,9 +608,8 @@ void SSLCON::DownloadEmails() {
                                 }
                                 QList <QString> FromsL = Froms.split(")\r\n*");
                                 for (uint k = 0; k < En-Fn+1; k++) {
-                                    if (FromsL[k].contains("From:"))
-                                    {
-                                        QString From = FromsL[k].mid(FromsL[k].indexOf("From: ")+6, FromsL[k].indexOf("\r\n)",FromsL[k].indexOf("From: ")+6)-FromsL[k].indexOf("From: ")-6);
+                                    if (FromsL[k].contains("From:")) {
+                                        QString From = FromsL[k].mid(FromsL[k].indexOf("From: ")+6, FromsL[k].indexOf("\r\n)", FromsL[k].indexOf("From: ")+6)-FromsL[k].indexOf("From: ")-6);
                                         QString Name = From.mid(0, From.indexOf("<"));
                                         Name = NameFilter(Name);
                                         QString EMA = From.mid(From.indexOf("<")+1, From.indexOf(">")-From.indexOf("<")-1).simplified();
@@ -627,7 +624,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = Fn; k + 100 < En; k +=100) {
                                     S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" FLAGS\r\n").toUtf8());
                                     QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"),Tmp.length()-Tmp.indexOf("TAG OK"));
+                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
                                     Flags.append(Tmp);
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" FLAGS\r\n").toUtf8());
@@ -669,7 +666,7 @@ void SSLCON::DownloadEmails() {
                                 for (uint k = Fn; k + 100 < En; k +=100) {
                                     S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODYSTRUCTURE\r\n").toUtf8());
                                     QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"),Tmp.length()-Tmp.indexOf("TAG OK"));
+                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
                                     BS.append(Tmp);
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODYSTRUCTURE\r\n").toUtf8());
@@ -686,7 +683,7 @@ void SSLCON::DownloadEmails() {
                                 BSL.removeFirst();
                                 for (uint k = 0; k < En-Fn+1; k++) {
                                     QList <QString> RBS = splitBS(BSL[k].mid(0, BSL[k].lastIndexOf(")")-1));
-                                    for (int l = 0;l < RBS.size(); l++) {
+                                    for (int l = 0; l < RBS.size(); l++) {
                                         Structure *Tmp = new Structure();
                                         QList <QString> IL;
                                         int L = 0;
@@ -1565,7 +1562,7 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     connect(AddB, SIGNAL(clicked()), this, SLOT(testInput()));
     C << List << Labels[0] << Labels[1] << Labels[2] << Labels[3] << Labels[4] << Labels[5] << Username << Passwd << IMAPS << SMTPS << Choose << AddB;
     setLayoutC();
-    connect(this,SIGNAL(updateTree()),this,SLOT(sortMail()));
+    connect(this, SIGNAL(updateTree()), this, SLOT(sortMail()));
 }
 qorgMail::~qorgMail() {
     for (uint i = 0; i < Mailv.size(); i++) {
@@ -1642,7 +1639,7 @@ void qorgMail::input(QString Input) {
     Mail *cMail;
     Mailbox *cMailbox;
     Email *cEmail;
-    for (int i = 0; i<A.size(); i++) {
+    for (int i = 0; i < A.size(); i++) {
         QStringList B = A[i].split(" ");
         switch (B.size()-1) {
         case 5: {
@@ -1670,7 +1667,7 @@ void qorgMail::input(QString Input) {
             cMailbox->Mbox_Attrybutes = InputI(B[2]);
             cMailbox->Mbox_Refresh = InputB(B[3]);
             cMailbox->Mbox_Top = InputB(B[4]);
-            QStringList C = B[5].split(",",QString::SkipEmptyParts);
+            QStringList C = B[5].split(",", QString::SkipEmptyParts);
             vector <uint> Temp;
             for (int i = 0; i < C.size(); i++) {
                 Temp.push_back(static_cast<uint>(C[i].toInt()));
@@ -1881,9 +1878,9 @@ void qorgMail::testInput() {
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(EmailS(bool)));
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setWindowTitle("Add mail bar");
-            connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
-            connect(T,SIGNAL(end()),Bar,SLOT(close()));
-            connect(Bar,SIGNAL(canceled()),T,SLOT(Canceled()));
+            connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
+            connect(T, SIGNAL(end()), Bar, SLOT(close()));
+            connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
             Bar->setAttribute(Qt::WA_DeleteOnClose);
             T->setMethod(SSLCON::Login);
             T->start();
@@ -1929,9 +1926,9 @@ void qorgMail::EditMail(uint IID) {
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setWindowTitle("Edit mail bar");
         Bar->setAttribute(Qt::WA_DeleteOnClose);
-        connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
-        connect(T,SIGNAL(end()),Bar,SLOT(close()));
-        connect(Bar,SIGNAL(canceled()),T,SLOT(Canceled()));
+        connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
+        connect(T, SIGNAL(end()), Bar, SLOT(close()));
+        connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
         T->setMethod(SSLCON::Mailboxes);
         T->start();
         Bar->exec();
@@ -1982,16 +1979,16 @@ void qorgMail::EditMailS(bool I) {
             Mailv[currentMail].Mboxv = B;
         }
         T->setMethod(SSLCON::Stop);
-        if((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
+        if ((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
             T = new SSLCON(&Mailv[currentMail]);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setWindowTitle("Edit mail bar");
             Bar->setAttribute(Qt::WA_DeleteOnClose);
-            connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
-            connect(T,SIGNAL(end()),Bar,SLOT(close()));
-            connect(Bar,SIGNAL(canceled()),T,SLOT(Canceled()));
-            connect(Bar,SIGNAL(canceled()),this,SLOT(UpdateMail()));
+            connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
+            connect(T, SIGNAL(end()), Bar, SLOT(close()));
+            connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
+            connect(Bar, SIGNAL(canceled()), this, SLOT(UpdateMail()));
             T->setMethod(SSLCON::Emails);
             T->start();
             Bar->exec();
@@ -2042,8 +2039,8 @@ void qorgMail::chooseEmail(QModelIndex I) {
         if (HTML.contains("\"cid:")) {
             bool Downloaded = true;
             uint position = 0;
-            while (HTML.indexOf("\"cid:",position) != -1) {
-                int s = HTML.indexOf("\"cid:",position);
+            while (HTML.indexOf("\"cid:", position) != -1) {
+                int s = HTML.indexOf("\"cid:", position);
                 int e = HTML.indexOf("\"", s+5);
                 position = e;
                 QString CID = HTML.mid(s+5, e-s-5);
@@ -2118,7 +2115,7 @@ void qorgMail::EmailS(bool I) {
         currentMail = Mailv.size()-1;
         emit updateTree();
     } else {
-        QMessageBox::critical(this,"Error","Error during downloading emails.");
+        QMessageBox::critical(this, "Error", "Error during downloading emails.");
     }
 }
 void qorgMail::downloadAttachment(QModelIndex I) {
@@ -2130,7 +2127,7 @@ void qorgMail::downloadAttachment(QModelIndex I) {
         L->setAttribute(Qt::WA_DeleteOnClose);
         L->setStyleSheet("background-color: #FF8888;");
         L->setWindowTitle(name);
-        connect(T,SIGNAL(end()),L,SLOT(close()));
+        connect(T, SIGNAL(end()), L, SLOT(close()));
         L->show();
         T->DownloadAttachmentData(currentMailbox, currentEmail, I.row()+1, path);
         T->setMethod(SSLCON::Attachment);
@@ -2167,9 +2164,9 @@ void qorgMail::AttachmentS(bool I) {
                     }
                 }
                 ReadMail->setHtml(HTML);
-                QEventLoop *loop=new QEventLoop(this);
-                connect(ReadMail,SIGNAL(loadFinished(bool)),loop,SLOT(quit()));
-                connect(ReadMail,SIGNAL(urlChanged(QUrl)),loop,SLOT(quit()));
+                QEventLoop *loop = new QEventLoop(this);
+                connect(ReadMail, SIGNAL(loadFinished(bool)), loop, SLOT(quit()));
+                connect(ReadMail, SIGNAL(urlChanged(QUrl)), loop, SLOT(quit()));
                 loop->exec();
                 loop->deleteLater();
                 for (int i = 0; i < ToClear.size(); i++) {
@@ -2242,10 +2239,10 @@ void qorgMail::RefreshS(bool I) {
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setWindowTitle("Refresh bar");
         Bar->setAttribute(Qt::WA_DeleteOnClose);
-        connect(T,SIGNAL(changeValue(int)),Bar,SLOT(setValue(int)));
-        connect(T,SIGNAL(end()),Bar,SLOT(close()));
-        connect(Bar,SIGNAL(canceled()),T,SLOT(Canceled()));
-        connect(Bar,SIGNAL(canceled()),this,SLOT(UpdateMail()));
+        connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
+        connect(T, SIGNAL(end()), Bar, SLOT(close()));
+        connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
+        connect(Bar, SIGNAL(canceled()), this, SLOT(UpdateMail()));
         T->setMethod(SSLCON::Emails);
         T->start();
         Bar->show();
@@ -2295,7 +2292,7 @@ void qorgMail::SendEmailS(bool I) {
 }
 void qorgMail::DeleteEmail() {
     if (currentEmail != -1) {
-        if(Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
+        if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
         SSLCON *T = new SSLCON(&Mailv[currentMail]);
         connect(T, SIGNAL(DeleteS(bool)), this, SLOT(DeleteEmailS(bool)));
         T->SetBE(currentMailbox, currentEmail);
@@ -2374,17 +2371,17 @@ void qorgMail::getUpdate() {
 void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
-    connect(QNR,SIGNAL(finished()),QNR,SLOT(deleteLater()));
+    connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
 }
 void qorgMail::sortMail() {
     if (Mailv.size() > 1) {
         while (true) {
             bool OKL = true;
             for (int i = 0; i < static_cast<int>(Mailv.size()-1); i++) {
-                if ( Mailv[i].Name > Mailv[i+1].Name ) {
-                    if ( i == currentMail) {
+                if (Mailv[i].Name > Mailv[i+1].Name) {
+                    if (i == currentMail) {
                         currentMail++;
-                    } else if ( i+1 == currentMail) {
+                    } else if (i+1 == currentMail) {
                         currentMail--;
                     }
                     swap(Mailv[i], Mailv[i+1]);
