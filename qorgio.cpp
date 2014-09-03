@@ -47,7 +47,7 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     memset(Output, 0, sizeof(sizeofinput));
     delete[] Output;
     delete aesKey;
-    if (!Decrypted.contains("QOrganizer") || Decrypted.mid(Decrypted.length()-AES_BLOCK_SIZE,AES_BLOCK_SIZE) != QString(AES_BLOCK_SIZE,'.')) {
+    if (!Decrypted.contains("QOrganizer") || Decrypted.mid(Decrypted.length() - AES_BLOCK_SIZE, AES_BLOCK_SIZE) != QString(AES_BLOCK_SIZE, '.')) {
         QMessageBox::critical(main, "Error", "Invalid file of password!");
         return false;
     }
@@ -74,7 +74,7 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     data.append(main->AdressBook->output());
     data.append(main->RSS->output());
     data.append(main->PasswordManager->output());
-    data.append(QString(AES_BLOCK_SIZE,'.'));
+    data.append(QString(AES_BLOCK_SIZE, '.'));
     QString Passwd = QString(calculateXOR(hashed->toUtf8(), hash->toUtf8()));
     if (Passwd.length() <  32) {
         Passwd.append(QString(32-Passwd.length(), '\0'));

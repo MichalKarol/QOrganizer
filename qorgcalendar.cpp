@@ -574,7 +574,7 @@ QString qorgCalendar::output() {
 }
 void qorgCalendar::input(QString Input) {
     QStringList A = Input.split("\n");
-    for (int i = 0; i<A.size(); i++) {
+    for (int i = 0; i < A.size(); i++) {
         QStringList B = A[i].split(" ");
         switch (B.size()-1) {
         case 5: {

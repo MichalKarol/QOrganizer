@@ -231,7 +231,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
             Calendar->setCategory(Input->text(0));
             Stacked->setCurrentIndex(1);
         } else if (Input->parent()->text(0) == "Mail") {
-            for (int i = 0;i<Input->parent()->childCount(); i++) {
+            for (int i = 0; i < Input->parent()->childCount(); i++) {
                 if (Input->parent()->child(i) == Input) {
                     Mail->setMail(i);
                     break;
@@ -242,7 +242,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
             AdressBook->setCategory(Input->text(0));
             Stacked->setCurrentIndex(4);
         } else if (Input->parent()->text(0) == "Feeds Reader") {
-            for (int i = 0;i<Input->parent()->childCount(); i++) {
+            for (int i = 0; i < Input->parent()->childCount(); i++) {
                 if (Input->parent()->child(i) == Input) {
                     RSS->setChannel(i);
                     break;

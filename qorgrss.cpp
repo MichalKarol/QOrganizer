@@ -14,6 +14,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <qorgrss.h>
+#include <algorithm>
 #include <vector>
 
 RSSItem::RSSItem() {
@@ -168,8 +169,8 @@ QString stringBetween(QString Tag, QString Text) {
     if (Text.contains("<")) {
         Text = Text.mid(0, Text.lastIndexOf("<"));
     }
-    Text.replace("<","&lt;");
-    Text.replace(">","&gt;");
+    Text.replace("<", "&lt;");
+    Text.replace(">", "&gt;");
     QTextDocument D;
     D.setHtml(Text);
     Text = D.toPlainText();
@@ -232,7 +233,7 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     Split->addWidget(Titles);
     Split->addWidget(W);
     setLayoutC();
-    connect(this,SIGNAL(updateTree()),this,SLOT(sortRSS()));
+    connect(this, SIGNAL(updateTree()), this, SLOT(sortRSS()));
 }
 qorgRSS::~qorgRSS() {
     for (uint i = 0; i < RSSv.size(); i++) {
@@ -261,7 +262,7 @@ QString qorgRSS::output() {
 void qorgRSS::input(QString Input) {
     QStringList A = Input.split("\n");
     RSSChannel *cChannel;
-    for (int i = 0; i<A.size(); i++) {
+    for (int i = 0; i < A.size(); i++) {
         QStringList B = A[i].split(" ");
         switch (B.size()-1) {
         case 2: {
@@ -501,7 +502,6 @@ void qorgRSS::DownloadedS(QString Rep) {
             RSSv.push_back((*Channel));
             if (UpdateQuene == 0) {
                 currentC = RSSv.size()-1;
-                qDebug()<<currentC;
             }
             delete Channel;
             emit updateTree();
@@ -565,17 +565,17 @@ void qorgRSS::UpdateS() {
 void qorgRSS::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     I.clear();
     QNR->ignoreSslErrors();
-    connect(QNR,SIGNAL(finished()),QNR,SLOT(deleteLater()));
+    connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
 }
 void qorgRSS::sortRSS() {
     if (RSSv.size() > 1) {
         while (true) {
             bool OKL = true;
             for (uint i = 0; i < RSSv.size()-1; i++) {
-                if ( RSSv[i].Title > RSSv[i+1].Title ) {
-                    if ( i == currentC) {
+                if (RSSv[i].Title > RSSv[i+1].Title) {
+                    if (i == currentC) {
                         currentC++;
-                    } else if ( i+1 == currentC) {
+                    } else if (i+1 == currentC) {
                         currentC--;
                     }
                     swap(RSSv[i], RSSv[i+1]);
