@@ -1290,11 +1290,13 @@ void qorgCalendar::setNotification(bool first) {
     NTimer->start();
 }
 void qorgCalendar::checkMidnight() {
-    if (Midnight->remainingTime() - QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))) > 500) {
+    int difference = Midnight->remainingTime()-QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00)));
+    if (difference > 500 || difference < -500) {
         Midnight->stop();
         Midnight->setInterval(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))));
         Midnight->start();
         setNotification(true);
+        updateAll();
     }
 }
 #include "qorgcalendar.moc"
