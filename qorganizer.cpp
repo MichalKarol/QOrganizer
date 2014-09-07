@@ -125,6 +125,9 @@ QOrganizer::QOrganizer() {
     layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
+    for (int i = TreeWidget->topLevelItemCount(); i > 0; i--) {
+        delete TreeWidget->topLevelItem(i-1);
+    }
     delete hash;
     delete hashed;
 }
@@ -253,13 +256,9 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
     }
 }
 void QOrganizer::updateCalendar() {
-    QString currentCategory;
+    QString currentCategory = TreeWidget->currentItem()->text(0);
     bool selected = false;
-    QTreeWidgetItem *Itm = TreeWidget->currentItem();
-    if (Itm->parent() != NULL) {
-        Itm = Itm->parent();
-        currentCategory = TreeWidget->currentItem()->text(0);
-    }
+    QTreeWidgetItem *Itm = TreeWidget->topLevelItem(0);
     for (int i = Itm->childCount(); i > 0; i--) {
         Itm->removeChild(TreeWidget->itemAt(0, 0)->child(i-1));
     }
@@ -286,14 +285,11 @@ void QOrganizer::Notification(QString M) {
     Tray->showMessage("Event notification", M, QSystemTrayIcon::Information, 3000);
 }
 void QOrganizer::updateMail() {
-    QTreeWidgetItem *Itm = TreeWidget->currentItem();
-    if (Itm->parent() != NULL) {
-        Itm = Itm->parent();
-    }
+    QTreeWidgetItem *Itm = TreeWidget->topLevelItem(1);
     int currentMail = Mail->getCurrent();
     QStringList categories = Mail->getCategories();
     for (int i = Itm->childCount(); i > 0; i--) {
-        Itm->removeChild(Itm->child(i-1));
+        delete Itm->child(i-1);
     }
     if (categories.size() > 0) {
         Itm->setExpanded(true);
@@ -311,15 +307,12 @@ void QOrganizer::updateMail() {
     }
 }
 void QOrganizer::updateAdressBook() {
-    QTreeWidgetItem *Itm = TreeWidget->currentItem();
-    if (Itm->parent() != NULL) {
-        Itm = Itm->parent();
-    }
+    QTreeWidgetItem *Itm = TreeWidget->topLevelItem(3);
     QString currentCategory = AdressBook->getCurrent();
     bool selected = false;
     QStringList categories = AdressBook->getCategories();
     for (int i = Itm->childCount(); i > 0; i--) {
-        Itm->removeChild(Itm->child(i-1));
+        delete Itm->child(i-1);
     }
     if (categories.size() > 0) {
         Itm->setExpanded(true);
@@ -340,14 +333,11 @@ void QOrganizer::updateAdressBook() {
     }
 }
 void QOrganizer::updateRSS() {
-    QTreeWidgetItem *Itm = TreeWidget->currentItem();
-    if (Itm->parent() != NULL) {
-        Itm = Itm->parent();
-    }
+    QTreeWidgetItem *Itm = TreeWidget->topLevelItem(4);
     int currentChannel = RSS->getCurrent();
     QStringList categories = RSS->getChannels();
     for (int i = Itm->childCount(); i > 0; i--) {
-        Itm->removeChild(Itm->child(i-1));
+        delete Itm->child(i-1);
     }
     if (categories.size() > 0) {
         Itm->setExpanded(true);

@@ -25,20 +25,7 @@ RSSItem::RSSItem() {
     GUID.clear();
     New = true;
 }
-RSSItem::~RSSItem() {
-    Title.clear();
-    PubDate.setMSecsSinceEpoch(0);
-    Link.clear();
-    Description.clear();
-    GUID.clear();
-    New = true;
-}
 RSSChannel::RSSChannel() {
-    Title.clear();
-    Link.clear();
-    Itemv.clear();
-}
-RSSChannel::~RSSChannel() {
     Title.clear();
     Link.clear();
     Itemv.clear();
@@ -84,7 +71,7 @@ void Download::run() {
         if (Req == server) {
             Req="/";
         }
-        S.write(QString("GET "+Req+" HTTP/1.1\nUser-Agent: QOrganizer\nHost: "+server+"\nConnection:close\n\n").toUtf8());
+        S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nConnection:close\r\n\r\n").toUtf8());
         if (S.waitForReadyRead()) {
             QByteArray Reply = S.readAll();
             while (S.state() == QTcpSocket::ConnectedState) {
@@ -136,7 +123,7 @@ QByteArray Download::SubDownload(QString I) {
         if (Req == server) {
             Req="/";
         }
-        S.write(QString("GET "+Req+" HTTP/1.1\nUser-Agent: QOrganizer\nHost: "+server+"\nConnection:close\n\n").toUtf8());
+        S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nConnection:close\r\n\r\n").toUtf8());
         if (S.waitForReadyRead()) {
             Reply = S.readAll();
             while (S.state() == QTcpSocket::ConnectedState) {
@@ -148,7 +135,7 @@ QByteArray Download::SubDownload(QString I) {
                 QString NUrl = Reply.mid(Reply.indexOf("The document has moved ")+32, Reply.indexOf("\">here")-Reply.indexOf("The document has moved ")-32);
                 Reply = SubDownload(NUrl);
             } else if (Reply.contains("HTTP/1.1 302")) {
-                QString NUrl = Reply.mid(Reply.indexOf("Location: ")+10, Reply.indexOf("\n", Reply.indexOf("Location: "))-Reply.indexOf("Location: ")-10);
+                QString NUrl = Reply.mid(Reply.indexOf("Location: ")+10, Reply.indexOf("\r\n", Reply.indexOf("Location: "))-Reply.indexOf("Location: ")-10);
                 Reply = SubDownload(NUrl);
             }
         }
@@ -448,9 +435,10 @@ void qorgRSS::DownloadedS(QString Rep) {
             Title.remove("\r\n");
             Title.remove("<br>");
             item->Title = Title;
-            QString Link = Rep.mid(Rep.indexOf("<link", 0, Qt::CaseInsensitive), Rep.indexOf("/>", Rep.indexOf("<link", 0, Qt::CaseInsensitive), Qt::CaseInsensitive)-Rep.indexOf("<link", 0, Qt::CaseInsensitive));
-            Link = Link.mid(Link.indexOf("href=\"")+6, Link.indexOf("\"", Link.indexOf("href=\"")+6)-6);
-            item->Link = Link;
+            int S = Rep.indexOf("<link", 0, Qt::CaseInsensitive);
+            int B = Rep.indexOf("href=\"", S+5, Qt::CaseInsensitive);
+            int E = Rep.indexOf("\"", B+6);
+            item->Link = Rep.mid(B+6,E-B-6);;
             QString Des;
             if (Rep.contains("summary")) {
                 Des = stringBetween("summary", Rep);
@@ -571,7 +559,7 @@ void qorgRSS::sortRSS() {
     if (RSSv.size() > 1) {
         while (true) {
             bool OKL = true;
-            for (uint i = 0; i < RSSv.size()-1; i++) {
+            for (int i = 0; i < RSSv.size()-1; i++) {
                 if (RSSv[i].Title > RSSv[i+1].Title) {
                     if (i == currentC) {
                         currentC++;

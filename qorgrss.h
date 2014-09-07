@@ -26,7 +26,6 @@ using std::swap;
 class RSSItem {
 public:
     RSSItem();
-    ~RSSItem();
     QString Title;
     QDateTime PubDate;
     QString Link;
@@ -37,7 +36,6 @@ public:
 class RSSChannel {
 public:
     RSSChannel();
-    ~RSSChannel();
     QString Title;
     QString Link;
     vector <RSSItem*> Itemv;

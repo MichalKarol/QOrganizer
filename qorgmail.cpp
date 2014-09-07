@@ -33,34 +33,7 @@ Structure::Structure() {
     this->Structure_Language.clear();
     this->Structure_Location.clear();
 }
-Structure::~Structure() {
-    this->Structure_Number.clear();
-    this->Structure_Type.clear();
-    this->Structure_Subtype.clear();
-    this->Structure_Attrybutes.Charset.clear();
-    this->Structure_Attrybutes.Name.clear();
-    this->Structure_CID.clear();
-    this->Structure_Descryption.clear();
-    this->Structure_Encoding.clear();
-    this->Structure_Size = 0;
-    this->Structure_Lines = 0;
-    this->Structure_MD5.clear();
-    this->Structure_Disposition.clear();
-    this->Structure_Language.clear();
-    this->Structure_Location.clear();
-}
 Email::Email() {
-    this->Email_Subject.clear();
-    this->Email_From.Name.clear();
-    this->Email_From.EMailA.clear();
-    this->Email_Date.setMSecsSinceEpoch(0);
-    this->Email_Body[0].clear();
-    this->Email_Body[1].clear();
-    this->Email_UID = 0;
-    this->Email_Flags = 0;
-    this->Structurev.clear();
-}
-Email::~Email() {
     this->Email_Subject.clear();
     this->Email_From.Name.clear();
     this->Email_From.EMailA.clear();
@@ -80,24 +53,7 @@ Mailbox::Mailbox() {
     this->Mbox_Refresh = false;
     this->Mbox_Top = false;
 }
-Mailbox::~Mailbox() {
-    this->Mbox_Name.clear();
-    this->Mbox_Showname.clear();
-    this->Mbox_Attrybutes = 0;
-    this->Mbox_Children.clear();
-    this->Emailv.clear();
-    this->Mbox_Refresh = false;
-    this->Mbox_Top = false;
-}
 Mail::Mail() {
-    this->Name.clear();
-    this->IMAPserver.clear();
-    this->SMTPserver.clear();
-    this->User.clear();
-    this->Password.clear();
-    this->Mboxv.clear();
-}
-Mail::~Mail() {
     this->Name.clear();
     this->IMAPserver.clear();
     this->SMTPserver.clear();
@@ -232,7 +188,7 @@ QByteArray SSLCON::readIMAP(QSslSocket *S) {
     QByteArray Reply;
     if (Current != Cancel && S->waitForReadyRead()) {
         Reply.append(S->readAll());
-        while (!Reply.contains("TAG OK") && !Reply.contains("TAG NO") && !Reply.contains("TAG BAD")) {
+        while (!(Reply.contains("TAG OK") || Reply.contains("TAG NO") || Reply.contains("TAG BAD"))) {
             if (S->waitForReadyRead() && S->bytesAvailable() != 0) {
                 Reply.append(S->readAll());
             }
@@ -304,7 +260,7 @@ void SSLCON::SecureLogin() {
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
     S.ignoreSslErrors();
-    Reply = readAll(&S);
+    Reply  = readAll(&S);
     if (Reply.isEmpty() || Current == Cancel) {
         emit LoginS(false);
         return;
@@ -1748,16 +1704,16 @@ void qorgMail::setMailbox(int I) {
     MailView->clear();
     ReadMail->setHtml("");
     AttachmentList->clear();
-    for (int i = Mailv[currentMail].Mboxv[I]->Emailv.size()-1; i > -1; i--) {
+    for (int i = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-1; i > -1; i--) {
         QTreeWidgetItem *Itm = new QTreeWidgetItem();
-        if (!(Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_Flags&Email::Seen)) {
+        if (!(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Flags&Email::Seen)) {
             Itm->setFont(0, QFont("", Itm->font(0).pixelSize(), QFont::Bold));
         }
-        Itm->setText(0, Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_Subject);
-        Itm->setToolTip(0, Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_Subject);
-        Itm->setText(1, Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_From.EMailA);
-        Itm->setToolTip(1, Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_From.EMailA);
-        Itm->setText(2, Mailv[currentMail].Mboxv[I]->Emailv[i]->Email_Date.toString("dd/MM/yyyy hh:mm"));
+        Itm->setText(0, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Subject);
+        Itm->setToolTip(0, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Subject);
+        Itm->setText(1, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_From.EMailA);
+        Itm->setToolTip(1, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_From.EMailA);
+        Itm->setText(2, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Date.toString("dd/MM/yyyy hh:mm"));
         MailView->addTopLevelItem(Itm);
     }
     MailView->scrollToTop();
@@ -2112,9 +2068,14 @@ void qorgMail::EmailS(bool I) {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         Mailv.push_back((*T->M));
+        delete T->M;
         currentMail = Mailv.size()-1;
         emit updateTree();
     } else {
+        for (uint i = 0; i < T->M->Mboxv.size(); i++) {
+            delete T->M->Mboxv[i];
+        }
+        delete T->M;
         QMessageBox::critical(this, "Error", "Error during downloading emails.");
     }
 }
@@ -2293,11 +2254,11 @@ void qorgMail::SendEmailS(bool I) {
 void qorgMail::DeleteEmail() {
     if (currentEmail != -1) {
         if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
-        SSLCON *T = new SSLCON(&Mailv[currentMail]);
-        connect(T, SIGNAL(DeleteS(bool)), this, SLOT(DeleteEmailS(bool)));
-        T->SetBE(currentMailbox, currentEmail);
-        T->setMethod(SSLCON::Delete);
-        T->start();
+            SSLCON *T = new SSLCON(&Mailv[currentMail]);
+            connect(T, SIGNAL(DeleteS(bool)), this, SLOT(DeleteEmailS(bool)));
+            T->SetBE(currentMailbox, currentEmail);
+            T->setMethod(SSLCON::Delete);
+            T->start();
         } else {
             DeleteEmailS(true);
         }

@@ -27,7 +27,6 @@ using std::swap;
 class Structure {
 public:
     Structure();
-    ~Structure();
     struct Attrybutes    {
         QString Charset;
         QString Name;
@@ -49,7 +48,6 @@ public:
 class Email {
 public:
     Email();
-    ~Email();
     enum Flags    {
         Answered = 1,
         Flagged = 2,
@@ -72,7 +70,6 @@ public:
 class Mailbox {
 public:
     Mailbox();
-    ~Mailbox();
     enum Att    {
         HasChildren = 1,
         HasNoChildren = 2,
@@ -96,7 +93,6 @@ public:
 class Mail {
 public:
     Mail();
-    ~Mail();
     QString Name;
     QString IMAPserver;
     QString SMTPserver;
