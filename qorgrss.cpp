@@ -71,12 +71,13 @@ void Download::run() {
         if (Req == server) {
             Req="/";
         }
-        S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nConnection:close\r\n\r\n").toUtf8());
+        S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n").toUtf8());
         if (S.waitForReadyRead()) {
             QByteArray Reply = S.readAll();
             while (S.state() == QTcpSocket::ConnectedState) {
                 if (S.waitForReadyRead()) {
-                    Reply.append(S.readAll());
+                    QString T = S.readAll();
+                    Reply.append(T);
                 }
             }
             if (Reply.contains("HTTP/1.1 301")) {
@@ -84,7 +85,20 @@ void Download::run() {
                 Reply = SubDownload(NUrl);
             } else if (Reply.contains("HTTP/1.1 302")) {
                 QString NUrl = Reply.mid(Reply.indexOf("Location: ")+10, Reply.indexOf("\r\n", Reply.indexOf("Location: "))-Reply.indexOf("Location: ")-10);
-                Reply = SubDownload(server+NUrl);
+                Reply = SubDownload(NUrl);
+            } else if (Reply.contains("Transfer-Encoding: chunked\r\n")) {
+                Reply = Reply.mid(Reply.indexOf("\r\n\r\n")+4,Reply.length()-Reply.indexOf("\r\n\r\n")-4);
+                QByteArray Temp;
+                uint pos = 0;
+                while (1) {
+                    uint Number = Reply.mid(pos,Reply.indexOf("\r\n",pos)-pos).toUInt(0,16);
+                    if (Number == 0) {
+                        break;
+                    }
+                    Temp.append(Reply.mid(Reply.indexOf("\r\n",pos)+2,Number));
+                    pos+=Reply.indexOf("\r\n")+Number+4;
+                }
+                Reply = Temp;
             }
             if (Reply.contains("encoding=\"")) {
                 QString encoding = Reply.mid(Reply.indexOf("encoding=\"")+10, Reply.indexOf("\"?>")-Reply.indexOf("encoding=\"")-10);
@@ -145,33 +159,35 @@ QByteArray Download::SubDownload(QString I) {
 }
 
 QString stringBetween(QString Tag, QString Text) {
-    Text = Text.mid(Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1,
-                    Text.indexOf(Tag+">", Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1, Qt::CaseInsensitive)
-                    - Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) - Tag.length()-1);
-    Text.remove("<![CDATA[");
-    Text.remove("]]>");
-    if (Text.contains(">")) {
-        Text = Text.mid(Text.indexOf(">")+1, Text.length()-Text.indexOf(">")-1);
-    }
-    if (Text.contains("<")) {
-        Text = Text.mid(0, Text.lastIndexOf("<"));
-    }
-    Text.replace("<", "&lt;");
-    Text.replace(">", "&gt;");
-    QTextDocument D;
-    D.setHtml(Text);
-    Text = D.toPlainText();
     QString Output;
-    for (int i = 0; i < Text.length()-4; i++) {
-        if (Text[i] == '&' && Text[i+1] == '#' && Text[i+4] == ';') {
-            QChar C(Text.mid(i+2, 2).toInt());
-            Output.append(C);
-            i+=4;
-        } else {
-            Output.append(Text[i]);
+    if (Text.contains("<" + Tag) && Text.contains(Tag + ">")) {
+        Text = Text.mid(Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1,
+                        Text.indexOf(Tag + ">", Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) + Tag.length() + 1, Qt::CaseInsensitive)
+                        - Text.indexOf("<" + Tag, 0, Qt::CaseInsensitive) - Tag.length()-1);
+        Text.remove("<![CDATA[");
+        Text.remove("]]>");
+        if (Text.contains(">")) {
+            Text = Text.mid(Text.indexOf(">")+1, Text.length()-Text.indexOf(">")-1);
         }
+        if (Text.contains("<")) {
+            Text = Text.mid(0, Text.lastIndexOf("<"));
+        }
+        Text.replace("<", "&lt;");
+        Text.replace(">", "&gt;");
+        QTextDocument D;
+        D.setHtml(Text);
+        Text = D.toPlainText();
+        for (int i = 0; i < Text.length()-4; i++) {
+            if (Text[i] == '&' && Text[i+1] == '#' && Text[i+4] == ';') {
+                QChar C(Text.mid(i+2, 2).toInt());
+                Output.append(C);
+                i+=4;
+            } else {
+                Output.append(Text[i]);
+            }
+        }
+        Output.append(Text.mid(Text.length()-4, 4));
     }
-    Output.append(Text.mid(Text.length()-4, 4));
     return Output;
 }
 
@@ -219,8 +235,7 @@ qorgRSS::qorgRSS(QWidget *parent) :QWidget(parent) {
     V->addLayout(H);
     Split->addWidget(Titles);
     Split->addWidget(W);
-    setLayoutC();
-    connect(this, SIGNAL(updateTree()), this, SLOT(sortRSS()));
+    setChannel(-1);
 }
 qorgRSS::~qorgRSS() {
     for (uint i = 0; i < RSSv.size(); i++) {
@@ -382,47 +397,48 @@ void qorgRSS::DownloadedS(QString Rep) {
     RSSChannel *Channel = D->Ch;
     if (Rep.contains("<rss ")&&Rep.contains("</rss>")) {
         if (Rep.contains("<channel>")&&Rep.contains("</channel>")) {
-            Channel->Title = stringBetween("title", Rep);
-            Rep = Rep.remove(0, Rep.indexOf("<item>"));
-            while (Rep.contains("</item>")) {
+            QList <QString> Parts = Rep.split("<item>");
+            Channel->Title = stringBetween("title", Parts[0]);
+            for(int i = 1; i < Parts.size()-1; i++) {
                 RSSItem *item = new RSSItem();
-                item->GUID = stringBetween("guid", Rep);
-                QString Title = stringBetween("title", Rep);
+                item->GUID = stringBetween("guid", Parts[i]);
+                QString Title = stringBetween("title", Parts[i]);
                 Title.remove("\r\n");
                 Title.remove("<br>");
                 item->Title = Title;
-                item->Link = stringBetween("link", Rep);
+                item->Link = stringBetween("link", Parts[i]);
                 if (item->GUID.isEmpty()) {
                     item->GUID = item->Link;
                 }
-                QString Des = stringBetween("description", Rep);
+                QString Des = stringBetween("description", Parts[i]);
                 item->Description = Des;
-                QString PB = stringBetween("pubDate", Rep);
+                QString PB = stringBetween("pubDate", Parts[i]);
                 PB = PB.remove(0, 5);
                 QStringList D = PB.simplified().split(" ");
-                QList  <QString>  Mon;
-                QDateTime Tmp;
-                Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
-                Tmp.setTimeSpec(Qt::UTC);
-                if (D[2].toInt() < 100) {
-                    D[2]="20"+D[2];
-                }
-                Tmp.setDate(QDate(D[2].toInt(), Mon.indexOf(D[1])+1, D[0].toInt()));
-                QStringList H = D[3].split(":");
-                Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
-                if (D[4] != "GMT") {
-                    char H = D[4].mid(1, 2).toShort();
-                    char M = D[4].mid(3, 2).toShort();
-                    int Sec = H*3600+M*60;
-                    if (D[4][0] == '+') {
-                        Tmp = Tmp.addSecs(-Sec);
-                    } else {
-                        Tmp = Tmp.addSecs(Sec);
+                if (D.size() == 5) {
+                    QList  <QString>  Mon;
+                    QDateTime Tmp;
+                    Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
+                    Tmp.setTimeSpec(Qt::UTC);
+                    if (D[2].toInt() < 100) {
+                        D[2]="20"+D[2];
                     }
+                    Tmp.setDate(QDate(D[2].toInt(), Mon.indexOf(D[1])+1, D[0].toInt()));
+                    QStringList H = D[3].split(":");
+                    Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
+                    if (D[4] != "GMT") {
+                        char H = D[4].mid(1, 2).toShort();
+                        char M = D[4].mid(3, 2).toShort();
+                        int Sec = H*3600+M*60;
+                        if (D[4][0] == '+') {
+                            Tmp = Tmp.addSecs(-Sec);
+                        } else {
+                            Tmp = Tmp.addSecs(Sec);
+                        }
+                    }
+                    item->PubDate = Tmp.toLocalTime();
                 }
-                item->PubDate = Tmp.toLocalTime();
                 Itm.push_back(item);
-                Rep.remove(0, Rep.indexOf("</item>")+7);
             }
         }
     } else if (Rep.contains("<feed xmlns=\"http://www.w3.org/2005/Atom\"")&&Rep.contains("</feed>")) {
@@ -492,7 +508,7 @@ void qorgRSS::DownloadedS(QString Rep) {
                 currentC = RSSv.size()-1;
             }
             delete Channel;
-            emit updateTree();
+            sortRSS();
         }
         for (uint i = 0; i < Itm.size(); i++) {
             delete Itm[i];
@@ -504,8 +520,8 @@ void qorgRSS::DeleteS(uint IID) {
         delete RSSv[IID].Itemv[j];
     }
     RSSv.erase(RSSv.begin()+IID);
-    setLayoutC();
-    emit updateTree();
+    currentC = -1;
+    sortRSS();
 }
 void qorgRSS::row(QString Input) {
     if (Input.isEmpty()) {
@@ -559,7 +575,7 @@ void qorgRSS::sortRSS() {
     if (RSSv.size() > 1) {
         while (true) {
             bool OKL = true;
-            for (int i = 0; i < RSSv.size()-1; i++) {
+            for (int i = 0; i < static_cast<int>(RSSv.size()-1); i++) {
                 if (RSSv[i].Title > RSSv[i+1].Title) {
                     if (i == currentC) {
                         currentC++;
@@ -576,7 +592,8 @@ void qorgRSS::sortRSS() {
         }
     }
     int tmp = currentC;
-    currentC = -1;
+    currentC = -2;
     setChannel(tmp);
+    emit updateTree();
 }
 #include "qorgrss.moc"
