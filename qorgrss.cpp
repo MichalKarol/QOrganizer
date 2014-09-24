@@ -76,8 +76,7 @@ void Download::run() {
             QByteArray Reply = S.readAll();
             while (S.state() == QTcpSocket::ConnectedState) {
                 if (S.waitForReadyRead()) {
-                    QString T = S.readAll();
-                    Reply.append(T);
+                    Reply.append(S.readAll());
                 }
             }
             if (Reply.contains("HTTP/1.1 301")) {
@@ -90,13 +89,13 @@ void Download::run() {
                 Reply = Reply.mid(Reply.indexOf("\r\n\r\n")+4,Reply.length()-Reply.indexOf("\r\n\r\n")-4);
                 QByteArray Temp;
                 uint pos = 0;
-                while (1) {
+                while (true) {
                     uint Number = Reply.mid(pos,Reply.indexOf("\r\n",pos)-pos).toUInt(0,16);
                     if (Number == 0) {
                         break;
                     }
                     Temp.append(Reply.mid(Reply.indexOf("\r\n",pos)+2,Number));
-                    pos+=Reply.indexOf("\r\n")+Number+4;
+                    pos = Reply.indexOf("\r\n",pos)+Number+4;
                 }
                 Reply = Temp;
             }

@@ -23,6 +23,7 @@
 #include <qorgab.h>
 #include <qorgrss.h>
 #include <qorgpasswd.h>
+#include <qorgoptions.h>;
 #include <QtWidgets>
 
 class QOrganizer : public QWidget {

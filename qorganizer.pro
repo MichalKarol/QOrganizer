@@ -22,7 +22,8 @@ SOURCES += main.cpp\
     qorgpasswd.cpp \
     qorglogin.cpp \
     qorganizer.cpp \
-    qorgtools.cpp
+    qorgtools.cpp \
+    qorgoptions.cpp
 
 HEADERS  += \
     qorgio.h \
@@ -34,7 +35,8 @@ HEADERS  += \
     qorgpasswd.h \
     qorglogin.h \
     qorganizer.h \
-    qorgtools.h
+    qorgtools.h \
+    qorgoptions.h
 
 LIBS += -lcrypto
 CONFIG += qt
