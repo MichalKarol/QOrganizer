@@ -47,7 +47,7 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     memset(Output, 0, sizeof(sizeofinput));
     delete[] Output;
     delete aesKey;
-    if (!Decrypted.contains("QOrganizer") || !Decrypted.endsWith(QString(AES_BLOCK_SIZE, '.'))) {
+    if (!Decrypted.contains("QOrganizer") || !Decrypted.contains(QString(AES_BLOCK_SIZE, '.'))) {
         QMessageBox::critical(main, "Error", "Invalid file of password!");
         return false;
     }
@@ -65,9 +65,9 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     return true;
 }
 void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString path) {
-    QString Out="QOrganizer 1.02";
+    QString Out="QOrganizer 1.02\n\n";
     QString data;
-    data.append(QString("\n\n"+Output(main->UInterval)+" "+Output(main->BInterval)+" \n\n"));
+    data.append(QString(Output(main->UInterval)+" "+Output(main->BInterval)+" \n\n"));
     data.append(main->Calendar->output());
     data.append(main->Mail->output());
     data.append(main->Notes->output());

@@ -134,7 +134,6 @@ SSLCON::SSLCON(Mail* I) {
     Current = Sleep;
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }
-
 void SSLCON::setMethod(Method I) {
     Current = I;
 }
@@ -235,7 +234,7 @@ QList <QString> SSLCON::splitBS(QString I) {
                             Output.append(O);
                         }
                     }
-                    if (I.at(i+1) == ' ') {
+                    if (I[i+1] == ' ') {
                         break;
                     }
                 }
@@ -487,7 +486,11 @@ void SSLCON::DownloadEmails() {
                                         if (Sub.simplified().isEmpty()) {
                                             Sub="(no subject)";
                                         }
-                                        (*Vec)[Fn+k-1]->Email_Subject = Sub.simplified();
+                                        Sub.replace("<", "&lt;");
+                                        Sub.replace(">", "&gt;");
+                                        QTextDocument D;
+                                        D.setHtml(Sub.simplified());
+                                        (*Vec)[Fn+k-1]->Email_Subject = D.toPlainText();
                                     }
                                 }
                             }
@@ -518,27 +521,29 @@ void SSLCON::DownloadEmails() {
                                             Dat = Dat.mid(Dat.indexOf(", ")+2, Dat.length()-Dat.indexOf(", ")-2);
                                         }
                                         QList <QString> D = Dat.simplified().split(" ");
-                                        QList <QString> Mon;
-                                        QDateTime Tmp;
-                                        Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
-                                        Tmp.setTimeSpec(Qt::UTC);
-                                        Tmp.setDate(QDate(D[2].toInt(), Mon.indexOf(D[1])+1, D[0].toInt()));
-                                        QStringList H = D[3].split(":");
-                                        Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
-                                        if (D.size() > 4) {
-                                            if (D[4] != "GMT") {
-                                                char H = D[4].mid(1, 2).toShort();
-                                                char M = D[4].mid(3, 2).toShort();
-                                                int Sec = H*3600+M*60;
-                                                if (D[4][0] == '+') {
-                                                    Tmp = Tmp.addSecs(-Sec);
-                                                } else {
-                                                    Tmp = Tmp.addSecs(Sec);
+                                        if (D.size() >= 4) {
+                                            QList <QString> Mon;
+                                            QDateTime Tmp;
+                                            Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
+                                            Tmp.setTimeSpec(Qt::UTC);
+                                            Tmp.setDate(QDate(D[2].toInt(), Mon.indexOf(D[1])+1, D[0].toInt()));
+                                            QStringList H = D[3].split(":");
+                                            Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
+                                            if (D.size() > 4) {
+                                                if (D[4] != "GMT") {
+                                                    char H = D[4].mid(1, 2).toShort();
+                                                    char M = D[4].mid(3, 2).toShort();
+                                                    int Sec = H*3600+M*60;
+                                                    if (D[4][0] == '+') {
+                                                        Tmp = Tmp.addSecs(-Sec);
+                                                    } else {
+                                                        Tmp = Tmp.addSecs(Sec);
+                                                    }
                                                 }
+                                                (*Vec)[Fn+k-1]->Email_Date = Tmp.toLocalTime();
+                                            } else {
+                                                (*Vec)[Fn+k-1]->Email_Date = Tmp;
                                             }
-                                            (*Vec)[Fn+k-1]->Email_Date = Tmp.toLocalTime();
-                                        } else {
-                                            (*Vec)[Fn+k-1]->Email_Date = Tmp;
                                         }
                                     }
                                 }
@@ -660,9 +665,11 @@ void SSLCON::DownloadEmails() {
                                         }
                                         IL.append(Data);
                                         for (int m = 0; m < IL.size(); m++) {
-                                            IL[m].remove("\"");
                                             IL[m].remove("(");
                                             IL[m].remove(")");
+                                            if (m != 10) {
+                                                IL[m].remove("\"");
+                                            }
                                         }
                                         Tmp->Structure_Number = IL[0];
                                         Tmp->Structure_Type = NILCleaner(IL[1]).toUpper();
@@ -685,16 +692,11 @@ void SSLCON::DownloadEmails() {
                                         if (Tmp->Structure_Type == "TEXT") {
                                             Tmp->Structure_Lines = IL[8].toInt();
                                             Tmp->Structure_MD5 = NILCleaner(IL[9]);
-                                            QList  <QString>  ILL = NILCleaner(IL[10]).toUpper().split(" ");
-                                            Tmp->Structure_Disposition = ILL[0];
-                                            QList  <QString>  ILLD = IL[10].split(" ");
+                                            QList  <QString>  ILL = NILCleaner(IL[10]).toUpper().split("\" \"");
+                                            Tmp->Structure_Disposition = ILL[0].remove("\"");
+                                            QList  <QString>  ILLD = IL[10].split("\" \"");
                                             if (ILL.indexOf("FILENAME") != -1) {
-                                                QString N = ILLD[ILL.indexOf("FILENAME")+1];
-                                                uint i = 2;
-                                                while (!N.contains(".")) {
-                                                    N.append(ILLD[ILL.indexOf("FILENAME")+i]);
-                                                }
-                                                Tmp->Structure_Attrybutes.Name = N;
+                                                Tmp->Structure_Attrybutes.Name = ILLD[ILL.indexOf("FILENAME")+1];
                                             }
                                             Tmp->Structure_Language = NILCleaner(IL[11]).toUpper();
                                             if (IL.size() == 13) {
@@ -767,6 +769,8 @@ void SSLCON::DownloadEmails() {
                                 }
                             }
                         }
+                    } else {
+                        Vec->clear();
                     }
                     break;
                 }
@@ -803,7 +807,7 @@ void SSLCON::DownloadAttachment() {
         emit AttachmentS(false);
         return;
     }
-    S.write(QString("TAG SELECT "+M->Mboxv[B]->Mbox_Name+"\r\n").toUtf8());
+    S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
         emit AttachmentS(false);
@@ -879,7 +883,7 @@ void SSLCON::SendEmail() {
         emit SendEmailS(false);
         return;
     }
-    S.write(QString("TAG SELECT "+M->Mboxv[B]->Mbox_Name+"\r\n").toUtf8());
+    S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false);
@@ -1011,7 +1015,7 @@ void SSLCON::DeleteEmail() {
         emit DeleteS(false);
         return;
     }
-    S.write(QString("TAG SELECT "+M->Mboxv[B]->Mbox_Name+"\r\n").toUtf8());
+    S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
         emit DeleteS(false);
@@ -1392,6 +1396,7 @@ private slots:
                 QListWidgetItem *Itm = new QListWidgetItem(To->text());
                 Itm->setToolTip(To->text());
                 Receivers->addItem(Itm);
+                To->setText(" ");
                 disconnect(To, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
                 To->clear();
             }
@@ -1430,6 +1435,28 @@ private slots:
             I->setStyleSheet("QQLineEdit{background: white;}");
         }
     }
+};
+class CertAccept :public QDialog {
+public:
+    explicit CertAccept(QWidget *parent, QSslCertificate cert) :QDialog(parent) {
+        setWindowTitle("SSL certificate error.");
+        Text = new QTextBrowser(this);
+        Text->setText(cert.toText());
+        No = new QPushButton(this);
+        No->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+        connect(No,SIGNAL(clicked()),this,SLOT(reject()));
+        Yes = new QPushButton(this);
+        Yes->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+        connect(Yes,SIGNAL(clicked()),this,SLOT(accept()));
+        QGridLayout *L = new QGridLayout(this);
+        L->addWidget(Text,0,0,1,2);
+        L->addWidget(No,1,0);
+        L->addWidget(Yes,1,1);
+    }
+private:
+    QTextBrowser *Text;
+    QPushButton *Yes;
+    QPushButton *No;
 };
 
 qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
@@ -1517,8 +1544,7 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     AddB->setShortcut(Qt::Key_Return);;
     connect(AddB, SIGNAL(clicked()), this, SLOT(testInput()));
     C << List << Labels[0] << Labels[1] << Labels[2] << Labels[3] << Labels[4] << Labels[5] << Username << Passwd << IMAPS << SMTPS << Choose << AddB;
-    setLayoutC();
-    connect(this, SIGNAL(updateTree()), this, SLOT(sortMail()));
+    setMail(-1);
 }
 qorgMail::~qorgMail() {
     for (uint i = 0; i < Mailv.size(); i++) {
@@ -1833,6 +1859,7 @@ void qorgMail::testInput() {
             connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(MailboxesS(bool)));
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(EmailS(bool)));
             QProgressDialog *Bar = new QProgressDialog();
+            Bar->setAutoReset(false);
             Bar->setWindowTitle("Add mail bar");
             connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
             connect(T, SIGNAL(end()), Bar, SLOT(close()));
@@ -1880,6 +1907,7 @@ void qorgMail::EditMail(uint IID) {
         SSLCON *T = new SSLCON(A);
         connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(EditMailS(bool)));
         QProgressDialog *Bar = new QProgressDialog();
+        Bar->setAutoReset(false);
         Bar->setWindowTitle("Edit mail bar");
         Bar->setAttribute(Qt::WA_DeleteOnClose);
         connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
@@ -1939,6 +1967,7 @@ void qorgMail::EditMailS(bool I) {
             T = new SSLCON(&Mailv[currentMail]);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
             QProgressDialog *Bar = new QProgressDialog();
+            Bar->setAutoReset(false);
             Bar->setWindowTitle("Edit mail bar");
             Bar->setAttribute(Qt::WA_DeleteOnClose);
             connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
@@ -1966,8 +1995,8 @@ void qorgMail::DeleteMail(uint IID) {
         delete I->Mboxv[j];
     }
     Mailv.erase(Mailv.begin()+IID);
-    setLayoutC();
-    emit updateTree();
+    currentMail = -1;
+    sortMail();
 }
 void qorgMail::chooseMbox(QTreeWidgetItem *I) {
     int Int = 0;
@@ -2004,8 +2033,6 @@ void qorgMail::chooseEmail(QModelIndex I) {
                     if (E->Structurev[i]->Structure_CID == CID) {
                         downloadAttachment(i, QDir::tempPath()+"/"+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
                         Downloaded = false;
-                        QUrl A = QUrl::fromLocalFile(QDir::tempPath()+"/"+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                        HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
                         break;
                     }
                 }
@@ -2070,7 +2097,7 @@ void qorgMail::EmailS(bool I) {
         Mailv.push_back((*T->M));
         delete T->M;
         currentMail = Mailv.size()-1;
-        emit updateTree();
+        sortMail();
     } else {
         for (uint i = 0; i < T->M->Mboxv.size(); i++) {
             delete T->M->Mboxv[i];
@@ -2125,11 +2152,10 @@ void qorgMail::AttachmentS(bool I) {
                     }
                 }
                 ReadMail->setHtml(HTML);
-                QEventLoop *loop = new QEventLoop(this);
-                connect(ReadMail, SIGNAL(loadFinished(bool)), loop, SLOT(quit()));
-                connect(ReadMail, SIGNAL(urlChanged(QUrl)), loop, SLOT(quit()));
-                loop->exec();
-                loop->deleteLater();
+                QEventLoop loop;
+                connect(ReadMail, SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
+                connect(ReadMail, SIGNAL(urlChanged(QUrl)), &loop, SLOT(quit()));
+                loop.exec();
                 for (int i = 0; i < ToClear.size(); i++) {
                     QFile::remove(ToClear[i]);
                 }
@@ -2198,6 +2224,7 @@ void qorgMail::RefreshS(bool I) {
         T = new SSLCON(&Mailv[currentMail]);
         connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
         QProgressDialog *Bar = new QProgressDialog();
+        Bar->setAutoReset(false);
         Bar->setWindowTitle("Refresh bar");
         Bar->setAttribute(Qt::WA_DeleteOnClose);
         connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
@@ -2277,7 +2304,7 @@ void qorgMail::DeleteEmailS(bool I) {
     }
 }
 void qorgMail::UpdateMail() {
-    emit updateTree();
+    sortMail();
 }
 void qorgMail::UpdateS() {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
@@ -2330,8 +2357,39 @@ void qorgMail::getUpdate() {
     }
 }
 void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
+    qDebug()<<I[0].certificate();
+    //qDebug()<<I[0].certificate().verify();
+    //qDebug()<<QByteArray(I[0].certificate().publicKey()).toBase64();
+    qDebug()<<I[0].certificate().serialNumber();
+    qDebug()<<I[0].certificate().subjectInfoAttributes();
+    qDebug()<<I[0].certificate().toText();
+    qDebug()<<I[0].certificate().version();
+    qDebug()<<I[0].error();
+    //qDebug()<<I[0].certificate().issuerInfo();
+    qDebug()<<I[0].certificate().issuerInfoAttributes();
+    //qDebug()<<I[0].certificate().extensions();
+    qDebug()<<I[0].certificate().effectiveDate();
+    qDebug()<<I[0].certificate().expiryDate();
+    qDebug()<<(I[0].error() == QSslError::CertificateUntrusted);
+    qDebug()<<(I[0].error() == QSslError::CertificateRejected);
+    qDebug()<<(I[0].error() == QSslError::UnableToGetIssuerCertificate);
+    qDebug()<<(I[0].error() == QSslError::SelfSignedCertificate);
+    qDebug()<<(I[0].error() == QSslError::SelfSignedCertificateInChain);
+    qDebug()<<(I[0].error() == QSslError::UnableToGetLocalIssuerCertificate);
+    qDebug()<<(I[0].error() == QSslError::UnableToVerifyFirstCertificate);
+    qDebug()<<I[0].certificate().issuerInfo("C");
+    qDebug()<<I[0].certificate().issuerInfo("O");
+    qDebug()<<I[0].certificate().issuerInfo("OU");
+    qDebug()<<I;
+    QSslConfiguration SC = QNR->request().sslConfiguration();
+    SC.setLocalCertificate(I[0].certificate());
+    QNR->request().setSslConfiguration(SC);
+    if (I[0].error() == QSslError::UnableToGetLocalIssuerCertificate &&
+            (new CertAccept(this,I.first().certificate()))->exec() == QDialog::Accepted) {
+        //add to Session certificates.
+        QNR->ignoreSslErrors();
+    }
     I.clear();
-    QNR->ignoreSslErrors();
     connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
 }
 void qorgMail::sortMail() {
@@ -2355,7 +2413,8 @@ void qorgMail::sortMail() {
         }
     }
     int tmp = currentMail;
-    currentMail = -1;
+    currentMail = -2;
     setMail(tmp);
+    emit updateTree();
 }
 #include "qorgmail.moc"
