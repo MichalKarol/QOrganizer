@@ -17,6 +17,7 @@
 #define QORGMAIL_H_
 #include <qorgtools.h>
 #include <qorgab.h>
+#include <qorgoptions.h>
 #include <QtWidgets>
 #include <QWebView>
 #include <QNetworkReply>
@@ -66,6 +67,7 @@ public:
     uint Email_UID;
     uchar Email_Flags;
     vector  <Structure*> Structurev;
+    uint Email_Quene;
 };
 class Mailbox {
 public:
@@ -104,21 +106,23 @@ public:
 class qorgMail: public QWidget {
     Q_OBJECT
 public:
-    qorgMail(QWidget*, qorgAB*);
+    explicit qorgMail(QWidget*,qorgAB* AB,qorgOptions* Options);
     ~qorgMail();
     QString output();
     void input(QString);
     void setMail(int);
     QStringList getCategories();
     int getCurrent()    {
-     return currentMail;
+        return currentMail;
     }
+    bool SSLSocketError(QList<QSslError>);
     void getUpdate();
 private:
-    qorgAB *AB;
-    vector  <Mail>  Mailv;
-    QGridLayout *Layout;
+    vector <Mail> Mailv;
+    QGridLayout* Layout;
     void setMailbox(int);
+    qorgAB* AdressBook;
+    qorgOptions* Options;
 
     int currentMail;
     uint currentMailbox;
@@ -129,7 +133,6 @@ private:
     QTreeWidget *MailView;
     QSplitter *Split;
     QWebView *ReadMail;
-    int Quene;
     uint UpdateQuene;
     QListWidget *AttachmentList;
     QPushButton *Refresh;
@@ -137,6 +140,8 @@ private:
     QPushButton *Delete;
     QPushButton *Forward;
     QPushButton *Reply;
+    bool isRefreshingDeleting;
+    bool isLoading;
     QList  <QWidget*>  F;
 
     void setLayoutC();
