@@ -43,6 +43,7 @@ Email::Email() {
     this->Email_UID = 0;
     this->Email_Flags = 0;
     this->Structurev.clear();
+    this->Email_Quene = 0;
 }
 Mailbox::Mailbox() {
     this->Mbox_Name.clear();
@@ -76,7 +77,7 @@ public:
         Stop,
         Cancel
     };
-    explicit SSLCON(Mail*);
+    explicit SSLCON(qorgMail*,Mail*);
     void setMethod(Method);
     void DownloadAttachmentData(int B, int E, int A, QString P) {
         this->M = M;
@@ -96,11 +97,11 @@ public:
         this->Att = Att;
     }
     Mail *M;
-private:
-    Method Current;
     int B;
     int E;
     int A;
+private:
+    Method Current;
     QString Path;
     QString Header;
     QList  <QString>  To;
@@ -117,6 +118,8 @@ private:
     QByteArray readIMAP(QSslSocket*);
     QList <QString> splitBS(QString);
     QString NILCleaner(QString);
+public slots:
+    void Canceled();
 signals:
     void changeValue(int);
     void end();
@@ -126,10 +129,8 @@ signals:
     void AttachmentS(bool);
     void SendEmailS(bool);
     void DeleteS(bool);
-public slots:
-    void Canceled();
 };
-SSLCON::SSLCON(Mail* I) {
+SSLCON::SSLCON(qorgMail*parent,Mail* I) :QThread(parent) {
     M = I;
     Current = Sleep;
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
@@ -258,8 +259,19 @@ void SSLCON::SecureLogin() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors();
-    Reply  = readAll(&S);
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit LoginS(false);
+                return;
+            }
+        }
+    }
+    Reply = readAll(&S);
     if (Reply.isEmpty() || Current == Cancel) {
         emit LoginS(false);
         return;
@@ -285,7 +297,18 @@ void SSLCON::DownloadMBoxVector() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors();
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit MailboxesS(false);
+                return;
+            }
+        }
+    }
     Reply = readAll(&S);
     if (Reply.isEmpty() || Current == Cancel) {
         emit MailboxesS(false);
@@ -384,7 +407,18 @@ void SSLCON::DownloadEmails() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors();
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit EmailS(false);
+                return;
+            }
+        }
+    }
     Reply = readAll(&S);
     if (Reply.isEmpty() || Current == Cancel) {
         emit EmailS(false);
@@ -790,7 +824,18 @@ void SSLCON::DownloadAttachment() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors();
+    if (!S.waitForEncrypted()) {
+            if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit AttachmentS(false);
+                return;
+            }
+        }
+    }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit AttachmentS(false);
@@ -813,7 +858,7 @@ void SSLCON::DownloadAttachment() {
         emit AttachmentS(false);
         return;
     }
-    Reply = "";
+    Reply.clear();
     for (uint m = 0; m < M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Size; m += 10000) {
         S.write(QString("TAG UID FETCH "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" BODY["+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
         QByteArray Tmp = readIMAP(&S);
@@ -845,7 +890,6 @@ void SSLCON::SendEmail() {
     QByteArray P = calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512));
     QString Reply;
     QSslSocket S;
-    S.ignoreSslErrors();
     Email* EM;
     if (E == -1) {
         EM = new Email;
@@ -868,6 +912,18 @@ void SSLCON::SendEmail() {
         Att.removeFirst();
     }
     S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForEncrypted()) {
+            if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit SendEmailS(false);
+                return;
+            }
+        }
+    }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false);
@@ -929,6 +985,18 @@ void SSLCON::SendEmail() {
     Output.append("--------"+boundry+"--");
     S.close();
     S.connectToHostEncrypted(M->SMTPserver, 465);
+    if (!S.waitForEncrypted()) {
+            if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit SendEmailS(false);
+                return;
+            }
+        }
+    }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false);
@@ -998,7 +1066,18 @@ void SSLCON::DeleteEmail() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
-    S.ignoreSslErrors();
+    if (!S.waitForEncrypted()) {
+            if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if(P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit DeleteS(false);
+                return;
+            }
+        }
+    }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
         emit DeleteS(false);
@@ -1360,7 +1439,7 @@ private slots:
             To->setStyleSheet("QLineEdit{background: #FF8888;}");
         } else {
             QString Months[12]={"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-            QString Header="Subject: =?UTF-8?B?"+Subject->text().toUtf8().toBase64()+"?=\r\nDate: "+QDateTime::currentDateTime().toString("dd ")+Months[QDateTime::currentDateTime().date().month()-1]+QDateTime::currentDateTime().toString(" MM yyyy hh:mm:ss");
+            QString Header="Subject: =?UTF-8?B?"+Subject->text().toUtf8().toBase64()+"?=\r\nDate: "+QDateTime::currentDateTime().toString("dd ")+Months[QDateTime::currentDateTime().date().month()-1]+QDateTime::currentDateTime().toString(" yyyy hh:mm:ss");
             QList  <QString>  To;
             for (int i = 0; i < Receivers->count(); i++) {
                 QString M = Receivers->item(i)->text();
@@ -1436,32 +1515,13 @@ private slots:
         }
     }
 };
-class CertAccept :public QDialog {
-public:
-    explicit CertAccept(QWidget *parent, QSslCertificate cert) :QDialog(parent) {
-        setWindowTitle("SSL certificate error.");
-        Text = new QTextBrowser(this);
-        Text->setText(cert.toText());
-        No = new QPushButton(this);
-        No->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
-        connect(No,SIGNAL(clicked()),this,SLOT(reject()));
-        Yes = new QPushButton(this);
-        Yes->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
-        connect(Yes,SIGNAL(clicked()),this,SLOT(accept()));
-        QGridLayout *L = new QGridLayout(this);
-        L->addWidget(Text,0,0,1,2);
-        L->addWidget(No,1,0);
-        L->addWidget(Yes,1,1);
-    }
-private:
-    QTextBrowser *Text;
-    QPushButton *Yes;
-    QPushButton *No;
-};
 
-qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
-    this->AB = AB;
+qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :QWidget(parent){
+    this->AdressBook = AdressBook;
+    this->Options = Options;
     currentMail = -1;
+    isRefreshingDeleting = false;
+    isLoading = false;
     AvailableServices.append(Services("AOL", "imap.aol.com", "smtp.aol.com"));
     AvailableServices.append(Services("Gmail", "imap.gmail.com", "smtp.gmail.com"));
     AvailableServices.append(Services("Interia.pl", "imap.interia.pl", "smtp.interia.pl"));
@@ -1489,7 +1549,6 @@ qorgMail::qorgMail(QWidget *parent, qorgAB *AB) :QWidget(parent) {
     ReadMail = new QWebView(this);
     connect(ReadMail->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError>)),
             this, SLOT(HTTPSS(QNetworkReply*, QList <QSslError>)));
-    Quene=-1;
     AttachmentList = new QListWidget(this);
     connect(AttachmentList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(downloadAttachment(QModelIndex)));
     QWidget *Wi = new QWidget(this);
@@ -1726,6 +1785,8 @@ void qorgMail::setMail(int setMail) {
     }
 }
 void qorgMail::setMailbox(int I) {
+    isRefreshingDeleting = false;
+    isLoading = false;
     currentMailbox = I;
     MailView->clear();
     ReadMail->setHtml("");
@@ -1854,7 +1915,7 @@ void qorgMail::testInput() {
             M->IMAPserver = IMAPS->text();
             M->SMTPserver = SMTPS->text();
             M->Name = M->User+" ("+M->IMAPserver+")";
-            SSLCON *T = new SSLCON(M);
+            SSLCON *T = new SSLCON(this,M);
             connect(T, SIGNAL(LoginS(bool)), this, SLOT(LoginS(bool)));
             connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(MailboxesS(bool)));
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(EmailS(bool)));
@@ -1904,7 +1965,7 @@ void qorgMail::EditMail(uint IID) {
     A->SMTPserver = I->SMTPserver;
     if ((new EditDialog(A, this))->exec() == QDialog::Accepted) {
         currentMail = IID;
-        SSLCON *T = new SSLCON(A);
+        SSLCON *T = new SSLCON(this,A);
         connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(EditMailS(bool)));
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
@@ -1964,7 +2025,7 @@ void qorgMail::EditMailS(bool I) {
         }
         T->setMethod(SSLCON::Stop);
         if ((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
-            T = new SSLCON(&Mailv[currentMail]);
+            T = new SSLCON(this,&Mailv[currentMail]);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setAutoReset(false);
@@ -2000,7 +2061,7 @@ void qorgMail::DeleteMail(uint IID) {
 }
 void qorgMail::chooseMbox(QTreeWidgetItem *I) {
     int Int = 0;
-    currentEmail=-1;
+    currentEmail = -1;
     for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
         if (Bit7ToBit8(Mailv[currentMail].Mboxv[i]->Mbox_Name) == I->toolTip(0)) {
             Int = i;
@@ -2011,59 +2072,67 @@ void qorgMail::chooseMbox(QTreeWidgetItem *I) {
     }
 }
 void qorgMail::chooseEmail(QModelIndex I) {
-    currentEmail = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-I.row()-1;
-    ReadMail->setHtml("<html><body>Loading. Please wait.<body></html>");
-    Email *E = Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
-    if (E->Email_Body[1].isEmpty()) {
-        QString Text = E->Email_Body[0];
-        Text="<html><body>"+Text+"</body ></html>";
-        Text.replace("\n", "<br/>");
-        ReadMail->setHtml(Text);
-    } else {
-        QString HTML = E->Email_Body[1];
-        if (HTML.contains("\"cid:")) {
-            bool Downloaded = true;
-            uint position = 0;
-            while (HTML.indexOf("\"cid:", position) != -1) {
-                int s = HTML.indexOf("\"cid:", position);
-                int e = HTML.indexOf("\"", s+5);
-                position = e;
-                QString CID = HTML.mid(s+5, e-s-5);
-                for (uint i = 1; i < E->Structurev.size(); i++) {
-                    if (E->Structurev[i]->Structure_CID == CID) {
-                        downloadAttachment(i, QDir::tempPath()+"/"+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                        Downloaded = false;
-                        break;
+    if (!isRefreshingDeleting) {
+        isLoading = true;
+        currentEmail = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-I.row()-1;
+        ReadMail->setHtml("<html><body>Loading. Please wait.<body></html>");
+        Email *E = Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
+        if (E->Email_Body[1].isEmpty()) {
+            QString Text = E->Email_Body[0];
+            Text="<html><body>"+Text+"</body ></html>";
+            Text.replace("\n", "<br/>");
+            ReadMail->setHtml(Text);
+        } else {
+            QString HTML = E->Email_Body[1];
+            if (HTML.contains("\"cid:")) {
+                Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene = 0;
+                uint position = 0;
+                QList <QString> AlreadyDownlading;
+                while (HTML.indexOf("\"cid:", position) != -1) {
+                    int s = HTML.indexOf("\"cid:", position);
+                    int e = HTML.indexOf("\"", s+5);
+                    position = e;
+                    QString CID = HTML.mid(s+5, e-s-5).trimmed();
+                    if(!AlreadyDownlading.contains(CID)) {
+                        for (uint i = 1; i < E->Structurev.size(); i++) {
+                            if (E->Structurev[i]->Structure_CID == CID) {
+                                AlreadyDownlading.append(CID);
+                                downloadAttachment(i, QDir::tempPath()+"/"+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                                break;
+                            }
+                        }
                     }
                 }
-            }
-            if (Downloaded) {
-                ReadMail->setHtml(HTML);
-            }
-        } else {
-            ReadMail->setHtml(HTML);
-        }
-    }
-    if (!(E->Email_Flags&Email::Seen)) {
-        E->Email_Flags|=Email::Seen;
-        MailView->selectedItems().first()->setFont(0, QFont());
-    }
-    AttachmentList->clear();
-    for (uint i = 0; i < E->Structurev.size(); i++) {
-        if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i < E->Structurev.size()-1) {
-            i++;
-        } else if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i == E->Structurev.size()-1) {
-            break;
-        }
-        QListWidgetItem *Itm = new QListWidgetItem(AttachmentList);
-        if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
-            if (E->Structurev[i]->Structure_CID.isEmpty()) {
-                Itm->setText("text."+E->Structurev[i]->Structure_Subtype.toLower());
+                if (AlreadyDownlading.isEmpty()) {
+                    ReadMail->setHtml(HTML);
+                    isLoading = false;
+                }
             } else {
-                Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                ReadMail->setHtml(HTML);
+                isLoading = false;
             }
-        } else {
-            Itm->setText(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name));
+        }
+        if (!(E->Email_Flags&Email::Seen)) {
+            E->Email_Flags|=Email::Seen;
+            MailView->selectedItems().first()->setFont(0, QFont());
+        }
+        AttachmentList->clear();
+        for (uint i = 0; i < E->Structurev.size(); i++) {
+            if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i < E->Structurev.size()-1) {
+                i++;
+            } else if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i == E->Structurev.size()-1) {
+                break;
+            }
+            QListWidgetItem *Itm = new QListWidgetItem(AttachmentList);
+            if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
+                if (E->Structurev[i]->Structure_CID.isEmpty()) {
+                    Itm->setText("text."+E->Structurev[i]->Structure_Subtype.toLower());
+                } else {
+                    Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                }
+            } else {
+                Itm->setText(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name));
+            }
         }
     }
 }
@@ -2110,69 +2179,102 @@ void qorgMail::downloadAttachment(QModelIndex I) {
     QString name = AttachmentList->item(I.row())->text();
     QString path = QFileDialog::getSaveFileName(this, "Save attachment to:", QDir::homePath()+"/"+name);
     if (!path.isEmpty()) {
-        SSLCON *T = new SSLCON(&Mailv[currentMail]);
+        SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
         QLabel *L = new QLabel("Downloading...");
         L->setAttribute(Qt::WA_DeleteOnClose);
         L->setStyleSheet("background-color: #FF8888;");
         L->setWindowTitle(name);
         connect(T, SIGNAL(end()), L, SLOT(close()));
         L->show();
-        T->DownloadAttachmentData(currentMailbox, currentEmail, I.row()+1, path);
+        if (Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[0]->Structure_Type == "TEXT" &&
+                Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[0]->Structure_Subtype == "PLAIN") {
+            T->DownloadAttachmentData(currentMailbox, currentEmail, I.row()+1, path);
+        } else {
+            T->DownloadAttachmentData(currentMailbox, currentEmail, I.row(), path);
+        }
         T->setMethod(SSLCON::Attachment);
         T->start();
     }
 }
 void qorgMail::downloadAttachment(uint I, QString path) {
-    SSLCON *T = new SSLCON(&Mailv[currentMail]);
+    SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
     connect(T, SIGNAL(AttachmentS(bool)), this, SLOT(AttachmentS(bool)));
     T->DownloadAttachmentData(currentMailbox, currentEmail, I, path);
     T->setMethod(SSLCON::Attachment);
     T->start();
-    Quene++;
+    Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene++;
 }
 void qorgMail::AttachmentS(bool I) {
+    SSLCON *S = qobject_cast<SSLCON*>(QObject::sender());
+    Mail *M =S->M;
+    int B =S->B;
+    int E = S->E;
+    int A = S->A;
     if (I) {
-        if (Quene != -1) {
-            if (Quene == 0) {
-                QList  <QString>  ToClear;
-                QString HTML = Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Body[1];
-                uint position = 0;
-                while (HTML.indexOf("\"cid:", position) != -1) {
-                    int s = HTML.indexOf("\"cid:", position);
-                    int e = HTML.indexOf("\"", s+5);
-                    position = e;
-                    QString CID = HTML.mid(s+5, e-s-5);
-                    for (uint i = 1; i < Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev.size(); i++) {
-                        if (Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i]->Structure_CID == CID) {
-                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+"/"+CID+"."+Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i]->Structure_Subtype.toLower());
-                            ToClear.append(QDir::tempPath()+"/"+CID+"."+Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i]->Structure_Subtype.toLower());
+        if (M->Mboxv[B]->Emailv[E]->Email_Quene == 1) {
+            QList  <QString>  ToClear;
+            QString HTML = M->Mboxv[B]->Emailv[E]->Email_Body[1];
+            uint position = 0;
+            QList <QString> AlreadyDeleted;
+            while (HTML.indexOf("\"cid:", position) != -1) {
+                int s = HTML.indexOf("\"cid:", position);
+                int e = HTML.indexOf("\"", s+5);
+                position = e;
+                QString CID = HTML.mid(s+5, e-s-5).trimmed();
+                if (!AlreadyDeleted.contains(CID)) {
+                    for (uint i = 1; i < M->Mboxv[B]->Emailv[E]->Structurev.size(); i++) {
+                        if (M->Mboxv[B]->Emailv[E]->Structurev[i]->Structure_CID == CID) {
+                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[i]->Structure_Subtype.toLower());
+                            ToClear.append(QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[i]->Structure_Subtype.toLower());
+                            AlreadyDeleted.append(CID);
                             HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
                             break;
                         }
                     }
                 }
+            }
+            if (E == currentEmail && isLoading) {
                 ReadMail->setHtml(HTML);
                 QEventLoop loop;
                 connect(ReadMail, SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
                 connect(ReadMail, SIGNAL(urlChanged(QUrl)), &loop, SLOT(quit()));
                 loop.exec();
-                for (int i = 0; i < ToClear.size(); i++) {
-                    QFile::remove(ToClear[i]);
-                }
+                isLoading = false;
             }
-            Quene--;
+            for (int i = 0; i < ToClear.size(); i++) {
+                QFile::remove(ToClear[i]);
+            }
+        }
+        if (M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
+            M->Mboxv[B]->Emailv[E]->Email_Quene--;
+        }
+    } else {
+        if(M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
+            if (E == currentEmail && isLoading) {
+                SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
+                connect(T, SIGNAL(AttachmentS(bool)), this, SLOT(AttachmentS(bool)));
+                T->DownloadAttachmentData(currentMailbox, currentEmail, A,
+                                          QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Subtype.toLower());
+                T->setMethod(SSLCON::Attachment);
+                T->start();
+            } else {
+                M->Mboxv[B]->Emailv[E]->Email_Quene--;
+            }
         }
     }
 }
 void qorgMail::RefreshS() {
-    Mail *M = new Mail();
-    M->IMAPserver = Mailv[currentMail].IMAPserver;
-    M->User = Mailv[currentMail].User;
-    M->Password = Mailv[currentMail].Password;
-    SSLCON *T = new SSLCON(M);
-    connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(RefreshS(bool)));
-    T->setMethod(SSLCON::Mailboxes);
-    T->start();
+    if (!isRefreshingDeleting) {
+        isRefreshingDeleting = true;
+        Mail *M = new Mail();
+        M->IMAPserver = Mailv[currentMail].IMAPserver;
+        M->User = Mailv[currentMail].User;
+        M->Password = Mailv[currentMail].Password;
+        SSLCON *T = new SSLCON(this,M);
+        connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(RefreshS(bool)));
+        T->setMethod(SSLCON::Mailboxes);
+        T->start();
+    }
 }
 void qorgMail::RefreshS(bool I) {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
@@ -2221,7 +2323,7 @@ void qorgMail::RefreshS(bool I) {
             }
         }
         T->setMethod(SSLCON::Stop);
-        T = new SSLCON(&Mailv[currentMail]);
+        T = new SSLCON(this,&Mailv[currentMail]);
         connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
@@ -2240,11 +2342,11 @@ void qorgMail::RefreshS(bool I) {
 }
 void qorgMail::SendEmail() {
     QPushButton *T = qobject_cast<QPushButton*>(QObject::sender());
-    SSLCON *S = new SSLCON(&Mailv[currentMail]);
+    SSLCON *S = new SSLCON(this,&Mailv[currentMail]);
     connect(S, SIGNAL(SendEmailS(bool)), this, SLOT(SendEmailS(bool)));
     S->SetBE(currentMailbox, currentEmail);
     QStringList Z;
-    Z.append(AB->getEmails());
+    Z.append(AdressBook->getEmails());
     for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
         for (uint j = 0; j < Mailv[currentMail].Mboxv[i]->Emailv.size(); j++) {
             if (!Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.EMailA.contains("noreply")) {
@@ -2279,15 +2381,17 @@ void qorgMail::SendEmailS(bool I) {
     }
 }
 void qorgMail::DeleteEmail() {
-    if (currentEmail != -1) {
+    if (currentEmail != -1 && !isRefreshingDeleting) {
+        isRefreshingDeleting = true;
         if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
-            SSLCON *T = new SSLCON(&Mailv[currentMail]);
+            SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
             connect(T, SIGNAL(DeleteS(bool)), this, SLOT(DeleteEmailS(bool)));
             T->SetBE(currentMailbox, currentEmail);
             T->setMethod(SSLCON::Delete);
             T->start();
         } else {
             DeleteEmailS(true);
+            isRefreshingDeleting = false;
         }
     }
 }
@@ -2298,12 +2402,18 @@ void qorgMail::DeleteEmailS(bool I) {
         }
         delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
         Mailv[currentMail].Mboxv[currentMailbox]->Emailv.erase(Mailv[currentMail].Mboxv[currentMailbox]->Emailv.begin()+currentEmail);
-        setMailbox(currentMailbox);
+        if (isRefreshingDeleting) {
+            setMailbox(currentMailbox);
+            isRefreshingDeleting = false;
+        }
     } else {
         QMessageBox::critical(this, "Error", "Error during deleting email.");
     }
 }
 void qorgMail::UpdateMail() {
+    if (isRefreshingDeleting) {
+        isRefreshingDeleting = false;
+    }
     sortMail();
 }
 void qorgMail::UpdateS() {
@@ -2346,7 +2456,7 @@ void qorgMail::getUpdate() {
                     break;
                 }
             }
-            SSLCON *T = new SSLCON(M);
+            SSLCON *T = new SSLCON(this,M);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateS()));
             T->setMethod(SSLCON::Emails);
             T->start();
@@ -2357,40 +2467,28 @@ void qorgMail::getUpdate() {
     }
 }
 void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
-    qDebug()<<I[0].certificate();
-    //qDebug()<<I[0].certificate().verify();
-    //qDebug()<<QByteArray(I[0].certificate().publicKey()).toBase64();
-    qDebug()<<I[0].certificate().serialNumber();
-    qDebug()<<I[0].certificate().subjectInfoAttributes();
-    qDebug()<<I[0].certificate().toText();
-    qDebug()<<I[0].certificate().version();
-    qDebug()<<I[0].error();
-    //qDebug()<<I[0].certificate().issuerInfo();
-    qDebug()<<I[0].certificate().issuerInfoAttributes();
-    //qDebug()<<I[0].certificate().extensions();
-    qDebug()<<I[0].certificate().effectiveDate();
-    qDebug()<<I[0].certificate().expiryDate();
-    qDebug()<<(I[0].error() == QSslError::CertificateUntrusted);
-    qDebug()<<(I[0].error() == QSslError::CertificateRejected);
-    qDebug()<<(I[0].error() == QSslError::UnableToGetIssuerCertificate);
-    qDebug()<<(I[0].error() == QSslError::SelfSignedCertificate);
-    qDebug()<<(I[0].error() == QSslError::SelfSignedCertificateInChain);
-    qDebug()<<(I[0].error() == QSslError::UnableToGetLocalIssuerCertificate);
-    qDebug()<<(I[0].error() == QSslError::UnableToVerifyFirstCertificate);
-    qDebug()<<I[0].certificate().issuerInfo("C");
-    qDebug()<<I[0].certificate().issuerInfo("O");
-    qDebug()<<I[0].certificate().issuerInfo("OU");
-    qDebug()<<I;
-    QSslConfiguration SC = QNR->request().sslConfiguration();
-    SC.setLocalCertificate(I[0].certificate());
-    QNR->request().setSslConfiguration(SC);
-    if (I[0].error() == QSslError::UnableToGetLocalIssuerCertificate &&
-            (new CertAccept(this,I.first().certificate()))->exec() == QDialog::Accepted) {
-        //add to Session certificates.
-        QNR->ignoreSslErrors();
+    int response =Options->checkCertificate(I.first().certificate());
+    if (response == 0) {
+        if ((new CertAccept(I.first().certificate()))->exec() == QDialog::Accepted) {
+            Options->acceptSSLCert(I.first().certificate());
+            QNR->ignoreSslErrors(I);
+        } else {
+            Options->blacklistSSLCert(I.first().certificate());
+        }
+    } else if (response == 1) {
+        QNR->ignoreSslErrors(I);
     }
-    I.clear();
     connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
+}
+bool qorgMail::SSLSocketError(QList<QSslError> I) {
+    int response = Options->checkCertificate(I.first().certificate());
+    if (response == 0) {
+        Options->addForVeryfication(I.first().certificate());
+        return false;
+    } else if (response == 1) {
+        return true;
+    }
+    return false;
 }
 void qorgMail::sortMail() {
     if (Mailv.size() > 1) {

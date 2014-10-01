@@ -18,12 +18,12 @@
 #include <qorgio.h>
 #include <qorglogin.h>
 #include <qorgcalendar.h>
+#include <qorgoptions.h>
 #include <qorgmail.h>
 #include <qorgnotes.h>
 #include <qorgab.h>
 #include <qorgrss.h>
 #include <qorgpasswd.h>
-#include <qorgoptions.h>;
 #include <QtWidgets>
 
 class QOrganizer : public QWidget {
@@ -31,35 +31,25 @@ class QOrganizer : public QWidget {
 public:
     QOrganizer();
     ~QOrganizer();
-    qorgCalendar *Calendar;
-    qorgMail *Mail;
-    qorgNotes *Notes;
-    qorgAB *AdressBook;
-    qorgRSS *RSS;
-    qorgPasswd *PasswordManager;
+    qorgCalendar* Calendar;
+    qorgMail* Mail;
+    qorgNotes* Notes;
+    qorgAB* AdressBook;
+    qorgRSS* RSS;
+    qorgPasswd* PasswordManager;
+    qorgOptions* Options;
     void setUser(QString, QString*, QString*);
-    uint UInterval;
-    uint BInterval;
 private:
-    QTimer *UTimer;
     QSystemTrayIcon *Tray;
     QTreeWidget *TreeWidget;
     QStackedWidget *Stacked;
     QString Updates[3];
     void setTree();
-    void closeEvent(QCloseEvent *);
+    void closeEvent(QCloseEvent*);
+    bool shown;
     bool closing;
-    // Settings
-    QLineEdit *CP;
-    QLineEdit *NP;
-    QPushButton *Change;
-    QSpinBox *UpdateInterval;
-    QSpinBox *BlockInterval;
-    QPushButton *ChangeInterval;
-    QTimer *BTimer;
     QLineEdit *BlockL;
     QPushButton *OKB;
-    bool shown;
 protected:
     QString user;
     QString *hash;
@@ -77,11 +67,7 @@ private slots:
     void RSSNews(QString);
     void updateTime();
     void Block();
-
-    // Settings
-    void Validator(QString);
-    void NewPassword();
-    void SetInterval();
+    void NewPassword(QString*,QString*,QString*,QString*);
 
     // Block
     void Unlock();

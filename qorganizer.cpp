@@ -19,17 +19,21 @@ QOrganizer::QOrganizer() {
     setWindowIcon(QIcon(":/main/QOrganizer.png"));
     setWindowTitle("QOrganizer");
     this->setMinimumWidth(1024);
+    Options = new qorgOptions(this);
+    connect(Options,SIGNAL(Update()),this,SLOT(updateTime()));
+    connect(Options,SIGNAL(Block()),this,SLOT(Block()));
+    connect(Options,SIGNAL(CNPassword(QString*,QString*,QString*,QString*)),this,SLOT(NewPassword(QString*,QString*,QString*,QString*)));
     AdressBook = new qorgAB(this);
     connect(AdressBook, SIGNAL(updateTree()), this, SLOT(updateAdressBook()));
     Calendar = new qorgCalendar(this, AdressBook);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
     connect(Calendar, SIGNAL(Notification(QString)), this, SLOT(Notification(QString)));
-    Mail = new qorgMail(this, AdressBook);
+    Mail = new qorgMail(this, AdressBook,Options);
     connect(Mail, SIGNAL(updateTree()), this, SLOT(updateMail()));
     connect(Mail, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(Mail, SIGNAL(sendUpdate(QString)), this, SLOT(MailNews(QString)));
     Notes = new qorgNotes(this);
-    RSS = new qorgRSS(this);
+    RSS = new qorgRSS(this,Options);
     connect(RSS, SIGNAL(updateTree()), this, SLOT(updateRSS()));
     connect(RSS, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(RSS, SIGNAL(sendUpdate(QString)), this, SLOT(RSSNews(QString)));
@@ -44,59 +48,10 @@ QOrganizer::QOrganizer() {
     Label->setText("QOrganizer 1.02\nCreated by: Mkarol (mkarol@linux.pl)\n29.08.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK\nLitecoins: LbDEkiQQJ8XzGoqf4oJE3UfJmW5qzPsK3i");
     // Timers and tray
-    UInterval = 30;
-    UTimer = new QTimer(this);
-    connect(UTimer, SIGNAL(timeout()), this, SLOT(updateTime()));
-    BInterval = 30;
-    BTimer = new QTimer(this);
-    connect(BTimer, SIGNAL(timeout()), this, SLOT(Block()));
     Tray = new QSystemTrayIcon(QIcon(":/main/QOrganizer.png"), this);
     Tray->show();
     closing = false;
-    // Options widget
-    QLabel *L[6];
-    CP = new QLineEdit(this);
-    CP->setEchoMode(QLineEdit::Password);
-    L[0]=new QLabel("Current password: ", this);
-    NP = new QLineEdit(this);
-    NP->setEchoMode(QLineEdit::Password);
-    connect(NP, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
-    L[1]=new QLabel("New password: ", this);
-    Change = new QPushButton("Change password.", this);
-    connect(Change, SIGNAL(clicked()), this, SLOT(NewPassword()));
-    L[2]=new QLabel("Updates interval: ", this);
-    UpdateInterval = new QSpinBox(this);
-    L[3]=new QLabel(" minutes", this);
-    L[4]=new QLabel("Time to lock: ", this);
-    BlockInterval = new QSpinBox(this);
-    L[5]=new QLabel(" minutes", this);
-    ChangeInterval = new QPushButton("Change", this);
-    connect(ChangeInterval, SIGNAL(clicked()), this, SLOT(SetInterval()));
     shown = false;
-    QWidget *W = new QWidget(this);
-    QGridLayout *G = new QGridLayout(W);
-    QHBoxLayout *La = new QHBoxLayout();
-    La->addWidget(L[0]);
-    La->addWidget(CP);
-    QHBoxLayout *Lb = new QHBoxLayout();
-    Lb->addWidget(L[1]);
-    Lb->addWidget(NP);
-    G->addLayout(La, 0, 0);
-    G->addLayout(Lb, 1, 0);
-    G->addWidget(Change, 2, 0);
-    QHBoxLayout *Lc = new QHBoxLayout();
-    Lc->addWidget(L[2]);
-    Lc->addWidget(UpdateInterval);
-    Lc->addWidget(L[3]);
-    QHBoxLayout *Ld = new QHBoxLayout();
-    Ld->addWidget(L[4]);
-    Ld->addWidget(BlockInterval);
-    Ld->addWidget(L[5]);
-    G->addLayout(Lc, 0, 1);
-    G->addLayout(Ld, 1, 1);
-    G->addWidget(ChangeInterval, 2, 1);
-    G->addItem(new QSpacerItem(1, 1), 3, 0, 3, 1);
-    G->addItem(new QSpacerItem(1, 1), 2, 1, 3, 1);
     // Block widget
     BlockL = new QLineEdit(this);
     BlockL->setEchoMode(QLineEdit::Password);
@@ -119,13 +74,16 @@ QOrganizer::QOrganizer() {
     Stacked->addWidget(AdressBook);
     Stacked->addWidget(RSS);
     Stacked->addWidget(PasswordManager);
-    Stacked->addWidget(W);
+    Stacked->addWidget(Options);
     Stacked->addWidget(Block);
     layout->addWidget(Stacked, 0, 1);
     layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
     for (int i = TreeWidget->topLevelItemCount(); i > 0; i--) {
+        for (int j = TreeWidget->topLevelItem(i-1)->childCount(); j > 0; j++) {
+            delete TreeWidget->topLevelItem(i-1)->child(j-1);
+        }
         delete TreeWidget->topLevelItem(i-1);
     }
     delete hash;
@@ -137,10 +95,6 @@ void QOrganizer::setUser(QString useri, QString *hashedi, QString *hashi) {
     hash = hashi;
     connect(Tray, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(TrayClick(QSystemTrayIcon::ActivationReason)));
     setTree();
-    UpdateInterval->setValue(UInterval);
-    BlockInterval->setValue(BInterval);
-    UTimer->setInterval(UInterval*60*1000);
-    BTimer->setInterval(BInterval*60*1000);
 }
 void QOrganizer::setTree() {
     TreeWidget->setFixedWidth(150);
@@ -195,6 +149,8 @@ void QOrganizer::setTree() {
     PassTI->setIcon(0, QIcon(":/main/PassMGR.png"));
 
     QTreeWidgetItem *OptionsTI = new QTreeWidgetItem(TreeWidget);
+    QTreeWidgetItem *OTI1 = new QTreeWidgetItem(OptionsTI);
+    OTI1->setText(0,"SSL Manager");
     OptionsTI->setText(0, "Options");
     OptionsTI->setIcon(0, QIcon(":/main/Options.png"));
 
@@ -223,6 +179,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
         } else if (Input->text(0) == "Password Manager") {
             Stacked->setCurrentIndex(6);
         } else if (Input->text(0) == "Options") {
+            Options->setWidget(0);
             Stacked->setCurrentIndex(7);
         } else if (Input->text(0) == "Save") {
             qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
@@ -252,6 +209,9 @@ void QOrganizer::launchFunction(QTreeWidgetItem *Input) {
                 }
             }
             Stacked->setCurrentIndex(5);
+        } else if (Input->parent()->text(0) == "Options") {
+            Options->setWidget(1);
+            Stacked->setCurrentIndex(7);
         }
     }
 }
@@ -373,13 +333,14 @@ void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
         closing = true;
         this->close();
     } else if (I == QSystemTrayIcon::DoubleClick) {
+        BlockL->clear();
         if (this->isHidden()) {
-            UTimer->stop();
-            BTimer->stop();
+            Options->stop(0);
+            Options->stop(1);
             this->show();
         } else {
-            UTimer->start();
-            BTimer->start();
+            Options->start(0);
+            Options->start(1);
             Calendar->setCategory("");
             Mail->setMail(-1);
             RSS->setChannel(-1);
@@ -393,9 +354,11 @@ void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
         }
     } else if (I == QSystemTrayIcon::MiddleClick&&this->isHidden()) {
         Tray->setIcon(QIcon(":/main/QOrganizerDownload.png"));
-        Updates[0]=Calendar->getUpdate();
+        Updates[0] = Calendar->getUpdate();
         Mail->getUpdate();
         RSS->getUpdate();
+        Options->stop(0);
+        Options->start(0);
     }
 }
 void QOrganizer::MailNews(QString I) {
@@ -404,9 +367,9 @@ void QOrganizer::MailNews(QString I) {
         qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
         Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
-        Updates[0]="";
-        Updates[1]="";
-        Updates[2]="";
+        Updates[0].clear();
+        Updates[1].clear();
+        Updates[2].clear();
     }
 }
 void QOrganizer::RSSNews(QString I) {
@@ -415,27 +378,27 @@ void QOrganizer::RSSNews(QString I) {
         qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
         Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
-        Updates[0]="";
-        Updates[1]="";
-        Updates[2]="";
+        Updates[0].clear();
+        Updates[1].clear();
+        Updates[2].clear();
     }
 }
 void QOrganizer::closeEvent(QCloseEvent *E) {
     if (!closing) {
         if (!shown) {
             QString M;
-            if (UInterval == 1) {
+            if (Options->UInterval == 1) {
                 M="minute";
             } else {
                 M="minutes";
             }
-            QMessageBox::information(this, "Closing", "QOrganizer will be hidden to the tray and updating every "+QString::number(UInterval)+" "+M+
+            QMessageBox::information(this, "Closing", "QOrganizer will be hidden to the tray and updating every "+QString::number(Options->UInterval)+" "+M+
                                      ".\nClick tray icon with middle mouse button to start immediate update.\nClick tray icon with right mouse button to exit.");
             shown = true;
         }
         qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
-        UTimer->start();
-        BTimer->start();
+        Options->start(0);
+        Options->start(1);
         Calendar->setCategory("");
         Mail->setMail(-1);
         RSS->setChannel(-1);
@@ -450,64 +413,32 @@ void QOrganizer::closeEvent(QCloseEvent *E) {
     }
 }
 void QOrganizer::updateTime() {
-    Tray->setIcon(QIcon(":/main/QOrganizerDownload.png"));
-    Updates[0]=Calendar->getUpdate();
-    Mail->getUpdate();
-    RSS->getUpdate();
+    if (Updates[0].isEmpty()) {
+        Tray->setIcon(QIcon(":/main/QOrganizerDownload.png"));
+        Updates[0]=Calendar->getUpdate();
+        Mail->getUpdate();
+        RSS->getUpdate();
+    }
 }
 void QOrganizer::Block() {
-    if (Stacked->currentIndex() != 8) {
-        TreeWidget->setDisabled(true);
-        Stacked->setCurrentIndex(8);
-    }
+    TreeWidget->setDisabled(true);
+    Stacked->setCurrentIndex(8);
+    Options->stop(1);
 }
-void QOrganizer::Validator(QString input) {
-    if (input.length() < 8&&!input.isEmpty()) {
-        NP->setStyleSheet("QLineEdit{background: #FF8888;}");
+void QOrganizer::NewPassword(QString* CA, QString* CB, QString* NA, QString* NB) {
+    if ((*hash) == CA && (*hashed) == CB) {
+        delete hash;
+        delete hashed;
+        hash = NA;
+        hashed = NB;
+        QMessageBox::information(this, "Password", "Password changed.");
     } else {
-        bool whitespaces = false;
-        for (int i = 0; i < input.length(); i++) {
-            if (input[i].isSpace()) {
-                whitespaces = true;
-                break;
-            }
-        }
-        if (whitespaces) {
-            NP->setStyleSheet("QLineEdit{background: #FF8888;}");
-        } else {
-            NP->setStyleSheet("QLineEdit{background: white;}");
-        }
-    }
-}
-void QOrganizer::NewPassword() {
-    if (NP->styleSheet() == "QLineEdit{background: white;}"&&!(NP->text().isEmpty())) {
-        QString CPhash = QString(QCryptographicHash::hash(salting(CP->text()).toUtf8(), QCryptographicHash::Sha3_512));
-        QString CPhashed = QString(calculateXOR(CP->text().toUtf8(), CPhash.toUtf8()));
-        if (hash == CPhash&&hashed == CPhashed) {
-            delete hash;
-            delete hashed;
-            hash = new QString(QCryptographicHash::hash(salting(NP->text()).toUtf8(), QCryptographicHash::Sha3_512));
-            hashed = new QString(calculateXOR(NP->text().toUtf8(), hash->toUtf8()));
-            QMessageBox::information(this, "Password", "Password changed.");
-        } else {
-            QMessageBox::critical(this, "Error", "Error during changing password");
-        }
-        CP->clear();
-        NP->clear();
-    }
-}
-void QOrganizer::SetInterval() {
-    if (UpdateInterval->value() > 0&&BlockInterval->value() > 0) {
-        UInterval = UpdateInterval->value();
-        UTimer->setInterval(UInterval*60*1000);
-        BInterval = BlockInterval->value();
-        BTimer->setInterval(BInterval*60*1000);
-        QMessageBox::information(this, "Times", "Update interval and time to lock changed.");
+        QMessageBox::critical(this, "Error", "Error during changing password");
     }
 }
 void QOrganizer::Unlock() {
     QString CPhash = QString(QCryptographicHash::hash(salting(BlockL->text()).toUtf8(), QCryptographicHash::Sha3_512));
-    QString CPhashed = QString(calculateXOR(BlockL->text().toUtf8(), CPhash.toUtf8()));
+    QString CPhashed = QString(calculateXOR(BlockL->text().toUtf8(), CPhash.toUtf8()).toBase64());
     if (hash == CPhash&&hashed == CPhashed) {
         TreeWidget->setEnabled(true);
         BlockL->setStyleSheet("QLineEdit{background: white;}");

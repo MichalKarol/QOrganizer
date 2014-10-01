@@ -16,6 +16,7 @@
 #ifndef QORGRSS_H_
 #define QORGRSS_H_
 #include <qorgtools.h>
+#include <qorgoptions.h>
 #include <QtWidgets>
 #include <QNetworkReply>
 #include <QWebView>
@@ -44,7 +45,7 @@ public:
 class qorgRSS : public QWidget {
     Q_OBJECT
 public:
-    explicit qorgRSS(QWidget*);
+    explicit qorgRSS(QWidget*,qorgOptions*);
     ~qorgRSS();
     QString output();
     void input(QString);
@@ -54,7 +55,9 @@ public:
         return currentC;
     }
     void getUpdate();
+    bool SSLSocketError(QList<QSslError>);
 private:
+    qorgOptions *Options;
     int currentC;
     vector <RSSChannel> RSSv;
     QGridLayout *Layout;
