@@ -28,7 +28,7 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     IV.clear();
     QByteArray DataBA = QByteArray::fromBase64(Data.toUtf8());
     Data.clear();
-    QString Passwd = QString(calculateXOR(hashed->toUtf8(), hash->toUtf8()));
+    QString Passwd = QString(calculateXOR(QByteArray::fromBase64(hashed->toUtf8()), hash->toUtf8()));
     if (Passwd.length() <  32) {
         Passwd.append(QString(32-Passwd.length(), '\0'));
     }
@@ -52,9 +52,7 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
         return false;
     }
     QStringList L = Decrypted.split("\n\n");
-    QStringList O = L[1].split(" ");
-    main->UInterval = InputI(O[0]);
-    main->BInterval = InputI(O[1]);
+    main->Options->input(L[1]);
     main->Calendar->input(L[2]);
     main->Mail->input(L[3]);
     main->Notes->input(L[4]);
@@ -65,9 +63,9 @@ bool qorgIO::ReadFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     return true;
 }
 void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString path) {
-    QString Out="QOrganizer 1.02\n\n";
-    QString data;
-    data.append(QString(Output(main->UInterval)+" "+Output(main->BInterval)+" \n\n"));
+    QString Out="QOrganizer 1.02";
+    QString data="\n\n";
+    data.append(main->Options->output());
     data.append(main->Calendar->output());
     data.append(main->Mail->output());
     data.append(main->Notes->output());
@@ -75,7 +73,7 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     data.append(main->RSS->output());
     data.append(main->PasswordManager->output());
     data.append(QString(AES_BLOCK_SIZE, '.'));
-    QString Passwd = QString(calculateXOR(hashed->toUtf8(), hash->toUtf8()));
+    QString Passwd = QString(calculateXOR(QByteArray::fromBase64(hashed->toUtf8()), hash->toUtf8()));
     if (Passwd.length() <  32) {
         Passwd.append(QString(32-Passwd.length(), '\0'));
     }

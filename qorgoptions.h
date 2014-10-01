@@ -1,43 +1,80 @@
+//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #ifndef QORGOPTIONS_H
 #define QORGOPTIONS_H
 
-#include <qorganizer.h>
+#include <qorgtools.h>
+#include <QSslCertificate>
 #include <QtWidgets>
 #include <algorithm>
 
 using std::vector;
-using std::find;
+
 class qorgOptions : public QWidget
 {
     Q_OBJECT
 public:
-    explicit qorgOptions(QOrganizer *parent);
+    explicit qorgOptions(QWidget* parent);
     int checkCertificate(QSslCertificate);
     void setWidget(uint);
     QString output();
     void input(QString);
-    QDialog *SSLCertYOR(QSslCertificate);
+    void acceptSSLCert(QSslCertificate);
+    void blacklistSSLCert(QSslCertificate);
+    void addForVeryfication(QSslCertificate);
+    uint UInterval;
+    uint BInterval;
+    QMutex CertMutex;
 private:
     vector <QSslCertificate> SSLCertA;
     vector <QSslCertificate> SSLCertB;
-    uint UInterval;
-    uint BInterval;
+    QList <QSslCertificate> SSLCertTmp;
     QTimer *UTimer;
     QTimer *BTimer;
     uint currentW;
+    QGridLayout *Layout;
+
+    QLabel* A[4];
+    QLineEdit* CPassword;
+    QLineEdit* NPassword;
+    QSpinBox* UInt;
+    QSpinBox* BInt;
+    QPushButton* Passwd;
+    QPushButton* Interval;
+    QSpacerItem* Spacer;
+    QList <QWidget*> W1;
+
+    QLabel *B[2];
     QListWidget *Accepted;
     QListWidget *Blacklisted;
+    QList <QWidget*> W2;
+public slots:
+    void start(bool);
+    void stop(bool);
+private slots:
+    void UTimeout();
+    void BTimeout();
+    void ChangeInterval();
+    void ChangePassword();
+    void Validator(QString);
+    void DClicked(QModelIndex);
 signals:
-    void ChangePassword(QString*,QString*);
+    void CNPassword(QString*,QString*,QString*,QString*);
     void Update();
     void Block();
-public slots:
-    void startUT();
-    void startBT();
-    void acceptSSLCert(QSslCertificate);
-    void blockSSLCert(QSslCertificate);
-private slots:
-
 };
 
 #endif // QORGOPTIONS_H
