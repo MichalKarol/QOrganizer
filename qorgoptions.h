@@ -13,18 +13,16 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef QORGOPTIONS_H
-#define QORGOPTIONS_H
+#ifndef QORGOPTIONS_H_
+#define QORGOPTIONS_H_
 
 #include <qorgtools.h>
 #include <QSslCertificate>
 #include <QtWidgets>
-#include <algorithm>
+#include <vector>
 
 using std::vector;
-
-class qorgOptions : public QWidget
-{
+class qorgOptions : public QWidget {
     Q_OBJECT
 public:
     explicit qorgOptions(QWidget* parent);
@@ -72,9 +70,9 @@ private slots:
     void Validator(QString);
     void DClicked(QModelIndex);
 signals:
-    void CNPassword(QString*,QString*,QString*,QString*);
+    void CNPassword(QString*, QString*, QString*, QString*);
     void Update();
     void Block();
 };
 
-#endif // QORGOPTIONS_H
+#endif  // QORGOPTIONS_H_

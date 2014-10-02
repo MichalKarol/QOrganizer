@@ -13,8 +13,10 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "qorgoptions.h"
-bool VectorSearch(vector<QSslCertificate>* A, QSslCertificate B) {
+#include <qorgoptions.h>
+#include <vector>
+
+bool VectorSearch(vector <QSslCertificate>* A, QSslCertificate B) {
     for (uint i = 0; i < A->size(); i++) {
         if ((*A)[i] == B) {
             return true;
@@ -23,51 +25,50 @@ bool VectorSearch(vector<QSslCertificate>* A, QSslCertificate B) {
     return false;
 }
 
-qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent)
-{
+qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent) {
     UInterval = 30;
     BInterval = 30;
     UTimer = new QTimer(this);
-    connect(UTimer,SIGNAL(timeout()),this,SLOT(UTimeout()));
+    connect(UTimer, SIGNAL(timeout()), this, SLOT(UTimeout()));
     BTimer = new QTimer(this);
-    connect(BTimer,SIGNAL(timeout()),this,SLOT(BTimeout()));
+    connect(BTimer, SIGNAL(timeout()), this, SLOT(BTimeout()));
 
     currentW = 2;
-    A[0] = new QLabel("Current password",this);
-    A[1] = new QLabel("New password",this);
-    A[2] = new QLabel("Update interval",this);
-    A[3] = new QLabel("Block interval",this);
+    A[0] = new QLabel("Current password", this);
+    A[1] = new QLabel("New password", this);
+    A[2] = new QLabel("Update interval", this);
+    A[3] = new QLabel("Block interval", this);
     CPassword = new QLineEdit(this);
     CPassword->setEchoMode(QLineEdit::Password);
-    connect(CPassword,SIGNAL(textChanged(QString)),this,SLOT(Validator(QString)));
+    connect(CPassword, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
     NPassword = new QLineEdit(this);
     NPassword->setEchoMode(QLineEdit::Password);
-    connect(NPassword,SIGNAL(textChanged(QString)),this,SLOT(Validator(QString)));
+    connect(NPassword, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
     UInt = new QSpinBox(this);
     BInt = new QSpinBox(this);
-    Passwd = new QPushButton("Change\npassword",this);
-    Passwd->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::MinimumExpanding);
-    connect(Passwd,SIGNAL(clicked()),this,SLOT(ChangePassword()));
-    Interval = new QPushButton("Change\ninterval",this);
-    Interval->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::MinimumExpanding);
-    connect(Interval,SIGNAL(clicked()),this,SLOT(ChangeInterval()));
-    Spacer = new QSpacerItem(250,250);
-    W1<<A[0]<<A[1]<<A[2]<<A[3]<<CPassword<<NPassword<<UInt<<BInt<<Passwd<<Interval;
+    Passwd = new QPushButton("Change\npassword", this);
+    Passwd->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
+    connect(Passwd, SIGNAL(clicked()), this, SLOT(ChangePassword()));
+    Interval = new QPushButton("Change\ninterval", this);
+    Interval->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
+    connect(Interval, SIGNAL(clicked()), this, SLOT(ChangeInterval()));
+    Spacer = new QSpacerItem(250, 250);
+    W1 << A[0] << A[1] << A[2] << A[3] << CPassword << NPassword << UInt << BInt << Passwd << Interval;
 
-    B[0] = new QLabel("Accepted SSL Certificates.",this);
-    B[1] = new QLabel("Blacklisted SSL Certificates.",this);
+    B[0] = new QLabel("Accepted SSL Certificates.", this);
+    B[1] = new QLabel("Blacklisted SSL Certificates.", this);
     Accepted = new QListWidget(this);
-    connect(Accepted,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(DClicked(QModelIndex)));
+    connect(Accepted, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(DClicked(QModelIndex)));
     Blacklisted = new QListWidget(this);
-    connect(Blacklisted,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(DClicked(QModelIndex)));
-    W2<<B[0]<<B[1]<<Accepted<<Blacklisted;
+    connect(Blacklisted, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(DClicked(QModelIndex)));
+    W2 << B[0] << B[1] << Accepted << Blacklisted;
 
     Layout = new QGridLayout(this);
 }
 int qorgOptions::checkCertificate(QSslCertificate I) {
-    if (VectorSearch(&SSLCertA,I)) {
+    if (VectorSearch(&SSLCertA, I)) {
         return 1;
-    } else if (VectorSearch(&SSLCertB,I)) {
+    } else if (VectorSearch(&SSLCertB, I)) {
         return -1;
     }
     return 0;
@@ -82,17 +83,17 @@ void qorgOptions::setWidget(uint W) {
                 W2[i]->hide();
                 Layout->removeWidget(W2[i]);
             }
-            Layout->addWidget(A[0],0,0,1,2);
-            Layout->addWidget(CPassword,1,0,1,2);
-            Layout->addWidget(A[1],2,0,1,2);
-            Layout->addWidget(NPassword,3,0,1,2);
-            Layout->addWidget(Passwd,0,2,4,1);
-            Layout->addWidget(A[2],4,0);
-            Layout->addWidget(A[3],4,1);
-            Layout->addWidget(UInt,5,0);
-            Layout->addWidget(BInt,5,1);
-            Layout->addWidget(Interval,4,2,2,1);
-            Layout->addItem(Spacer,6,0,5,3);
+            Layout->addWidget(A[0], 0, 0, 1, 2);
+            Layout->addWidget(CPassword, 1, 0, 1, 2);
+            Layout->addWidget(A[1], 2, 0, 1, 2);
+            Layout->addWidget(NPassword, 3, 0, 1, 2);
+            Layout->addWidget(Passwd, 0, 2, 4, 1);
+            Layout->addWidget(A[2], 4, 0);
+            Layout->addWidget(A[3], 4, 1);
+            Layout->addWidget(UInt, 5, 0);
+            Layout->addWidget(BInt, 5, 1);
+            Layout->addWidget(Interval, 4, 2, 2, 1);
+            Layout->addItem(Spacer, 6, 0, 5, 3);
             currentW = 0;
         } else {
             for (int i = 0; i < W2.size(); i++) {
@@ -103,10 +104,10 @@ void qorgOptions::setWidget(uint W) {
                 Layout->removeWidget(W1[i]);
             }
             Layout->removeItem(Spacer);
-            Layout->addWidget(B[0],0,0);
-            Layout->addWidget(B[1],0,1);
-            Layout->addWidget(Accepted,1,0);
-            Layout->addWidget(Blacklisted,1,1);
+            Layout->addWidget(B[0], 0, 0);
+            Layout->addWidget(B[1], 0, 1);
+            Layout->addWidget(Accepted, 1, 0);
+            Layout->addWidget(Blacklisted, 1, 1);
             currentW = 1;
             for (int i = SSLCertTmp.size(); i > 0; i--) {
                 if (checkCertificate(SSLCertTmp[i-1]) == 0) {
@@ -156,13 +157,13 @@ void qorgOptions::input(QString Input) {
     BInt->setValue(BInterval);
 }
 void qorgOptions::acceptSSLCert(QSslCertificate C) {
-    if (!VectorSearch(&SSLCertA,C)) {
+    if (!VectorSearch(&SSLCertA, C)) {
         SSLCertA.push_back(C);
         Accepted->addItem(C.serialNumber());
     }
 }
 void qorgOptions::blacklistSSLCert(QSslCertificate C) {
-    if (!VectorSearch(&SSLCertB,C)) {
+    if (!VectorSearch(&SSLCertB, C)) {
         SSLCertB.push_back(C);
         Blacklisted->addItem(C.serialNumber());
     }
@@ -200,7 +201,7 @@ void qorgOptions::ChangeInterval() {
         stop(1);
         start(0);
         start(1);
-        QMessageBox::information(this,"Changing intervals","Intervals changed successfully.");
+        QMessageBox::information(this, "Changing intervals", "Intervals changed successfully.");
     }
 }
 void qorgOptions::ChangePassword() {
@@ -214,7 +215,7 @@ void qorgOptions::ChangePassword() {
         NPassword->clear();
         CPassword->setStyleSheet("QLineEdit{background: white;}");
         NPassword->setStyleSheet("QLineEdit{background: white;}");
-        emit CNPassword(CA,CB,NA,NB);
+        emit CNPassword(CA, CB, NA, NB);
     }
 }
 void qorgOptions::Validator(QString Input) {
@@ -238,14 +239,14 @@ void qorgOptions::Validator(QString Input) {
 }
 void qorgOptions::DClicked(QModelIndex I) {
     if (QObject::sender() == Accepted) {
-        if((new CertAccept(SSLCertA[I.row()]))->exec() == QDialog::Rejected) {
+        if ((new CertAccept(SSLCertA[I.row()]))->exec() == QDialog::Rejected) {
             SSLCertB.push_back(SSLCertA[I.row()]);
             Blacklisted->addItem(SSLCertB.back().serialNumber());
             SSLCertA.erase(SSLCertA.begin()+I.row());
             delete Accepted->item(I.row());
         }
     } else {
-        if((new CertAccept(SSLCertB[I.row()]))->exec() == QDialog::Accepted) {
+        if ((new CertAccept(SSLCertB[I.row()]))->exec() == QDialog::Accepted) {
             SSLCertA.push_back(SSLCertB[I.row()]);
             Accepted->addItem(SSLCertA.back().serialNumber());
             SSLCertB.erase(SSLCertB.begin()+I.row());

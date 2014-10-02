@@ -797,7 +797,7 @@ void qorgCalendar::setCalendar() {
     int ItmSel = 0;
     for (int i = temp.dayOfWeek(); i > 1; i--) {
         QTableWidgetItem* Itm = new QTableWidgetItem();
-        Itm->setFlags(Itm->flags() xor Qt::ItemIsEditable);
+        Itm->setFlags(Itm->flags() ^ Qt::ItemIsEditable);
         Itm->setText(QString::number(temp.addDays(1-i).day()));
         Itm->setTextAlignment(Qt::AlignCenter);
         Itm->setTextColor(Qt::gray);
@@ -806,7 +806,7 @@ void qorgCalendar::setCalendar() {
     }
     for (int i = 0; i < temp.daysInMonth(); i++) {
         QTableWidgetItem* Itm = new QTableWidgetItem();
-        Itm->setFlags(Itm->flags() xor Qt::ItemIsEditable);
+        Itm->setFlags(Itm->flags() ^ Qt::ItemIsEditable);
         if (temp.addDays(i) == currentDate) {
             ItmSel = Items.size();
         }
@@ -818,7 +818,7 @@ void qorgCalendar::setCalendar() {
     }
     for (int i = 1; Items.size() < 42; i++) {
         QTableWidgetItem* Itm = new QTableWidgetItem();
-        Itm->setFlags(Itm->flags() xor Qt::ItemIsEditable);
+        Itm->setFlags(Itm->flags() ^ Qt::ItemIsEditable);
         Itm->setText(QString::number(temp1.addDays(i).day()));
         Itm->setTextAlignment(Qt::AlignCenter);
         Itm->setToolTip(temp1.addDays(i).toString("d/MM/yyyy"));

@@ -77,7 +77,7 @@ public:
         Stop,
         Cancel
     };
-    explicit SSLCON(qorgMail*,Mail*);
+    explicit SSLCON(qorgMail*, Mail*);
     void setMethod(Method);
     void DownloadAttachmentData(int B, int E, int A, QString P) {
         this->M = M;
@@ -130,7 +130,7 @@ signals:
     void SendEmailS(bool);
     void DeleteS(bool);
 };
-SSLCON::SSLCON(qorgMail*parent,Mail* I) :QThread(parent) {
+SSLCON::SSLCON(qorgMail*parent, Mail* I) :QThread(parent) {
     M = I;
     Current = Sleep;
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
@@ -262,7 +262,7 @@ void SSLCON::SecureLogin() {
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -300,7 +300,7 @@ void SSLCON::DownloadMBoxVector() {
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -410,7 +410,7 @@ void SSLCON::DownloadEmails() {
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -827,7 +827,7 @@ void SSLCON::DownloadAttachment() {
     if (!S.waitForEncrypted()) {
             if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -915,7 +915,7 @@ void SSLCON::SendEmail() {
     if (!S.waitForEncrypted()) {
             if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -988,7 +988,7 @@ void SSLCON::SendEmail() {
     if (!S.waitForEncrypted()) {
             if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -1069,7 +1069,7 @@ void SSLCON::DeleteEmail() {
     if (!S.waitForEncrypted()) {
             if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if(P->SSLSocketError(S.sslErrors())) {
+            if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
@@ -1516,7 +1516,7 @@ private slots:
     }
 };
 
-qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :QWidget(parent){
+qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :QWidget(parent) {
     this->AdressBook = AdressBook;
     this->Options = Options;
     currentMail = -1;
@@ -1915,7 +1915,7 @@ void qorgMail::testInput() {
             M->IMAPserver = IMAPS->text();
             M->SMTPserver = SMTPS->text();
             M->Name = M->User+" ("+M->IMAPserver+")";
-            SSLCON *T = new SSLCON(this,M);
+            SSLCON *T = new SSLCON(this, M);
             connect(T, SIGNAL(LoginS(bool)), this, SLOT(LoginS(bool)));
             connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(MailboxesS(bool)));
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(EmailS(bool)));
@@ -1965,7 +1965,7 @@ void qorgMail::EditMail(uint IID) {
     A->SMTPserver = I->SMTPserver;
     if ((new EditDialog(A, this))->exec() == QDialog::Accepted) {
         currentMail = IID;
-        SSLCON *T = new SSLCON(this,A);
+        SSLCON *T = new SSLCON(this, A);
         connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(EditMailS(bool)));
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
@@ -2025,7 +2025,7 @@ void qorgMail::EditMailS(bool I) {
         }
         T->setMethod(SSLCON::Stop);
         if ((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
-            T = new SSLCON(this,&Mailv[currentMail]);
+            T = new SSLCON(this, &Mailv[currentMail]);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setAutoReset(false);
@@ -2093,7 +2093,7 @@ void qorgMail::chooseEmail(QModelIndex I) {
                     int e = HTML.indexOf("\"", s+5);
                     position = e;
                     QString CID = HTML.mid(s+5, e-s-5).trimmed();
-                    if(!AlreadyDownlading.contains(CID)) {
+                    if (!AlreadyDownlading.contains(CID)) {
                         for (uint i = 1; i < E->Structurev.size(); i++) {
                             if (E->Structurev[i]->Structure_CID == CID) {
                                 AlreadyDownlading.append(CID);
@@ -2179,7 +2179,7 @@ void qorgMail::downloadAttachment(QModelIndex I) {
     QString name = AttachmentList->item(I.row())->text();
     QString path = QFileDialog::getSaveFileName(this, "Save attachment to:", QDir::homePath()+"/"+name);
     if (!path.isEmpty()) {
-        SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
+        SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
         QLabel *L = new QLabel("Downloading...");
         L->setAttribute(Qt::WA_DeleteOnClose);
         L->setStyleSheet("background-color: #FF8888;");
@@ -2197,7 +2197,7 @@ void qorgMail::downloadAttachment(QModelIndex I) {
     }
 }
 void qorgMail::downloadAttachment(uint I, QString path) {
-    SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
+    SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
     connect(T, SIGNAL(AttachmentS(bool)), this, SLOT(AttachmentS(bool)));
     T->DownloadAttachmentData(currentMailbox, currentEmail, I, path);
     T->setMethod(SSLCON::Attachment);
@@ -2249,9 +2249,9 @@ void qorgMail::AttachmentS(bool I) {
             M->Mboxv[B]->Emailv[E]->Email_Quene--;
         }
     } else {
-        if(M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
+        if (M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
             if (E == currentEmail && isLoading) {
-                SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
+                SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
                 connect(T, SIGNAL(AttachmentS(bool)), this, SLOT(AttachmentS(bool)));
                 T->DownloadAttachmentData(currentMailbox, currentEmail, A,
                                           QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Subtype.toLower());
@@ -2270,7 +2270,7 @@ void qorgMail::RefreshS() {
         M->IMAPserver = Mailv[currentMail].IMAPserver;
         M->User = Mailv[currentMail].User;
         M->Password = Mailv[currentMail].Password;
-        SSLCON *T = new SSLCON(this,M);
+        SSLCON *T = new SSLCON(this, M);
         connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(RefreshS(bool)));
         T->setMethod(SSLCON::Mailboxes);
         T->start();
@@ -2323,7 +2323,7 @@ void qorgMail::RefreshS(bool I) {
             }
         }
         T->setMethod(SSLCON::Stop);
-        T = new SSLCON(this,&Mailv[currentMail]);
+        T = new SSLCON(this, &Mailv[currentMail]);
         connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
@@ -2342,7 +2342,7 @@ void qorgMail::RefreshS(bool I) {
 }
 void qorgMail::SendEmail() {
     QPushButton *T = qobject_cast<QPushButton*>(QObject::sender());
-    SSLCON *S = new SSLCON(this,&Mailv[currentMail]);
+    SSLCON *S = new SSLCON(this, &Mailv[currentMail]);
     connect(S, SIGNAL(SendEmailS(bool)), this, SLOT(SendEmailS(bool)));
     S->SetBE(currentMailbox, currentEmail);
     QStringList Z;
@@ -2384,7 +2384,7 @@ void qorgMail::DeleteEmail() {
     if (currentEmail != -1 && !isRefreshingDeleting) {
         isRefreshingDeleting = true;
         if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
-            SSLCON *T = new SSLCON(this,&Mailv[currentMail]);
+            SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
             connect(T, SIGNAL(DeleteS(bool)), this, SLOT(DeleteEmailS(bool)));
             T->SetBE(currentMailbox, currentEmail);
             T->setMethod(SSLCON::Delete);
@@ -2456,7 +2456,7 @@ void qorgMail::getUpdate() {
                     break;
                 }
             }
-            SSLCON *T = new SSLCON(this,M);
+            SSLCON *T = new SSLCON(this, M);
             connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateS()));
             T->setMethod(SSLCON::Emails);
             T->start();

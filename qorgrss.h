@@ -45,7 +45,7 @@ public:
 class qorgRSS : public QWidget {
     Q_OBJECT
 public:
-    explicit qorgRSS(QWidget*,qorgOptions*);
+    explicit qorgRSS(QWidget*, qorgOptions*);
     ~qorgRSS();
     QString output();
     void input(QString);

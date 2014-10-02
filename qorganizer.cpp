@@ -20,20 +20,20 @@ QOrganizer::QOrganizer() {
     setWindowTitle("QOrganizer");
     this->setMinimumWidth(1024);
     Options = new qorgOptions(this);
-    connect(Options,SIGNAL(Update()),this,SLOT(updateTime()));
-    connect(Options,SIGNAL(Block()),this,SLOT(Block()));
-    connect(Options,SIGNAL(CNPassword(QString*,QString*,QString*,QString*)),this,SLOT(NewPassword(QString*,QString*,QString*,QString*)));
+    connect(Options, SIGNAL(Update()), this, SLOT(updateTime()));
+    connect(Options, SIGNAL(Block()), this, SLOT(Block()));
+    connect(Options, SIGNAL(CNPassword(QString*, QString*, QString*, QString*)), this, SLOT(NewPassword(QString*, QString*, QString*, QString*)));
     AdressBook = new qorgAB(this);
     connect(AdressBook, SIGNAL(updateTree()), this, SLOT(updateAdressBook()));
     Calendar = new qorgCalendar(this, AdressBook);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
     connect(Calendar, SIGNAL(Notification(QString)), this, SLOT(Notification(QString)));
-    Mail = new qorgMail(this, AdressBook,Options);
+    Mail = new qorgMail(this, AdressBook, Options);
     connect(Mail, SIGNAL(updateTree()), this, SLOT(updateMail()));
     connect(Mail, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(Mail, SIGNAL(sendUpdate(QString)), this, SLOT(MailNews(QString)));
     Notes = new qorgNotes(this);
-    RSS = new qorgRSS(this,Options);
+    RSS = new qorgRSS(this, Options);
     connect(RSS, SIGNAL(updateTree()), this, SLOT(updateRSS()));
     connect(RSS, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(RSS, SIGNAL(sendUpdate(QString)), this, SLOT(RSSNews(QString)));
@@ -80,8 +80,10 @@ QOrganizer::QOrganizer() {
     layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
+    qDebug("CLOSINGDESTRUKTOR");
+
     for (int i = TreeWidget->topLevelItemCount(); i > 0; i--) {
-        for (int j = TreeWidget->topLevelItem(i-1)->childCount(); j > 0; j++) {
+        for (int j = TreeWidget->topLevelItem(i-1)->childCount(); j > 0; j--) {
             delete TreeWidget->topLevelItem(i-1)->child(j-1);
         }
         delete TreeWidget->topLevelItem(i-1);
@@ -150,7 +152,7 @@ void QOrganizer::setTree() {
 
     QTreeWidgetItem *OptionsTI = new QTreeWidgetItem(TreeWidget);
     QTreeWidgetItem *OTI1 = new QTreeWidgetItem(OptionsTI);
-    OTI1->setText(0,"SSL Manager");
+    OTI1->setText(0, "SSL Manager");
     OptionsTI->setText(0, "Options");
     OptionsTI->setIcon(0, QIcon(":/main/Options.png"));
 
@@ -329,9 +331,13 @@ void QOrganizer::doubleClick(QString Text) {
 }
 void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
     if (I == QSystemTrayIcon::Context) {
+        qDebug("CLOSING");
         qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
+        qDebug("CLOSINGA");
         closing = true;
+        qDebug("CLOSINGB");
         this->close();
+        qDebug("CLOSINGC");
     } else if (I == QSystemTrayIcon::DoubleClick) {
         BlockL->clear();
         if (this->isHidden()) {
@@ -409,7 +415,9 @@ void QOrganizer::closeEvent(QCloseEvent *E) {
         this->hide();
         E->ignore();
     } else {
+        qDebug("CLOSINGD");
         E->accept();
+        qDebug("CLOSINGE");
     }
 }
 void QOrganizer::updateTime() {
