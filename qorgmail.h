@@ -106,7 +106,7 @@ public:
 class qorgMail: public QWidget {
     Q_OBJECT
 public:
-    explicit qorgMail(QWidget*,qorgAB* AB,qorgOptions* Options);
+    explicit qorgMail(QWidget*, qorgAB* AB, qorgOptions* Options);
     ~qorgMail();
     QString output();
     void input(QString);

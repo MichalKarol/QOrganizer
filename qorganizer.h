@@ -67,7 +67,7 @@ private slots:
     void RSSNews(QString);
     void updateTime();
     void Block();
-    void NewPassword(QString*,QString*,QString*,QString*);
+    void NewPassword(QString*, QString*, QString*, QString*);
 
     // Block
     void Unlock();

@@ -62,20 +62,20 @@ class CertAccept :public QDialog {
 public:
     explicit CertAccept(QSslCertificate cert) {
         setWindowTitle("SSL certificate error.");
-        QLabel *La = new QLabel("Do you trust this certificate?",this);
+        QLabel *La = new QLabel("Do you trust this certificate?", this);
         QTextBrowser* Text = new QTextBrowser(this);
         Text->setText(cert.toText());
         QPushButton* No = new QPushButton(this);
         No->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
-        connect(No,SIGNAL(clicked()),this,SLOT(reject()));
+        connect(No, SIGNAL(clicked()), this, SLOT(reject()));
         QPushButton* Yes = new QPushButton(this);
         Yes->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
-        connect(Yes,SIGNAL(clicked()),this,SLOT(accept()));
+        connect(Yes, SIGNAL(clicked()), this, SLOT(accept()));
         QGridLayout *L = new QGridLayout(this);
-        L->addWidget(La,0,0,1,2);
-        L->addWidget(Text,1,0,1,2);
-        L->addWidget(No,2,0);
-        L->addWidget(Yes,2,1);
+        L->addWidget(La, 0, 0, 1, 2);
+        L->addWidget(Text, 1, 0, 1, 2);
+        L->addWidget(No, 2, 0);
+        L->addWidget(Yes, 2, 1);
     }
 };
 

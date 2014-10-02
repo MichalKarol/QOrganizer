@@ -34,7 +34,7 @@ RSSChannel::RSSChannel() {
 class Download :public QThread {
     Q_OBJECT
 public:
-    explicit Download(qorgRSS*,RSSChannel*);
+    explicit Download(qorgRSS*, RSSChannel*);
     RSSChannel *Ch;
     void run();
 private:
@@ -44,7 +44,7 @@ private:
 signals:
     void Downloaded(QString);
 };
-Download::Download(qorgRSS* parent,RSSChannel *C) :QThread(parent) {
+Download::Download(qorgRSS* parent, RSSChannel *C) :QThread(parent) {
     URL = C->Link;
     Ch = C;
     this->start();
@@ -66,7 +66,7 @@ void Download::run() {
         if (!S.waitForEncrypted()) {
             if (!S.sslErrors().isEmpty()) {
                 qorgRSS* P = qobject_cast<qorgRSS*>(this->parent());
-                if(P->SSLSocketError(S.sslErrors())) {
+                if (P->SSLSocketError(S.sslErrors())) {
                     S.ignoreSslErrors(S.sslErrors());
                     S.connectToHostEncrypted(server, 443);
                 } else {
@@ -98,16 +98,16 @@ void Download::run() {
                 QString NUrl = Reply.mid(Reply.indexOf("Location: ")+10, Reply.indexOf("\r\n", Reply.indexOf("Location: "))-Reply.indexOf("Location: ")-10);
                 Reply = SubDownload(NUrl);
             } else if (Reply.contains("Transfer-Encoding: chunked\r\n")) {
-                Reply = Reply.mid(Reply.indexOf("\r\n\r\n")+4,Reply.length()-Reply.indexOf("\r\n\r\n")-4);
+                Reply = Reply.mid(Reply.indexOf("\r\n\r\n")+4, Reply.length()-Reply.indexOf("\r\n\r\n")-4);
                 QByteArray Temp;
                 uint pos = 0;
                 while (true) {
-                    uint Number = Reply.mid(pos,Reply.indexOf("\r\n",pos)-pos).toUInt(0,16);
+                    uint Number = Reply.mid(pos, Reply.indexOf("\r\n", pos)-pos).toUInt(0, 16);
                     if (Number == 0) {
                         break;
                     }
-                    Temp.append(Reply.mid(Reply.indexOf("\r\n",pos)+2,Number));
-                    pos = Reply.indexOf("\r\n",pos)+Number+4;
+                    Temp.append(Reply.mid(Reply.indexOf("\r\n", pos)+2, Number));
+                    pos = Reply.indexOf("\r\n", pos)+Number+4;
                 }
                 Reply = Temp;
             }
@@ -142,7 +142,7 @@ QByteArray Download::SubDownload(QString I) {
         if (!S.waitForEncrypted()) {
             if (!S.sslErrors().isEmpty()) {
                 qorgRSS* P = qobject_cast<qorgRSS*>(this->parent());
-                if(P->SSLSocketError(S.sslErrors())) {
+                if (P->SSLSocketError(S.sslErrors())) {
                     S.ignoreSslErrors(S.sslErrors());
                     S.connectToHostEncrypted(server, 443);
                 } else {
@@ -213,7 +213,7 @@ QString stringBetween(QString Tag, QString Text) {
     return Output;
 }
 
-qorgRSS::qorgRSS(QWidget *parent,qorgOptions* Options) :QWidget(parent) {
+qorgRSS::qorgRSS(QWidget *parent, qorgOptions* Options) :QWidget(parent) {
     this->Options = Options;
     currentC = -1;
     Layout = new QGridLayout(this);
@@ -343,7 +343,7 @@ QStringList qorgRSS::getChannels() {
 void qorgRSS::getUpdate() {
     if (RSSv.size() != 0) {
         for (uint i = 0; i < RSSv.size(); i++) {
-            Download *D = new Download(this,&RSSv[i]);
+            Download *D = new Download(this, &RSSv[i]);
             connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
             connect(D, SIGNAL(Downloaded(QString)), this, SLOT(UpdateS()));
             UpdateQuene++;
@@ -407,7 +407,7 @@ void qorgRSS::AddS() {
         Channel->Link = URL->text();
         URL->clear();
         QEventLoop *eventLoop = new QEventLoop(this);
-        Download *D = new Download(this,Channel);
+        Download *D = new Download(this, Channel);
         connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
         connect(D, SIGNAL(finished()), eventLoop, SLOT(quit()));
         eventLoop->exec();
@@ -422,7 +422,7 @@ void qorgRSS::DownloadedS(QString Rep) {
         if (Rep.contains("<channel>")&&Rep.contains("</channel>")) {
             QList <QString> Parts = Rep.split("<item>");
             Channel->Title = stringBetween("title", Parts[0]);
-            for(int i = 1; i < Parts.size()-1; i++) {
+            for (int i = 1; i < Parts.size()-1; i++) {
                 RSSItem *item = new RSSItem();
                 item->GUID = stringBetween("guid", Parts[i]);
                 QString Title = stringBetween("title", Parts[i]);
@@ -477,7 +477,7 @@ void qorgRSS::DownloadedS(QString Rep) {
             int S = Rep.indexOf("<link", 0, Qt::CaseInsensitive);
             int B = Rep.indexOf("href=\"", S+5, Qt::CaseInsensitive);
             int E = Rep.indexOf("\"", B+6);
-            item->Link = Rep.mid(B+6,E-B-6);;
+            item->Link = Rep.mid(B+6, E-B-6);
             QString Des;
             if (Rep.contains("summary")) {
                 Des = stringBetween("summary", Rep);
@@ -566,7 +566,7 @@ void qorgRSS::chooseItem(QModelIndex I) {
     Link->setText("<a href='"+RSSv[currentC].Itemv[I.row()]->Link+"'>"+RSSv[currentC].Itemv[I.row()]->Link);
 }
 void qorgRSS::RefreshS() {
-    Download *D = new Download(this,&RSSv[currentC]);
+    Download *D = new Download(this, &RSSv[currentC]);
     connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
 }
 void qorgRSS::UpdateS() {
