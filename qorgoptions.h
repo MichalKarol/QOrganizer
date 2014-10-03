@@ -26,6 +26,7 @@ class qorgOptions : public QWidget {
     Q_OBJECT
 public:
     explicit qorgOptions(QWidget* parent);
+    ~qorgOptions();
     int checkCertificate(QSslCertificate);
     void setWidget(uint);
     QString output();

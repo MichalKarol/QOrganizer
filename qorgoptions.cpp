@@ -32,7 +32,6 @@ qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent) {
     connect(UTimer, SIGNAL(timeout()), this, SLOT(UTimeout()));
     BTimer = new QTimer(this);
     connect(BTimer, SIGNAL(timeout()), this, SLOT(BTimeout()));
-
     currentW = 2;
     A[0] = new QLabel("Current password", this);
     A[1] = new QLabel("New password", this);
@@ -65,6 +64,9 @@ qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent) {
 
     Layout = new QGridLayout(this);
 }
+qorgOptions::~qorgOptions() {
+    delete Spacer;
+}
 int qorgOptions::checkCertificate(QSslCertificate I) {
     if (VectorSearch(&SSLCertA, I)) {
         return 1;
@@ -74,7 +76,7 @@ int qorgOptions::checkCertificate(QSslCertificate I) {
     return 0;
 }
 void qorgOptions::setWidget(uint W) {
-    if (W != currentW) {
+    if (W != currentW || (W == 1 && !SSLCertTmp.isEmpty())) {
         if (W == 0) {
             for (int i = 0; i < W1.size(); i++) {
                 W1[i]->show();
@@ -135,22 +137,24 @@ QString qorgOptions::output() {
     return Out;
 }
 void qorgOptions::input(QString Input) {
-    QStringList A = Input.split("\n");
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        switch (B.size()-1) {
-        case 1: {
-            SSLCertA.push_back(QSslCertificate::fromData(InputS(B[0]).toUtf8()).first());
-            Accepted->addItem(SSLCertA.back().serialNumber());
-        }break;
-        case 2: {
-            UInterval = InputI(B[0]);
-            BInterval = InputI(B[1]);
-        }break;
-        case 3: {
-            SSLCertB.push_back(QSslCertificate::fromData(InputS(B[0]).toUtf8()).first());
-            Blacklisted->addItem(SSLCertB.back().serialNumber());
-        }break;
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            switch (B.size()-1) {
+            case 1: {
+                SSLCertA.push_back(QSslCertificate::fromData(InputS(B[0]).toUtf8()).first());
+                Accepted->addItem(SSLCertA.back().serialNumber());
+            }break;
+            case 2: {
+                UInterval = InputI(B[0]);
+                BInterval = InputI(B[1]);
+            }break;
+            case 3: {
+                SSLCertB.push_back(QSslCertificate::fromData(InputS(B[0]).toUtf8()).first());
+                Blacklisted->addItem(SSLCertB.back().serialNumber());
+            }break;
+            }
         }
     }
     UInt->setValue(UInterval);

@@ -285,27 +285,29 @@ QString qorgRSS::output() {
     return out;
 }
 void qorgRSS::input(QString Input) {
-    QStringList A = Input.split("\n");
-    RSSChannel *cChannel;
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        switch (B.size()-1) {
-        case 2: {
-            RSSv.push_back(RSSChannel());
-            cChannel = &RSSv.back();
-            cChannel->Title = InputS(B[0]);
-            cChannel->Link = InputS(B[1]);
-        }break;
-        case 6: {
-            RSSItem *cItem = new RSSItem();
-            cChannel->Itemv.push_back(cItem);
-            cItem->Title = InputS(B[0]);
-            cItem->PubDate = InputDT(B[1]);
-            cItem->Link = InputS(B[2]);
-            cItem->Description = InputS(B[3]);
-            cItem->GUID = InputS(B[4]);
-            cItem->New = InputB(B[5]);
-        }break;
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        RSSChannel *cChannel;
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            switch (B.size()-1) {
+            case 2: {
+                RSSv.push_back(RSSChannel());
+                cChannel = &RSSv.back();
+                cChannel->Title = InputS(B[0]);
+                cChannel->Link = InputS(B[1]);
+            }break;
+            case 6: {
+                RSSItem *cItem = new RSSItem();
+                cChannel->Itemv.push_back(cItem);
+                cItem->Title = InputS(B[0]);
+                cItem->PubDate = InputDT(B[1]);
+                cItem->Link = InputS(B[2]);
+                cItem->Description = InputS(B[3]);
+                cItem->GUID = InputS(B[4]);
+                cItem->New = InputB(B[5]);
+            }break;
+            }
         }
     }
     setLayoutC();

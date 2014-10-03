@@ -167,18 +167,18 @@ private slots:
     // MAIN
     void chooseMbox(QTreeWidgetItem*);
     void chooseEmail(QModelIndex);
-    void LoginS(bool);
-    void MailboxesS(bool);
-    void EmailS(bool);
+    void LoginS(bool, QString);
+    void MailboxesS(bool, QString);
+    void EmailS(bool, QString);
     void downloadAttachment(QModelIndex);
     void downloadAttachment(uint, QString);
     void AttachmentS(bool);
     void RefreshS();
     void RefreshS(bool);
     void SendEmail();
-    void SendEmailS(bool);
+    void SendEmailS(bool, QString);
     void DeleteEmail();
-    void DeleteEmailS(bool);
+    void DeleteEmailS(bool, QString);
     void UpdateMail();
     void UpdateS();
     void HTTPSS(QNetworkReply*, QList <QSslError>);

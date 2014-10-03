@@ -573,30 +573,32 @@ QString qorgCalendar::output() {
     return out;
 }
 void qorgCalendar::input(QString Input) {
-    QStringList A = Input.split("\n");
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        switch (B.size()-1) {
-        case 5: {
-          CalNor Nor;
-          Nor.name = InputS(B[0]);
-          Nor.category = InputS(B[1]);
-          Nor.priority = InputC(B[2]);
-          Nor.datet = InputDT(B[3]);
-          Nor.edatet = InputDT(B[4]);
-          Normal.push_back(Nor);
-        } break;
-        case 7: {
-          CalRec Rec;
-          Rec.name = InputS(B[0]);
-          Rec.category = InputS(B[1]);
-          Rec.priority = InputC(B[2]);
-          Rec.type = InputC(B[3]);
-          Rec.datet = InputDT(B[4]);
-          Rec.edatet = InputDT(B[5]);
-          Rec.edate = InputD(B[6]);
-          Recurrent.push_back(Rec);
-        } break;
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            switch (B.size()-1) {
+            case 5: {
+                CalNor Nor;
+                Nor.name = InputS(B[0]);
+                Nor.category = InputS(B[1]);
+                Nor.priority = InputC(B[2]);
+                Nor.datet = InputDT(B[3]);
+                Nor.edatet = InputDT(B[4]);
+                Normal.push_back(Nor);
+            } break;
+            case 7: {
+                CalRec Rec;
+                Rec.name = InputS(B[0]);
+                Rec.category = InputS(B[1]);
+                Rec.priority = InputC(B[2]);
+                Rec.type = InputC(B[3]);
+                Rec.datet = InputDT(B[4]);
+                Rec.edatet = InputDT(B[5]);
+                Rec.edate = InputD(B[6]);
+                Recurrent.push_back(Rec);
+            } break;
+            }
         }
     }
     sort();
@@ -918,7 +920,7 @@ QList  <QString>  qorgCalendar::checkBd(QDate D) {
 void qorgCalendar::updateAll() {
     Incoming->clear();
     QList  <uint>  DUID;
-    for (uint i = 0, j = 0; i < 30&&j < 10; i++) {
+    for (uint i = 0, j = 0; i < 30&&j < 25; i++) {
         if (category.isEmpty()||category == "Birthdays") {
             QList  <QString>  B = checkBd(QDate::currentDate().addDays(i));
             for (int k = 0; k < B.size(); k++) {

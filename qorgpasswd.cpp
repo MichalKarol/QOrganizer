@@ -142,22 +142,24 @@ QString qorgPasswd::output() {
     return out;
 }
 void qorgPasswd::input(QString Input) {
-    QStringList A = Input.split("\n");
-    Program *cProgram;
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        switch (B.size()-1) {
-        case 1: {
-            Programv.push_back(Program());
-            cProgram = &Programv.back();
-            cProgram->Name = InputS(B[0]);
-        }break;
-        case 2: {
-            Password *cPassword = new Password();
-            cProgram->Passwordv.push_back(cPassword);
-            cPassword->Login = InputS(B[0]);
-            cPassword->Passwd = InputS(B[1]);
-        }break;
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        Program *cProgram;
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            switch (B.size()-1) {
+            case 1: {
+                Programv.push_back(Program());
+                cProgram = &Programv.back();
+                cProgram->Name = InputS(B[0]);
+            }break;
+            case 2: {
+                Password *cPassword = new Password();
+                cProgram->Passwordv.push_back(cPassword);
+                cPassword->Login = InputS(B[0]);
+                cPassword->Passwd = InputS(B[1]);
+            }break;
+            }
         }
     }
     UpdateTree();
