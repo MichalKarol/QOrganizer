@@ -75,7 +75,7 @@ void qorgLogin::UserInputValidation(QString input) {
 void qorgLogin::PasswordInputValidation(QString input) {
     if (input.length() < 8 || input.isEmpty()) {
         Line[1]->setStyleSheet("QLineEdit{background: #FF8888;}");
-            PassLabel->setText("Password should be at least 8 characters long!");
+        PassLabel->setText("Password should be at least 8 characters long!");
         Validated[1]=false;
     } else {
         PassLabel->setText("");
@@ -130,8 +130,10 @@ void qorgLogin::Register() {
             hash = new QString(QCryptographicHash::hash(salting(Line[1]->text()).toUtf8(), QCryptographicHash::Sha3_512));
             hashed = new QString(calculateXOR(Line[1]->text().toUtf8(), hash->toUtf8()).toBase64());
             qorgIO::SaveFile(hashed, hash, pointer, path);
-            pointer->setUser(Line[0]->text(), hashed, hash);
-            this->accept();
+            if (qorgIO::ReadFile(hashed, hash, pointer, path)) {
+                pointer->setUser(Line[0]->text(), hashed, hash);
+                this->accept();
+            }
         }
         Line[1]->clear();
         Line[1]->setStyleSheet("QLineEdit{background: white;}");

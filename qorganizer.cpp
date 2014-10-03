@@ -80,8 +80,6 @@ QOrganizer::QOrganizer() {
     layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
-    qDebug("CLOSINGDESTRUKTOR");
-
     for (int i = TreeWidget->topLevelItemCount(); i > 0; i--) {
         for (int j = TreeWidget->topLevelItem(i-1)->childCount(); j > 0; j--) {
             delete TreeWidget->topLevelItem(i-1)->child(j-1);
@@ -331,13 +329,9 @@ void QOrganizer::doubleClick(QString Text) {
 }
 void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
     if (I == QSystemTrayIcon::Context) {
-        qDebug("CLOSING");
         qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
-        qDebug("CLOSINGA");
         closing = true;
-        qDebug("CLOSINGB");
         this->close();
-        qDebug("CLOSINGC");
     } else if (I == QSystemTrayIcon::DoubleClick) {
         BlockL->clear();
         if (this->isHidden()) {
@@ -415,9 +409,7 @@ void QOrganizer::closeEvent(QCloseEvent *E) {
         this->hide();
         E->ignore();
     } else {
-        qDebug("CLOSINGD");
         E->accept();
-        qDebug("CLOSINGE");
     }
 }
 void QOrganizer::updateTime() {

@@ -80,15 +80,17 @@ QString qorgNotes::output() {
     return out;
 }
 void qorgNotes::input(QString Input) {
-    QStringList A = Input.split("\n");
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        if (B.size()-1 == 3) {
-            Note Not;
-            Not.Topic = InputS(B[0]);
-            Not.Priority = InputC(B[1]);
-            Not.Text = InputS(B[2]);
-            Notes.push_back(Not);
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            if (B.size()-1 == 3) {
+                Note Not;
+                Not.Topic = InputS(B[0]);
+                Not.Priority = InputC(B[1]);
+                Not.Text = InputS(B[2]);
+                Notes.push_back(Not);
+            }
         }
     }
     updateList();
