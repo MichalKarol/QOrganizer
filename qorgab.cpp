@@ -164,22 +164,24 @@ QString qorgAB::output() {
     return out;
 }
 void qorgAB::input(QString Input) {
-    QStringList A = Input.split("\n");
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        if (B.size()-1 == 10) {
-            Person Per;
-            Per.Name = InputS(B[0]);
-            Per.Surname = InputS(B[1]);
-            Per.Category = InputS(B[2]);
-            Per.Town = InputS(B[3]);
-            Per.Street = InputS(B[4]);
-            Per.HouseNumber = InputI(B[5]);
-            Per.Apartment = InputI(B[6]);
-            Per.Email = InputS(B[7]);
-            Per.Mobile = InputS(B[8]);
-            Per.Birthday = InputD(B[9]);
-            Personv.push_back(Per);
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            if (B.size()-1 == 10) {
+                Person Per;
+                Per.Name = InputS(B[0]);
+                Per.Surname = InputS(B[1]);
+                Per.Category = InputS(B[2]);
+                Per.Town = InputS(B[3]);
+                Per.Street = InputS(B[4]);
+                Per.HouseNumber = InputI(B[5]);
+                Per.Apartment = InputI(B[6]);
+                Per.Email = InputS(B[7]);
+                Per.Mobile = InputS(B[8]);
+                Per.Birthday = InputD(B[9]);
+                Personv.push_back(Per);
+            }
         }
     }
     UpdateList();
