@@ -75,7 +75,6 @@ public:
         Send,
         Delete,
         Stop,
-        Cancel
     };
     explicit SSLCON(qorgMail*, Mail*);
     void setMethod(Method);
@@ -100,6 +99,7 @@ public:
     int B;
     int E;
     int A;
+    bool Cancelled;
 private:
     Method Current;
     QString Path;
@@ -123,15 +123,16 @@ public slots:
 signals:
     void changeValue(int);
     void end();
-    void LoginS(bool);
-    void MailboxesS(bool);
-    void EmailS(bool);
-    void AttachmentS(bool);
-    void SendEmailS(bool);
-    void DeleteS(bool);
+    void LoginS(bool, QString);
+    void MailboxesS(bool, QString);
+    void EmailS(bool, QString);
+    void AttachmentS(bool, QString);
+    void SendEmailS(bool, QString);
+    void DeleteS(bool, QString);
 };
 SSLCON::SSLCON(qorgMail*parent, Mail* I) :QThread(parent) {
     M = I;
+    Cancelled = false;
     Current = Sleep;
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }
@@ -176,7 +177,7 @@ void SSLCON::run() {
 }
 QByteArray SSLCON::readAll(QSslSocket *S) {
     QByteArray Reply;
-    if (Current != Cancel && S->waitForReadyRead()) {
+    if (!Cancelled && S->waitForReadyRead()) {
         Reply.append(S->readAll());
         while (S->waitForReadyRead(10)&&S->bytesAvailable() != 0) {
             Reply.append(S->readAll());
@@ -186,7 +187,7 @@ QByteArray SSLCON::readAll(QSslSocket *S) {
 }
 QByteArray SSLCON::readIMAP(QSslSocket *S) {
     QByteArray Reply;
-    if (Current != Cancel && S->waitForReadyRead()) {
+    if (!Cancelled && S->waitForReadyRead()) {
         Reply.append(S->readAll());
         while (!(Reply.contains("TAG OK") || Reply.contains("TAG NO") || Reply.contains("TAG BAD"))) {
             if (S->waitForReadyRead() && S->bytesAvailable() != 0) {
@@ -266,30 +267,30 @@ void SSLCON::SecureLogin() {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit LoginS(false);
+                emit LoginS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit LoginS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit LoginS(false,  "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     P.clear();
     Reply = readIMAP(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit LoginS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit LoginS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
     S.close();
-    if (Reply.contains("TAG OK") && Current != Cancel) {
+    if (Reply.contains("TAG OK") && !Cancelled) {
         emit changeValue(12);
-        emit LoginS(true);
+        emit LoginS(true, "Logged in.");
     } else {
-        emit LoginS(false);
+        emit LoginS(false, "ERROR: Authentication failed.");
     }
 }
 void SSLCON::DownloadMBoxVector() {
@@ -304,30 +305,30 @@ void SSLCON::DownloadMBoxVector() {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit MailboxesS(false);
+                emit MailboxesS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit MailboxesS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit MailboxesS(false, "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     Reply = readIMAP(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit MailboxesS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit MailboxesS(false, "ERROR: No response from server.");
         return;
     }
     if (!Reply.contains("TAG OK")) {
-        emit MailboxesS(false);
+        emit MailboxesS(false, "ERROR: Authentication failed.");
         return;
     }
     S.write("TAG LIST \"\" \"*\"\r\n");
     Reply = readIMAP(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit MailboxesS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit MailboxesS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
@@ -395,10 +396,10 @@ void SSLCON::DownloadMBoxVector() {
             M->Mboxv[i]->Mbox_Top = true;
         }
     }
-    if (Current == Cancel) {
-        emit MailboxesS(false);
+    if (Cancelled) {
+        emit MailboxesS(false, "Cancelled.");
     } else {
-        emit MailboxesS(true);
+        emit MailboxesS(true, "Mailboxes tree downloaded.");
         emit changeValue(25);
     }
 }
@@ -414,33 +415,33 @@ void SSLCON::DownloadEmails() {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit EmailS(false);
+                emit EmailS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit EmailS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit EmailS(false,  "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     P.clear();
     Reply = readIMAP(&S);
-    if (Reply.isEmpty() || Current == Cancel) {
-        emit EmailS(false);
+    if (Reply.isEmpty() || Cancelled) {
+        emit EmailS(false, "ERROR: No response from server.");
         return;
     }
     if (!Reply.contains("TAG OK")) {
-        emit EmailS(false);
+        emit EmailS(false, "ERROR: Authentication failed.");
         return;
     }
     for (uint i = 0; i < M->Mboxv.size(); i++) {
         if (M->Mboxv[i]->Mbox_Refresh) {
             S.write(QString("TAG SELECT \""+M->Mboxv[i]->Mbox_Name+"\"\r\n").toUtf8());
             Reply = readIMAP(&S);
-            if (Reply.isEmpty() || Current == Cancel) {
-                emit EmailS(false);
+            if (Reply.isEmpty() || Cancelled) {
+                emit EmailS(false, "ERROR: No response from server.");
                 return;
             }
             QStringList A = Reply.split("*", QString::SkipEmptyParts);
@@ -462,8 +463,8 @@ void SSLCON::DownloadEmails() {
                             }
                             S.write(QString("TAG FETCH "+QString::number(En - En%100 + 1)+":"+Enu+" UID\r\n").toUtf8());
                             UIDS.append(readIMAP(&S));
-                            if (UIDS.isEmpty() || Current == Cancel) {
-                                emit EmailS(false);
+                            if (UIDS.isEmpty() || Cancelled) {
+                                emit EmailS(false, "ERROR: No response from server.");
                                 return;
                             }
                             QList <QString> UIDL = UIDS.split("UID");
@@ -503,12 +504,12 @@ void SSLCON::DownloadEmails() {
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
                                 Subjects.append(readIMAP(&S));
-                                if (Subjects.isEmpty() || Current == Cancel) {
+                                if (Subjects.isEmpty() || Cancelled) {
                                     for (uint k = En; k >= Fn; k--) {
                                         delete (*Vec)[k-1];
                                         Vec->erase(Vec->begin()+k-1);
                                     }
-                                    emit EmailS(false);
+                                    emit EmailS(false, "ERROR: No response from server.");
                                     return;
                                 }
                                 QList <QString> SubL = Subjects.split(")\r\n*");
@@ -539,12 +540,12 @@ void SSLCON::DownloadEmails() {
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Date)]\r\n").toUtf8());
                                 Dates.append(readIMAP(&S));
-                                if (Dates.isEmpty() || Current == Cancel) {
+                                if (Dates.isEmpty() || Cancelled) {
                                     for (uint k = En; k >= Fn; k--) {
                                         delete (*Vec)[k-1];
                                         Vec->erase(Vec->begin()+k-1);
                                     }
-                                    emit EmailS(false);
+                                    emit EmailS(false, "ERROR: No response from server.");
                                     return;
                                 }
                                 QList <QString> DateL = Dates.split(")\r\n*");
@@ -593,12 +594,12 @@ void SSLCON::DownloadEmails() {
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
                                 Froms.append(readIMAP(&S));
-                                if (Froms.isEmpty() || Current == Cancel) {
+                                if (Froms.isEmpty() || Cancelled) {
                                     for (uint k = En; k >= Fn; k--) {
                                         delete (*Vec)[k-1];
                                         Vec->erase(Vec->begin()+k-1);
                                     }
-                                    emit EmailS(false);
+                                    emit EmailS(false, "ERROR: No response from server.");
                                     return;
                                 }
                                 QList <QString> FromsL = Froms.split(")\r\n*");
@@ -624,12 +625,12 @@ void SSLCON::DownloadEmails() {
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" FLAGS\r\n").toUtf8());
                                 Flags.append(readIMAP(&S));
-                                if (Flags.isEmpty() || Current == Cancel) {
+                                if (Flags.isEmpty() || Cancelled) {
                                     for (uint k = En; k >= Fn; k--) {
                                         delete (*Vec)[k-1];
                                         Vec->erase(Vec->begin()+k-1);
                                     }
-                                    emit EmailS(false);
+                                    emit EmailS(false, "ERROR: No response from server.");
                                     return;
                                 }
                                 QList <QString> FlagsL = Flags.split("FLAGS (");
@@ -666,12 +667,12 @@ void SSLCON::DownloadEmails() {
                                 }
                                 S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODYSTRUCTURE\r\n").toUtf8());
                                 BS.append(readIMAP(&S));
-                                if (BS.isEmpty() || Current == Cancel) {
+                                if (BS.isEmpty() || Cancelled) {
                                     for (uint k = En; k >= Fn; k--) {
                                         delete (*Vec)[k-1];
                                         Vec->erase(Vec->begin()+k-1);
                                     }
-                                    emit EmailS(false);
+                                    emit EmailS(false, "ERROR: No response from server.");
                                     return;
                                 }
                                 QList  <QString>  BSL = BS.split("BODYSTRUCTURE (");
@@ -771,7 +772,7 @@ void SSLCON::DownloadEmails() {
                                                     QByteArray Tmp = readIMAP(&S);
                                                     Text.append(Tmp.mid(Tmp.indexOf("}")+1, Tmp.indexOf(")\r\nTAG OK")-Tmp.indexOf("}")-1));
                                                 }
-                                                if (Text.isEmpty() || Current == Cancel) {
+                                                if (Text.isEmpty() || Cancelled) {
                                                     for (uint m = En; m >= Fn; m--) {
                                                         for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
                                                             delete (*Vec)[m-1]->Structurev[n-1];
@@ -780,7 +781,7 @@ void SSLCON::DownloadEmails() {
                                                         delete (*Vec)[m-1];
                                                         Vec->erase(Vec->begin()+m-1);
                                                     }
-                                                    emit EmailS(false);
+                                                    emit EmailS(false, "ERROR: No response from server.");
                                                     return;
                                                 }
                                                 if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "BASE64") {
@@ -813,10 +814,10 @@ void SSLCON::DownloadEmails() {
     }
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
     S.close();
-    if (Current == Cancel) {
-        emit EmailS(false);
+    if (Cancelled) {
+        emit EmailS(false, "Cancelled");
     } else {
-        emit EmailS(true);
+        emit EmailS(true, "Emails header fields and bodies downloaded.");
     }
 }
 void SSLCON::DownloadAttachment() {
@@ -825,37 +826,37 @@ void SSLCON::DownloadAttachment() {
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
     if (!S.waitForEncrypted()) {
-            if (!S.sslErrors().isEmpty()) {
+        if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
             if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit AttachmentS(false);
+                emit AttachmentS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit AttachmentS(false);
+        emit AttachmentS(false,  "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     P.clear();
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit AttachmentS(false);
+        emit AttachmentS(false, "ERROR: No response from server.");
         return;
     }
     if (!Reply.contains("TAG OK")) {
-        emit AttachmentS(false);
+        emit AttachmentS(false, "ERROR: Authentication failed.");
         return;
     }
     S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit AttachmentS(false);
+        emit AttachmentS(false, "ERROR: No response from server.");
         return;
     }
     Reply.clear();
@@ -865,7 +866,7 @@ void SSLCON::DownloadAttachment() {
         Reply.append(Tmp.mid(Tmp.indexOf("}")+1, Tmp.indexOf(")\r\nTAG OK")-Tmp.indexOf("}")-1));
     }
     if (Reply.isEmpty()) {
-        emit AttachmentS(false);
+        emit AttachmentS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
@@ -884,7 +885,7 @@ void SSLCON::DownloadAttachment() {
     F.open(QIODevice::WriteOnly);
     F.write(Array);
     F.close();
-    emit AttachmentS(true);
+    emit AttachmentS(true, "Attachment downloaded.");
 }
 void SSLCON::SendEmail() {
     QByteArray P = calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512));
@@ -913,36 +914,36 @@ void SSLCON::SendEmail() {
     }
     S.connectToHostEncrypted(M->IMAPserver, 993);
     if (!S.waitForEncrypted()) {
-            if (!S.sslErrors().isEmpty()) {
+        if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
             if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit SendEmailS(false);
+                emit SendEmailS(false, "ERROR(IMAP): Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR(IMAP): No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     if (!Reply.contains("TAG OK")) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR(IMAP): Authentication failed.");
         return;
     }
     S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     for (int i = 0; i < Att.size(); i++) {
@@ -963,7 +964,7 @@ void SSLCON::SendEmail() {
             S.write(QString("TAG UID FETCH "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" BODY["+M->Mboxv[B]->Emailv[E]->Structurev[Att[i].toInt()]->Structure_Number+"]\r\n").toUtf8());
             Reply = readIMAP(&S);
             if (Reply.isEmpty()) {
-                emit SendEmailS(false);
+                emit SendEmailS(false, "ERROR: No response from server.");
                 return;
             }
             Reply = Reply.mid(Reply.indexOf("}")+1, Reply.indexOf(")\r\nTAG OK")-Reply.indexOf("}")-1);
@@ -986,80 +987,83 @@ void SSLCON::SendEmail() {
     S.close();
     S.connectToHostEncrypted(M->SMTPserver, 465);
     if (!S.waitForEncrypted()) {
-            if (!S.sslErrors().isEmpty()) {
+        if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
             if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
-                S.connectToHostEncrypted(M->IMAPserver, 993);
+                S.connectToHostEncrypted(M->IMAPserver, 465);
             } else {
-                emit SendEmailS(false);
+                emit SendEmailS(false, "ERROR(SMTP): Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR(SMTP): No HELLO message.");
         return;
     }
     S.write(QString("EHLO "+M->SMTPserver.mid(5, M->SMTPserver.length()-5)+"\r\n").toUtf8());
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("AUTH LOGIN\r\n").toUtf8());
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString(M->User.toUtf8().toBase64()+"\r\n").toUtf8());
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString(P.toBase64()+"\r\n").toUtf8());
     P.clear();
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     if (!Reply.contains("235")) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR(SMTP): Authentication failed.");
         return;
     }
     S.write(QString("MAIL FROM: <"+M->User+"@"+M->IMAPserver.mid(5, M->IMAPserver.length()-5)+">\r\n").toUtf8());
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     for (int i = 0; i < To.size(); i++) {
         S.write(QString("RCPT TO: <"+To[i]+">\r\n").toUtf8());
         Reply = readAll(&S);
         if (Reply.isEmpty()) {
-            emit SendEmailS(false);
+            emit SendEmailS(false, "ERROR: No response from server.");
             return;
         }
     }
     S.write(QString("DATA\r\n").toUtf8());
     Reply = readAll(&S);
-    if (Reply.isEmpty() || Reply.contains("552")) {
-        emit SendEmailS(false);
+    if (Reply.isEmpty()) {
+        emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString(Output+"\r\n.\r\n").toUtf8());
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit SendEmailS(false);
+        emit SendEmailS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("552")) {
+        emit SendEmailS(false, "ERROR: Data too large.");
         return;
     }
     S.write(QString("QUIT\r\n").toUtf8());
     S.close();
-    emit SendEmailS(true);
+    emit SendEmailS(true, "Email sent.");
 }
 void SSLCON::DeleteEmail() {
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
@@ -1067,37 +1071,37 @@ void SSLCON::DeleteEmail() {
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
     if (!S.waitForEncrypted()) {
-            if (!S.sslErrors().isEmpty()) {
+        if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
             if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit DeleteS(false);
+                emit DeleteS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false);
+        emit DeleteS(false,  "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     P.clear();
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false);
+        emit DeleteS(false, "ERROR: No response from server.");
         return;
     }
     if (!Reply.contains("TAG OK")) {
-        emit DeleteS(false);
+        emit DeleteS(false, "ERROR: Authentication failed.");
         return;
     }
     S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false);
+        emit DeleteS(false, "ERROR: No response from server.");
         return;
     }
     for (uint i = 0; i < M->Mboxv.size(); i++) {
@@ -1105,7 +1109,7 @@ void SSLCON::DeleteEmail() {
             S.write(QString("TAG UID COPY "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" \""+M->Mboxv[i]->Mbox_Name+"\"\r\n").toUtf8());
             Reply = readIMAP(&S);
             if (Reply.isEmpty()) {
-                emit DeleteS(false);
+                emit DeleteS(false, "ERROR: No response from server.");
                 return;
             }
             break;
@@ -1114,21 +1118,21 @@ void SSLCON::DeleteEmail() {
     S.write(QString("TAG UID STORE "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" +FLAGS (\\Deleted)\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false);
+        emit DeleteS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("TAG EXPUNGE\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false);
+        emit DeleteS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("TAG LOGOUT\r\n").toUtf8());
     S.close();
-    emit DeleteS(true);
+    emit DeleteS(true, "Deleted");
 }
 void SSLCON::Canceled() {
-    Current = Cancel;
+    Cancelled = true;
 }
 
 class Services {
@@ -1675,81 +1679,83 @@ QString qorgMail::output() {
     return out;
 }
 void qorgMail::input(QString Input) {
-    QStringList A = Input.split("\n");
-    vector < vector <uint> > MailConnections;
-    Mail *cMail;
-    Mailbox *cMailbox;
-    Email *cEmail;
-    for (int i = 0; i < A.size(); i++) {
-        QStringList B = A[i].split(" ");
-        switch (B.size()-1) {
-        case 5: {
-            if (Mailv.size() > 0) {
-                for (uint i = 0; i < Mailv.back().Mboxv.size(); i++) {
-                    for (uint j = 0; j < MailConnections[i].size(); j++) {
-                        Mailv.back().Mboxv[i]->Mbox_Children.push_back(Mailv.back().Mboxv[MailConnections[i][j]]);
+    if (!Input.isEmpty()) {
+        QStringList A = Input.split("\n");
+        vector < vector <uint> > MailConnections;
+        Mail *cMail;
+        Mailbox *cMailbox;
+        Email *cEmail;
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            switch (B.size()-1) {
+            case 5: {
+                if (Mailv.size() > 0) {
+                    for (uint i = 0; i < Mailv.back().Mboxv.size(); i++) {
+                        for (uint j = 0; j < MailConnections[i].size(); j++) {
+                            Mailv.back().Mboxv[i]->Mbox_Children.push_back(Mailv.back().Mboxv[MailConnections[i][j]]);
+                        }
                     }
+                    MailConnections.clear();
                 }
-                MailConnections.clear();
+                Mailv.push_back(Mail());
+                cMail = &Mailv.back();
+                cMail->Name = InputS(B[0]);
+                cMail->IMAPserver = InputS(B[1]);
+                cMail->SMTPserver = InputS(B[2]);
+                cMail->User = InputS(B[3]);
+                cMail->Password = InputS(B[4]);
+            }break;
+            case 6: {
+                cMailbox = new Mailbox();
+                cMail->Mboxv.push_back(cMailbox);
+                cMailbox->Mbox_Name = InputS(B[0]);
+                cMailbox->Mbox_Showname = InputS(B[1]);
+                cMailbox->Mbox_Attrybutes = InputI(B[2]);
+                cMailbox->Mbox_Refresh = InputB(B[3]);
+                cMailbox->Mbox_Top = InputB(B[4]);
+                QStringList C = B[5].split(",", QString::SkipEmptyParts);
+                vector <uint> Temp;
+                for (int i = 0; i < C.size(); i++) {
+                    Temp.push_back(static_cast<uint>(C[i].toInt()));
+                }
+                MailConnections.push_back(Temp);
+            }break;
+            case 8: {
+                cEmail = new Email();
+                cMailbox->Emailv.push_back(cEmail);
+                cEmail->Email_Subject = InputS(B[0]);
+                cEmail->Email_From.Name = InputS(B[1]);
+                cEmail->Email_From.EMailA = InputS(B[2]);
+                cEmail->Email_Date = InputDT(B[3]);
+                cEmail->Email_Body[0] = InputS(B[4]);
+                cEmail->Email_Body[1] = InputS(B[5]);
+                cEmail->Email_UID = InputI(B[6]);
+                cEmail->Email_Flags = InputC(B[7]);
+            }break;
+            case 14: {
+                Structure *cStruct = new Structure();
+                cEmail->Structurev.push_back(cStruct);
+                cStruct->Structure_Number = InputS(B[0]);
+                cStruct->Structure_Type = InputS(B[1]);
+                cStruct->Structure_Subtype = InputS(B[2]);
+                cStruct->Structure_Attrybutes.Charset = InputS(B[3]);
+                cStruct->Structure_Attrybutes.Name = InputS(B[4]);
+                cStruct->Structure_CID = InputS(B[5]);
+                cStruct->Structure_Descryption = InputS(B[6]);
+                cStruct->Structure_Encoding = InputS(B[7]);
+                cStruct->Structure_Size = InputI(B[8]);
+                cStruct->Structure_Lines = InputI(B[9]);
+                cStruct->Structure_MD5 = InputS(B[10]);
+                cStruct->Structure_Disposition = InputS(B[11]);
+                cStruct->Structure_Language = InputS(B[12]);
+                cStruct->Structure_Location = InputS(B[13]);
+            }break;
             }
-            Mailv.push_back(Mail());
-            cMail = &Mailv.back();
-            cMail->Name = InputS(B[0]);
-            cMail->IMAPserver = InputS(B[1]);
-            cMail->SMTPserver = InputS(B[2]);
-            cMail->User = InputS(B[3]);
-            cMail->Password = InputS(B[4]);
-        }break;
-        case 6: {
-            cMailbox = new Mailbox();
-            cMail->Mboxv.push_back(cMailbox);
-            cMailbox->Mbox_Name = InputS(B[0]);
-            cMailbox->Mbox_Showname = InputS(B[1]);
-            cMailbox->Mbox_Attrybutes = InputI(B[2]);
-            cMailbox->Mbox_Refresh = InputB(B[3]);
-            cMailbox->Mbox_Top = InputB(B[4]);
-            QStringList C = B[5].split(",", QString::SkipEmptyParts);
-            vector <uint> Temp;
-            for (int i = 0; i < C.size(); i++) {
-                Temp.push_back(static_cast<uint>(C[i].toInt()));
-            }
-            MailConnections.push_back(Temp);
-        }break;
-        case 8: {
-            cEmail = new Email();
-            cMailbox->Emailv.push_back(cEmail);
-            cEmail->Email_Subject = InputS(B[0]);
-            cEmail->Email_From.Name = InputS(B[1]);
-            cEmail->Email_From.EMailA = InputS(B[2]);
-            cEmail->Email_Date = InputDT(B[3]);
-            cEmail->Email_Body[0] = InputS(B[4]);
-            cEmail->Email_Body[1] = InputS(B[5]);
-            cEmail->Email_UID = InputI(B[6]);
-            cEmail->Email_Flags = InputC(B[7]);
-        }break;
-        case 14: {
-            Structure *cStruct = new Structure();
-            cEmail->Structurev.push_back(cStruct);
-            cStruct->Structure_Number = InputS(B[0]);
-            cStruct->Structure_Type = InputS(B[1]);
-            cStruct->Structure_Subtype = InputS(B[2]);
-            cStruct->Structure_Attrybutes.Charset = InputS(B[3]);
-            cStruct->Structure_Attrybutes.Name = InputS(B[4]);
-            cStruct->Structure_CID = InputS(B[5]);
-            cStruct->Structure_Descryption = InputS(B[6]);
-            cStruct->Structure_Encoding = InputS(B[7]);
-            cStruct->Structure_Size = InputI(B[8]);
-            cStruct->Structure_Lines = InputI(B[9]);
-            cStruct->Structure_MD5 = InputS(B[10]);
-            cStruct->Structure_Disposition = InputS(B[11]);
-            cStruct->Structure_Language = InputS(B[12]);
-            cStruct->Structure_Location = InputS(B[13]);
-        }break;
         }
-    }
-    for (uint i = 0; i < Mailv.back().Mboxv.size(); i++) {
-        for (uint j = 0; j < MailConnections[i].size(); j++) {
-            Mailv.back().Mboxv[i]->Mbox_Children.push_back(Mailv.back().Mboxv[MailConnections[i][j]]);
+        for (uint i = 0; i < Mailv.back().Mboxv.size(); i++) {
+            for (uint j = 0; j < MailConnections[i].size(); j++) {
+                Mailv.back().Mboxv[i]->Mbox_Children.push_back(Mailv.back().Mboxv[MailConnections[i][j]]);
+            }
         }
     }
     setLayoutC();
@@ -1916,9 +1922,9 @@ void qorgMail::testInput() {
             M->SMTPserver = SMTPS->text();
             M->Name = M->User+" ("+M->IMAPserver+")";
             SSLCON *T = new SSLCON(this, M);
-            connect(T, SIGNAL(LoginS(bool)), this, SLOT(LoginS(bool)));
-            connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(MailboxesS(bool)));
-            connect(T, SIGNAL(EmailS(bool)), this, SLOT(EmailS(bool)));
+            connect(T, SIGNAL(LoginS(bool, QString)), this, SLOT(LoginS(bool, QString)));
+            connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(MailboxesS(bool, QString)));
+            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(EmailS(bool, QString)));
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setAutoReset(false);
             Bar->setWindowTitle("Add mail bar");
@@ -1966,7 +1972,7 @@ void qorgMail::EditMail(uint IID) {
     if ((new EditDialog(A, this))->exec() == QDialog::Accepted) {
         currentMail = IID;
         SSLCON *T = new SSLCON(this, A);
-        connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(EditMailS(bool)));
+        connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(EditMailS(bool)));
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
         Bar->setWindowTitle("Edit mail bar");
@@ -2026,7 +2032,7 @@ void qorgMail::EditMailS(bool I) {
         T->setMethod(SSLCON::Stop);
         if ((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
             T = new SSLCON(this, &Mailv[currentMail]);
-            connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
+            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateMail()));
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setAutoReset(false);
             Bar->setWindowTitle("Edit mail bar");
@@ -2136,16 +2142,18 @@ void qorgMail::chooseEmail(QModelIndex I) {
         }
     }
 }
-void qorgMail::LoginS(bool I) {
+void qorgMail::LoginS(bool I, QString R) {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         T->setMethod(SSLCON::Mailboxes);
     } else {
         T->setMethod(SSLCON::Stop);
-        QMessageBox::critical(this, "Login error", "Wrong username or password.");
+        if (!T->Cancelled) {
+            QMessageBox::critical(this, "Login error", R);
+        }
     }
 }
-void qorgMail::MailboxesS(bool I) {
+void qorgMail::MailboxesS(bool I, QString R) {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         if ((new MailboxTree(T->M, this))->exec() == QDialog::Accepted) {
@@ -2158,9 +2166,12 @@ void qorgMail::MailboxesS(bool I) {
         }
     } else {
         T->setMethod(SSLCON::Stop);
+        if (!T->Cancelled) {
+            QMessageBox::critical(this, "Mailboxes error", R);
+        }
     }
 }
-void qorgMail::EmailS(bool I) {
+void qorgMail::EmailS(bool I, QString R) {
     SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         Mailv.push_back((*T->M));
@@ -2172,7 +2183,9 @@ void qorgMail::EmailS(bool I) {
             delete T->M->Mboxv[i];
         }
         delete T->M;
-        QMessageBox::critical(this, "Error", "Error during downloading emails.");
+        if (!T->Cancelled) {
+            QMessageBox::critical(this, "Email error", R);
+        }
     }
 }
 void qorgMail::downloadAttachment(QModelIndex I) {
@@ -2198,7 +2211,7 @@ void qorgMail::downloadAttachment(QModelIndex I) {
 }
 void qorgMail::downloadAttachment(uint I, QString path) {
     SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-    connect(T, SIGNAL(AttachmentS(bool)), this, SLOT(AttachmentS(bool)));
+    connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool)));
     T->DownloadAttachmentData(currentMailbox, currentEmail, I, path);
     T->setMethod(SSLCON::Attachment);
     T->start();
@@ -2252,7 +2265,7 @@ void qorgMail::AttachmentS(bool I) {
         if (M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
             if (E == currentEmail && isLoading) {
                 SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-                connect(T, SIGNAL(AttachmentS(bool)), this, SLOT(AttachmentS(bool)));
+                connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool)));
                 T->DownloadAttachmentData(currentMailbox, currentEmail, A,
                                           QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Subtype.toLower());
                 T->setMethod(SSLCON::Attachment);
@@ -2271,7 +2284,7 @@ void qorgMail::RefreshS() {
         M->User = Mailv[currentMail].User;
         M->Password = Mailv[currentMail].Password;
         SSLCON *T = new SSLCON(this, M);
-        connect(T, SIGNAL(MailboxesS(bool)), this, SLOT(RefreshS(bool)));
+        connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(RefreshS(bool)));
         T->setMethod(SSLCON::Mailboxes);
         T->start();
     }
@@ -2324,7 +2337,7 @@ void qorgMail::RefreshS(bool I) {
         }
         T->setMethod(SSLCON::Stop);
         T = new SSLCON(this, &Mailv[currentMail]);
-        connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateMail()));
+        connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateMail()));
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
         Bar->setWindowTitle("Refresh bar");
@@ -2343,7 +2356,7 @@ void qorgMail::RefreshS(bool I) {
 void qorgMail::SendEmail() {
     QPushButton *T = qobject_cast<QPushButton*>(QObject::sender());
     SSLCON *S = new SSLCON(this, &Mailv[currentMail]);
-    connect(S, SIGNAL(SendEmailS(bool)), this, SLOT(SendEmailS(bool)));
+    connect(S, SIGNAL(SendEmailS(bool, QString)), this, SLOT(SendEmailS(bool, QString)));
     S->SetBE(currentMailbox, currentEmail);
     QStringList Z;
     Z.append(AdressBook->getEmails());
@@ -2373,11 +2386,11 @@ void qorgMail::SendEmail() {
     }
     Completer->deleteLater();
 }
-void qorgMail::SendEmailS(bool I) {
+void qorgMail::SendEmailS(bool I, QString R) {
     if (I) {
-        QMessageBox::information(this, "Sending", "Mail sent.");
+        QMessageBox::information(this, "Sending", R);
     } else {
-        QMessageBox::critical(this, "Error", "Error during sending mail");
+        QMessageBox::critical(this, "Mailboxes error", R);
     }
 }
 void qorgMail::DeleteEmail() {
@@ -2385,17 +2398,17 @@ void qorgMail::DeleteEmail() {
         isRefreshingDeleting = true;
         if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
             SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-            connect(T, SIGNAL(DeleteS(bool)), this, SLOT(DeleteEmailS(bool)));
+            connect(T, SIGNAL(DeleteS(bool, QString)), this, SLOT(DeleteEmailS(bool, QString)));
             T->SetBE(currentMailbox, currentEmail);
             T->setMethod(SSLCON::Delete);
             T->start();
         } else {
-            DeleteEmailS(true);
+            DeleteEmailS(true, "Delete from vector");
             isRefreshingDeleting = false;
         }
     }
 }
-void qorgMail::DeleteEmailS(bool I) {
+void qorgMail::DeleteEmailS(bool I, QString R) {
     if (I) {
         for (uint i = 0; i < Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev.size(); i++) {
             delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i];
@@ -2407,7 +2420,7 @@ void qorgMail::DeleteEmailS(bool I) {
             isRefreshingDeleting = false;
         }
     } else {
-        QMessageBox::critical(this, "Error", "Error during deleting email.");
+        QMessageBox::critical(this, "Error", R);
     }
 }
 void qorgMail::UpdateMail() {
@@ -2457,7 +2470,7 @@ void qorgMail::getUpdate() {
                 }
             }
             SSLCON *T = new SSLCON(this, M);
-            connect(T, SIGNAL(EmailS(bool)), this, SLOT(UpdateS()));
+            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateS()));
             T->setMethod(SSLCON::Emails);
             T->start();
             ++UpdateQuene;
