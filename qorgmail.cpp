@@ -1162,6 +1162,7 @@ public:
     MailboxTree(Mail *M, QWidget *parent) :QDialog(parent) {
         vec=&M->Mboxv;
         setWindowTitle("Choose mailboxes to use.");
+        setWindowIcon(QIcon(":/main/QOrganizer.png"));
         QGridLayout *Layout = new QGridLayout(this);
         Tree = new QTreeWidget(this);
         Tree->header()->hide();
@@ -1244,6 +1245,7 @@ public:
     EditDialog(Mail *A, QWidget *parent) :QDialog(parent) {
         M = A;
         setWindowTitle("Edit mail settings.");
+        setWindowIcon(QIcon(":/main/QOrganizer.png"));
         User = new QLabel("Username: ", this);
         Passwd = new QLabel("Password: ", this);
         IMAP = new QLabel("IMAP Server: ", this);
@@ -1342,6 +1344,7 @@ public:
     };
     Sender(Email *E, Type I, QCompleter *C, SSLCON *SSL, QWidget *parent) :QDialog(parent) {
         setWindowTitle("Send Mail");
+        setWindowIcon(QIcon(":/main/QOrganizer.png"));
         setMinimumWidth(600);
         this->SSL = SSL;
         S = new QLabel("Subject: ", this);

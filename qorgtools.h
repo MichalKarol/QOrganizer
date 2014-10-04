@@ -62,6 +62,7 @@ class CertAccept :public QDialog {
 public:
     explicit CertAccept(QSslCertificate cert) {
         setWindowTitle("SSL certificate error.");
+        setWindowIcon(QIcon(":/main/QOrganizer.png"));
         QLabel *La = new QLabel("Do you trust this certificate?", this);
         QTextBrowser* Text = new QTextBrowser(this);
         Text->setText(cert.toText());
