@@ -1928,6 +1928,7 @@ void qorgMail::testInput() {
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setAutoReset(false);
             Bar->setWindowTitle("Add mail bar");
+            Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
             connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
             connect(T, SIGNAL(end()), Bar, SLOT(close()));
             connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
@@ -1976,6 +1977,7 @@ void qorgMail::EditMail(uint IID) {
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
         Bar->setWindowTitle("Edit mail bar");
+        Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
         Bar->setAttribute(Qt::WA_DeleteOnClose);
         connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
         connect(T, SIGNAL(end()), Bar, SLOT(close()));
@@ -2036,6 +2038,7 @@ void qorgMail::EditMailS(bool I) {
             QProgressDialog *Bar = new QProgressDialog();
             Bar->setAutoReset(false);
             Bar->setWindowTitle("Edit mail bar");
+            Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
             Bar->setAttribute(Qt::WA_DeleteOnClose);
             connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
             connect(T, SIGNAL(end()), Bar, SLOT(close()));
@@ -2341,6 +2344,7 @@ void qorgMail::RefreshS(bool I) {
         QProgressDialog *Bar = new QProgressDialog();
         Bar->setAutoReset(false);
         Bar->setWindowTitle("Refresh bar");
+        Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
         Bar->setAttribute(Qt::WA_DeleteOnClose);
         connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
         connect(T, SIGNAL(end()), Bar, SLOT(close()));
@@ -2424,7 +2428,7 @@ void qorgMail::DeleteEmailS(bool I, QString R) {
     isRefreshingDeleting = false;
 }
 void qorgMail::UpdateMail() {
-        isRefreshingDeleting = false;
+    isRefreshingDeleting = false;
     sortMail();
 }
 void qorgMail::UpdateS() {
