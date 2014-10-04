@@ -9,4 +9,4 @@ I would be very thankful for reporting every issue and sharing every useful tip.
 Ready packages for Debian and source are available on Sourceforge.
 https://sourceforge.net/p/qorganizerbymkarol
 
-Michał Karol <mailto:mkarol@linux.pl>
+Michał Karol <mkarol@linux.pl>
