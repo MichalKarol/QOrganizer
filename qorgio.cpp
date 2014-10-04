@@ -73,13 +73,16 @@ void qorgIO::SaveFile(QString *hashed, QString *hash, QOrganizer *main, QString 
     data.append(main->RSS->output());
     data.append(main->PasswordManager->output());
     data.append(QString(AES_BLOCK_SIZE, '.'));
+    if (data.length() % AES_BLOCK_SIZE != 0) {
+        data.append(QByteArray(AES_BLOCK_SIZE - (data.length() % AES_BLOCK_SIZE), ' '));
+    }
     QString Passwd = QString(calculateXOR(QByteArray::fromBase64(hashed->toUtf8()), hash->toUtf8()));
     if (Passwd.length() <  32) {
         Passwd.append(QString(32-Passwd.length(), '\0'));
     }
     AES_KEY *aesKey = new AES_KEY;
     AES_set_encrypt_key((unsigned char*)Passwd.toUtf8().data(), 256, aesKey);
-    const size_t encslength = ((data.length() + AES_BLOCK_SIZE) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
+    const size_t encslength = data.length();
     unsigned char IV[AES_BLOCK_SIZE+1]={0};
     RAND_bytes(IV, AES_BLOCK_SIZE);
     Out.append(QByteArray((const char*)IV, AES_BLOCK_SIZE+1).toBase64());
