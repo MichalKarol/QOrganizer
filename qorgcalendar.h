@@ -21,7 +21,6 @@
 #include <vector>
 
 using std::vector;
-using std::swap;
 struct CalNor {
     QString name;
     QString category;
@@ -52,7 +51,7 @@ public:
     vector <CalRec> Recurrent;
     QString category;
 private:
-    qorgAB *AB;
+    qorgAB* AB;
     void setCalendar();
     void updateAll();
     void sort();
@@ -62,28 +61,30 @@ private:
     QDate currentDate;
     QGridLayout* Layout;
 
-    QComboBox *Month;
-    QPushButton *Yminus;
-    QComboBox *Year;
-    QPushButton *Yplus;
-    QTableWidget *Calendar;
-    QTreeWidget *DayView;
-    QTreeWidget *Incoming;
+    QComboBox* Month;
+    QPushButton* Yminus;
+    QComboBox* Year;
+    QPushButton* Yplus;
+    QTableWidget* Calendar;
+    QTreeWidget* DayView;
+    QTreeWidget* Incoming;
     QList <uint> NotifiedN;
     QList <uint> NotifiedR;
-    QTimer *MidnightTester;
-    QTimer *Midnight;
-    QTimer *NTimer;
+    QTimer* MidnightTester;
+    QTimer* Midnight;
+    QTimer* NTimer;
 private slots:
     void Add(QDate);
     void Edit(uint);
     void Delete(uint);
     void dayChanged(QTableWidgetItem*);
+    void doubleClick(QModelIndex);
     void monthChanged(int);
     void yearChanged(QString Input = "");
     void MidnightChange();
     void setNotification(bool first = false);
     void checkMidnight();
+
 signals:
     void updateTree();
     void Notification(QString);

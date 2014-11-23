@@ -18,8 +18,10 @@
 #include <QtWidgets>
 #include <QSslCertificate>
 
+
 QByteArray calculateXOR(QByteArray A, QByteArray B);
 QString Bit7ToBit8(QString);
+QString Bit8ToBit7(QString);
 QString QPEncode(QByteArray);
 QByteArray QPDecode(QByteArray);
 QString Output(QString);
@@ -43,7 +45,7 @@ QString NameFilter(QString);
 class QItemPushButton :public QPushButton {
     Q_OBJECT
 public:
-    QItemPushButton(QIcon icon, QWidget *parent, uint IID) :QPushButton(icon, "", parent)    {
+    QItemPushButton(QIcon icon, QWidget* parent, uint IID) :QPushButton(icon, "", parent)    {
         ItemID = IID;
         setStyleSheet("QPushButton {border: 0px solid white;}");
         connect(this, SIGNAL(clicked()), this, SLOT(Emits()));
@@ -63,7 +65,7 @@ public:
     explicit CertAccept(QSslCertificate cert) {
         setWindowTitle("SSL certificate error.");
         setWindowIcon(QIcon(":/main/QOrganizer.png"));
-        QLabel *La = new QLabel("Do you trust this certificate?", this);
+        QLabel* La = new QLabel("Do you trust this certificate?", this);
         QTextBrowser* Text = new QTextBrowser(this);
         Text->setText(cert.toText());
         QPushButton* No = new QPushButton(this);
@@ -72,7 +74,7 @@ public:
         QPushButton* Yes = new QPushButton(this);
         Yes->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
         connect(Yes, SIGNAL(clicked()), this, SLOT(accept()));
-        QGridLayout *L = new QGridLayout(this);
+        QGridLayout* L = new QGridLayout(this);
         L->addWidget(La, 0, 0, 1, 2);
         L->addWidget(Text, 1, 0, 1, 2);
         L->addWidget(No, 2, 0);

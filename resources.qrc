@@ -2,6 +2,7 @@
     <qresource prefix="/mail">
         <file alias="Forward.png">Images/Forward.png</file>
         <file alias="Reply.png">Images/Reply.png</file>
+        <file alias="ReplyAll.png">Images/ReplyAll.png</file>
     </qresource>
     <qresource prefix="/cal">
         <file alias="Birthday.png">Images/Birthday.png</file>

@@ -36,7 +36,7 @@ Password::~Password() {
 class TreeWidget :public QWidget {
     Q_OBJECT
 public:
-    TreeWidget(Password* I, QPoint P, QWidget *parent) :QWidget(parent) {
+    TreeWidget(Password* I, QPoint P, QWidget* parent) :QWidget(parent) {
         this->P = P;
         Edit = new QPushButton(QIcon(":/main/Edit.png"), "", this);
         Edit->setStyleSheet("QPushButton {border: 0px solid white;}");
@@ -44,10 +44,10 @@ public:
         Delete = new QPushButton(QIcon(":/main/Delete.png"), "", this);
         Delete->setStyleSheet("QPushButton {border: 0px solid white;}");
         connect(Delete, SIGNAL(clicked()), this, SLOT(DeleteIN()));
-        QGraphicsScene *Scene = new QGraphicsScene(this);
+        QGraphicsScene* Scene = new QGraphicsScene(this);
         Scene->addItem(new QGraphicsTextItem("Login: "+I->Login+"\nPassword: "+QString(calculateXOR(QByteArray::fromBase64(I->Passwd.toUtf8()), QCryptographicHash::hash(I->Login.toUtf8(), QCryptographicHash::Sha3_512)))));
         View = new QGraphicsView(Scene, this);
-        QGridLayout *G = new QGridLayout(this);
+        QGridLayout* G = new QGridLayout(this);
         G->addWidget(View, 0, 0, 2, 1);
         G->addWidget(Edit, 0, 1);
         G->addWidget(Delete, 1, 1);
@@ -67,9 +67,9 @@ public:
     }
     QPoint P;
 private:
-    QGraphicsView *View;
-    QPushButton *Edit;
-    QPushButton *Delete;
+    QGraphicsView* View;
+    QPushButton* Edit;
+    QPushButton* Delete;
 private slots:
     void EditIN() {
         emit EditOUT(P);
@@ -82,7 +82,7 @@ signals:
     void DeleteOUT(QPoint);
 };
 
-qorgPasswd::qorgPasswd(QWidget *parent) :QWidget(parent) {
+qorgPasswd::qorgPasswd(QWidget* parent) :QWidget(parent) {
     Tree = new QTreeWidget(this);
     Tree->header()->hide();
     connect(Tree, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(clicked(QTreeWidgetItem*)));
@@ -108,7 +108,7 @@ qorgPasswd::qorgPasswd(QWidget *parent) :QWidget(parent) {
     connect(Cancel, SIGNAL(clicked()), this, SLOT(Can()));
     Cancel->hide();
     lastitem = NULL;
-    QGridLayout *Layout = new QGridLayout(this);
+    QGridLayout* Layout = new QGridLayout(this);
     Layout->addWidget(Tree, 0, 0, 2, 1);
     Layout->setMargin(0);
     La = new QGridLayout();
@@ -144,7 +144,7 @@ QString qorgPasswd::output() {
 void qorgPasswd::input(QString Input) {
     if (!Input.isEmpty()) {
         QStringList A = Input.split("\n");
-        Program *cProgram;
+        Program* cProgram;
         for (int i = 0; i < A.size(); i++) {
             QStringList B = A[i].split(" ");
             switch (B.size()-1) {
@@ -154,7 +154,7 @@ void qorgPasswd::input(QString Input) {
                 cProgram->Name = InputS(B[0]);
             }break;
             case 2: {
-                Password *cPassword = new Password();
+                Password* cPassword = new Password();
                 cProgram->Passwordv.push_back(cPassword);
                 cPassword->Login = InputS(B[0]);
                 cPassword->Passwd = InputS(B[1]);
@@ -172,7 +172,7 @@ void qorgPasswd::UpdateTree() {
             bool Sorted = true;
             for (uint i = 0; i < Programv.size()-1; i++) {
                 if (Programv[i].Name > Programv[i+1].Name) {
-                    swap(Programv[i], Programv[i+1]);
+                    std::swap(Programv[i], Programv[i+1]);
                     Sorted = false;
                 }
             }
@@ -184,13 +184,13 @@ void qorgPasswd::UpdateTree() {
         for (uint i = 0; i < Programv.size(); i++) {
             if (Programv[i].Passwordv.size() > 0) {
 
-                QTreeWidgetItem *Prog = new QTreeWidgetItem(Tree);
+                QTreeWidgetItem* Prog = new QTreeWidgetItem(Tree);
                 Prog->setText(0, Programv[i].Name);
                 while (true) {
                     bool OK = true;
                     for (uint j = 0; j < Programv[i].Passwordv.size()-1; j++) {
                         if (Programv[i].Passwordv[j]->Login > Programv[i].Passwordv[j+1]->Login) {
-                            swap(Programv[i].Passwordv[j], Programv[i].Passwordv[j+1]);
+                            std::swap(Programv[i].Passwordv[j], Programv[i].Passwordv[j+1]);
                             OK = false;
                         }
                     }
@@ -199,8 +199,8 @@ void qorgPasswd::UpdateTree() {
                     }
                 }
                 for (uint j = 0; j < Programv[i].Passwordv.size(); j++) {
-                    QTreeWidgetItem *Pass = new QTreeWidgetItem(Prog);
-                    TreeWidget *W = new TreeWidget(Programv[i].Passwordv[j], QPoint(i, j), this);
+                    QTreeWidgetItem* Pass = new QTreeWidgetItem(Prog);
+                    TreeWidget* W = new TreeWidget(Programv[i].Passwordv[j], QPoint(i, j), this);
                     connect(W, SIGNAL(EditOUT(QPoint)), this, SLOT(Edit(QPoint)));
                     connect(W, SIGNAL(DeleteOUT(QPoint)), this, SLOT(Delete(QPoint)));
                     Pass->setText(0, Programv[i].Passwordv[j]->Login);
@@ -254,7 +254,7 @@ void qorgPasswd::AddB() {
                     }
                 }
                 if (OK) {
-                    Password *Pa = new Password();
+                    Password* Pa = new Password();
                     Pa->Login = LoginL->text();
                     Pa->Passwd = QString(calculateXOR(PasswordL->text().toUtf8(), QCryptographicHash::hash(LoginL->text().toUtf8(), QCryptographicHash::Sha3_512)).toBase64());
                     Programv[i].Passwordv.push_back(Pa);
@@ -268,7 +268,7 @@ void qorgPasswd::AddB() {
         if (nfound) {
             Program Pr;
             Pr.Name = P;
-            Password *Pa = new Password();
+            Password* Pa = new Password();
             Pa->Login = LoginL->text();
             Pa->Passwd = QString(calculateXOR(PasswordL->text().toUtf8(), QCryptographicHash::hash(LoginL->text().toUtf8(), QCryptographicHash::Sha3_512)).toBase64());
             Pr.Passwordv.push_back(Pa);
@@ -282,7 +282,7 @@ void qorgPasswd::AddB() {
     }
 }
 void qorgPasswd::row(QString Input) {
-    QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
+    QLineEdit* I = qobject_cast<QLineEdit*>(QObject::sender());
     if (Input.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
@@ -291,7 +291,7 @@ void qorgPasswd::row(QString Input) {
 }
 void qorgPasswd::clicked(QTreeWidgetItem* W) {
     if (W->parent() != NULL) {
-        TreeWidget *Wi = qobject_cast  <TreeWidget*> (Tree->itemWidget(W, 0));
+        TreeWidget* Wi = qobject_cast  <TreeWidget*> (Tree->itemWidget(W, 0));
         if (W != lastitem) {
             W->setText(0, "");
             W->setSizeHint(0, QSize(W->sizeHint(0).width(), 130));
@@ -309,7 +309,7 @@ void qorgPasswd::clicked(QTreeWidgetItem* W) {
 }
 void qorgPasswd::Edit(QPoint P) {
     Add->hide();
-    QHBoxLayout *H = new QHBoxLayout();
+    QHBoxLayout* H = new QHBoxLayout();
     H->addWidget(Cancel);
     H->addWidget(OKB);
     La->addLayout(H, 3, 0, 1, 2);
@@ -331,7 +331,7 @@ void qorgPasswd::OK() {
         }
         PasswordL->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
-        Password *Pass = Programv[Last.x()].Passwordv[Last.y()];
+        Password* Pass = Programv[Last.x()].Passwordv[Last.y()];
         Programv[Last.x()].Passwordv.erase(Programv[Last.x()].Passwordv.begin()+Last.y());
         disconnect(LoginL, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
         disconnect(PasswordL, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
@@ -351,7 +351,7 @@ void qorgPasswd::OK() {
                 }
                 if (OK) {
                     delete Pass;
-                    Password *Pa = new Password();
+                    Password* Pa = new Password();
                     Pa->Login = LoginL->text();
                     Pa->Passwd = QString(calculateXOR(PasswordL->text().toUtf8(), QCryptographicHash::hash(LoginL->text().toUtf8(), QCryptographicHash::Sha3_512)).toBase64());
                     Programv[i].Passwordv.push_back(Pa);
@@ -367,7 +367,7 @@ void qorgPasswd::OK() {
             delete Pass;
             Program Pr;
             Pr.Name = P;
-            Password *Pa = new Password();
+            Password* Pa = new Password();
             Pa->Login = LoginL->text();
             Pa->Passwd = QString(calculateXOR(PasswordL->text().toUtf8(), QCryptographicHash::hash(LoginL->text().toUtf8(), QCryptographicHash::Sha3_512)).toBase64());
             Pr.Passwordv.push_back(Pa);

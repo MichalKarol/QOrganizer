@@ -27,21 +27,21 @@ public:
     explicit qorgLogin(QOrganizer*);
     void clear();
 private:
-    QOrganizer *pointer;
+    QOrganizer* pointer;
     bool Validated[2];
-    QLineEdit *Line[2];
-    QLabel *Label[2];
-    QLabel *PassLabel;
-    QPushButton *Login;
-    QPushButton *Reg;
+    QLineEdit* Line[2];
+    QLabel* Label[2];
+    QLabel* PassLabel;
+    QPushButton* Login;
+    QPushButton* Reg;
 private slots:
     void UserInputValidation(QString);
     void PasswordInputValidation(QString);
     void Authentication();
     void Register();
 protected:
-    QString *hashed;
-    QString *hash;
+    QString* hashed;
+    QString* hash;
 };
 
 #endif  // QORGLOGIN_H_

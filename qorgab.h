@@ -20,7 +20,6 @@
 #include <vector>
 
 using std::vector;
-using std::swap;
 struct Person {
     QString Name;
     QString Surname;
@@ -55,15 +54,15 @@ private:
     vector  <Person>  Personv;
     uint lastIID;
     QString currentCategory;
-    QGridLayout *La;
-    QListWidget *List;
-    QLabel *L[9];
-    QLineEdit *E[9];
-    QDateEdit *D;
-    QPushButton *Add;
-    QPushButton *OKB;
-    QPushButton *Cancel;
-    QCompleter *C;
+    QGridLayout* La;
+    QListWidget* List;
+    QLabel* L[9];
+    QLineEdit* E[9];
+    QDateEdit* D;
+    QPushButton* Add;
+    QPushButton* OKB;
+    QPushButton* Cancel;
+    QCompleter* C;
 private slots:
     void AddS();
     void row(QString);

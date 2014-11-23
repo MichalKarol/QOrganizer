@@ -16,7 +16,7 @@
 #include <qorgnotes.h>
 #include <algorithm>
 
-qorgNotes::qorgNotes(QWidget *parent) :QWidget(parent) {
+qorgNotes::qorgNotes(QWidget* parent) :QWidget(parent) {
     Layout = new QGridLayout(this);
     Layout->setMargin(0);
     TLabel = new QLabel("Topic: ", this);
@@ -101,11 +101,11 @@ void qorgNotes::updateList() {
             bool Sorted = true;
             for (uint i = 0; i < Notes.size()-1; i++) {
                 if (Notes[i].Priority < Notes[i+1].Priority) {
-                    swap(Notes[i], Notes[i+1]);
+                    std::swap(Notes[i], Notes[i+1]);
                     Sorted = false;
                 } else {
                     if (Notes[i].Priority == Notes[i+1].Priority&&Notes[i].Topic > Notes[i+1].Topic) {
-                        swap(Notes[i], Notes[i+1]);
+                        std::swap(Notes[i], Notes[i+1]);
                         Sorted = false;
                     }
                 }
@@ -117,15 +117,15 @@ void qorgNotes::updateList() {
     }
     List->clear();
     for (uint i = 0; i < Notes.size(); i++) {
-        QTreeWidgetItem *Itm = new QTreeWidgetItem(List);
+        QTreeWidgetItem* Itm = new QTreeWidgetItem(List);
         Itm->setText(0, Notes[i].Topic);
         Itm->setToolTip(0, Notes[i].Topic);
         Itm->setText(1, "");
         Itm->setText(2, "");
-        QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i);
+        QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i);
         connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
         List->setItemWidget(Itm, 1, Edit);
-        QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i);
+        QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i);
         connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
         List->setItemWidget(Itm, 2, Delete);
         colorItem(Itm, Notes[i].Priority);
@@ -136,7 +136,7 @@ void qorgNotes::Add() {
         Topic->setReadOnly(false);
         Priority->setEnabled(true);
         Text->setReadOnly(false);
-        QHBoxLayout *L1 = new QHBoxLayout();
+        QHBoxLayout* L1 = new QHBoxLayout();
         L1->addWidget(Cancel);
         L1->addWidget(OK);
         OK->show();
@@ -159,7 +159,7 @@ void qorgNotes::Edit(uint IID) {
         Topic->setReadOnly(false);
         Priority->setEnabled(true);
         Text->setReadOnly(false);
-        QHBoxLayout *L1 = new QHBoxLayout();
+        QHBoxLayout* L1 = new QHBoxLayout();
         L1->addWidget(Cancel);
         L1->addWidget(OK);
         OK->show();
