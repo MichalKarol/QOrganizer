@@ -35,11 +35,11 @@ QString Bit7ToBit8(QString I) {
             QByteArray Array = QByteArray::fromBase64(I.mid(I.indexOf("&")+1, I.indexOf("-")-I.indexOf("&")-1).toUtf8());
             QString Out;
             while (!Array.isEmpty()) {
-                uint utf16=(unsigned char)Array[0]*256+(unsigned char)Array[1];
+                uint utf16=((unsigned char)Array[0] << 8)+(unsigned char)Array[1];
                 Array.remove(0, 2);
                 uint unicode = 0;
                 if (utf16 >= 0xD800&&utf16 <= 0xDFFF) {
-                    unicode=(utf16-0xD800)*1024+((unsigned char)Array[0]*256+(unsigned char)Array[1]-0xDC00)+0x10000;
+                    unicode=((utf16-0xD800) << 10)+(((unsigned char)Array[0] << 8)+(unsigned char)Array[1]-0xDC00)+0x10000;
                     Array.remove(0, 2);
                 } else {
                     unicode = utf16;
@@ -84,6 +84,65 @@ QString Bit7ToBit8(QString I) {
     }
     return I;
 }
+QString Bit8ToBit7(QString I) {
+    QString Output;
+    QByteArray String = I.toUtf8();
+    for (int i = 0; i < String.length(); i++) {
+        if ((uchar)String[i] > 0x7F) {
+            QByteArray Str;
+            while (true) {
+                uint unicode = 0;
+                uchar A = String[i];
+                uchar B = String[i+1];
+                if (A < 0xE0) {
+                    unicode = ((A-192) << 6)+(B-128);
+                    i+=1;
+                } else if (A < 0xF0 && A >= 0xE0) {
+                    uchar C = String[i+2];
+                    unicode = ((A-224) << 12)+((B-128) << 6)+(C-128);
+                    i+=2;
+                } else if (A > 0xF0) {
+                    uchar C = String[i+2];
+                    uchar D = String[i+3];
+                    unicode = ((A-240) << 18)+((B-128) << 12)+((C-128) << 6)+(D-128);
+                    i+=3;
+                }
+                if (unicode < 0x10000) {
+                    uchar C1 = (unicode >> 8);
+                    uchar C2 = unicode%256;
+                    Str.append(C1);
+                    Str.append(C2);
+                } else {
+                    unicode -= 0x10000;
+                    uint W1 = (unicode >> 10)+0xD800;
+                    uint W2 = (unicode%1024)+0xDC00;
+                    uchar C1 = (W1 >> 8);
+                    uchar C2 = W1%256;
+                    uchar C3 = (W2 >> 8);
+                    uchar C4 = W2%256;
+                    Str.append(C1);
+                    Str.append(C2);
+                    Str.append(C3);
+                    Str.append(C4);
+                }
+                if (i+1 < String.length()) {
+                    if ((uchar)String[i+1] > 0x7F) {
+                        i +=1;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            Output.append(QString("&"+Str.toBase64()+"-").remove("="));
+        } else {
+            Output.append(static_cast<char>(String[i]));
+        }
+    }
+    return Output;
+}
+
 QString QPEncode(QByteArray I) {
     QString HEX="0123456789ABCDEF";
     QString Output;
@@ -104,8 +163,8 @@ QByteArray QPDecode(QByteArray I) {
     QByteArray BA;
     for (int i = 0; i < I.length(); i++) {
         if (I[i] == '=') {
-            int A = HEX.indexOf(I.at(i+1), Qt::CaseInsensitive);
-            int B = HEX.indexOf(I.at(i+2), Qt::CaseInsensitive);
+            int A = HEX.indexOf(I.at(i+1), 0, Qt::CaseInsensitive);
+            int B = HEX.indexOf(I.at(i+2), 0, Qt::CaseInsensitive);
             BA.append(static_cast<char>(A*16+B));
             i+=2;
         } else {
@@ -155,7 +214,7 @@ QDate InputD(QString Input) {
     return QDate::fromString(Input, Qt::ISODate);
 }
 
-void colorItem(QTreeWidgetItem *Itm, char P) {
+void colorItem(QTreeWidgetItem* Itm, char P) {
     switch (P) {
     case 5:
     {
@@ -251,15 +310,19 @@ QString NameFilter(QString Input) {
         Data.replace("_", " ");
         if (Type.toUpper() == "B") {
             if (Charset.toUpper() != "UTF-8") {
-                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
-                Data = A->toUnicode(QPDecode(QByteArray::fromBase64(Data.toUtf8())));
+                if (QTextCodec::availableCodecs().contains(Charset.toUpper().toUtf8())) {
+                    QTextCodec* A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
+                    Data = A->toUnicode(QPDecode(QByteArray::fromBase64(Data.toUtf8())));
+                }
             } else {
                 Data = QString(QByteArray::fromBase64(Data.toUtf8()));
             }
         } else if (Type.toUpper() == "Q") {
             if (Charset.toUpper() != "UTF-8") {
-                QTextCodec *A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
-                Data = A->toUnicode(QPDecode(Data.toUtf8()));
+                if (QTextCodec::availableCodecs().contains(Charset.toUpper().toUtf8())) {
+                    QTextCodec* A = QTextCodec::codecForName(Charset.toUpper().toUtf8());
+                    Data = A->toUnicode(QPDecode(Data.toUtf8()));
+                }
             } else {
                 Data = QPDecode(Data.toUtf8());
             }

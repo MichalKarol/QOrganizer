@@ -25,7 +25,7 @@ bool VectorSearch(vector <QSslCertificate>* A, QSslCertificate B) {
     return false;
 }
 
-qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent) {
+qorgOptions::qorgOptions(QWidget* parent) :QWidget(parent) {
     UInterval = 30;
     BInterval = 30;
     UTimer = new QTimer(this);
@@ -48,7 +48,7 @@ qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent) {
     Passwd = new QPushButton("Change\npassword", this);
     Passwd->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
     connect(Passwd, SIGNAL(clicked()), this, SLOT(ChangePassword()));
-    Interval = new QPushButton("Change\ninterval", this);
+    Interval = new QPushButton("Change\nintervals", this);
     Interval->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
     connect(Interval, SIGNAL(clicked()), this, SLOT(ChangeInterval()));
     Spacer = new QSpacerItem(250, 250);
@@ -65,7 +65,9 @@ qorgOptions::qorgOptions(QWidget *parent) :QWidget(parent) {
     Layout = new QGridLayout(this);
 }
 qorgOptions::~qorgOptions() {
+    if (currentW != 0) {
     delete Spacer;
+    }
 }
 int qorgOptions::checkCertificate(QSslCertificate I) {
     if (VectorSearch(&SSLCertA, I)) {

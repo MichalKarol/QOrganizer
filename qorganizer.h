@@ -40,31 +40,40 @@ public:
     qorgOptions* Options;
     void setUser(QString, QString*, QString*);
 private:
-    QSystemTrayIcon *Tray;
-    QTreeWidget *TreeWidget;
-    QStackedWidget *Stacked;
+    class VersionUpdater;
+    VersionUpdater* VU;
+    QSystemTrayIcon* Tray;
+    QTreeWidget* TreeWidget;
+    QStackedWidget* Stacked;
     QString Updates[3];
     void setTree();
     void closeEvent(QCloseEvent*);
     bool shown;
     bool closing;
-    QLineEdit *BlockL;
-    QPushButton *OKB;
+    QLineEdit* BlockL;
+    QPushButton* OKB;
 protected:
     QString user;
-    QString *hash;
-    QString *hashed;
+    QString* hash;
+    QString* hashed;
 private slots:
     void launchFunction(QTreeWidgetItem*);
+    void doubleClick(QString);
+
     void updateCalendar();
     void Notification(QString);
+
     void updateMail();
-    void updateAdressBook();
-    void updateRSS();
-    void doubleClick(QString);
-    void TrayClick(QSystemTrayIcon::ActivationReason);
     void MailNews(QString);
+
+    void updateAdressBook();
+
+    void updateRSS();
     void RSSNews(QString);
+
+    void TrayClick(QSystemTrayIcon::ActivationReason);
+    void VersionUpdate(QString);
+
     void updateTime();
     void Block();
     void NewPassword(QString*, QString*, QString*, QString*);

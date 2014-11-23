@@ -23,7 +23,6 @@
 #include <vector>
 
 using std::vector;
-using std::swap;
 class RSSItem {
 public:
     RSSItem();
@@ -54,23 +53,24 @@ public:
     int getCurrent() {
         return currentC;
     }
+    uint threadNumber();
     void getUpdate();
     bool SSLSocketError(QList<QSslError>);
 private:
-    qorgOptions *Options;
+    qorgOptions* Options;
     int currentC;
     vector <RSSChannel> RSSv;
-    QGridLayout *Layout;
-    QTreeWidget *List;
-    QLabel *Lab;
-    QLineEdit *URL;
-    QPushButton *Add;
+    QGridLayout* Layout;
+    QTreeWidget* List;
+    QLabel* Lab;
+    QLineEdit* URL;
+    QPushButton* Add;
 
-    QSplitter *Split;
-    QTreeWidget *Titles;
-    QWebView *View;
-    QLabel *Link;
-    QPushButton *Refresh;
+    QSplitter* Split;
+    QTreeWidget* Titles;
+    QWebView* View;
+    QLabel* Link;
+    QPushButton* Refresh;
     uint UpdateQuene;
     void setLayoutC();
     void setLayoutF();
@@ -83,6 +83,7 @@ private slots:
     void chooseItem(QModelIndex);
     void RefreshS();
     void UpdateS();
+    void linkClicked(QUrl);
     void HTTPSS(QNetworkReply*, QList <QSslError>);
     void sortRSS();
 signals:

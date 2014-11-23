@@ -20,7 +20,6 @@
 #include <vector>
 
 using std::vector;
-using std::swap;
 class Password {
 public:
     Password();
@@ -46,19 +45,19 @@ public:
     void input(QString);
 private:
     vector  <Program>  Programv;
-    QGridLayout *La;
-    QTreeWidgetItem *lastitem;
+    QGridLayout* La;
+    QTreeWidgetItem* lastitem;
     QPoint Last;
-    QTreeWidget *Tree;
-    QLabel *L[3];
-    QLineEdit *ProgramL;
-    QLineEdit *LoginL;
-    QLineEdit *PasswordL;
-    QCompleter *C;
-    QPushButton *Change;
-    QPushButton *Add;
-    QPushButton *OKB;
-    QPushButton *Cancel;
+    QTreeWidget* Tree;
+    QLabel* L[3];
+    QLineEdit* ProgramL;
+    QLineEdit* LoginL;
+    QLineEdit* PasswordL;
+    QCompleter* C;
+    QPushButton* Change;
+    QPushButton* Add;
+    QPushButton* OKB;
+    QPushButton* Cancel;
     void UpdateTree();
 private slots:
     void change();

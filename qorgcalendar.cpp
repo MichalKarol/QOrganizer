@@ -19,7 +19,7 @@
 class QTableCalendarWidget: public QWidget {
     Q_OBJECT
 public:
-    QTableCalendarWidget(QString ToolTip, bool Ev, bool BDay, QWidget *parent) :QWidget(parent) {
+    QTableCalendarWidget(QString ToolTip, bool Ev, bool BDay, QWidget* parent) :QWidget(parent) {
         Date = QDate::fromString(ToolTip, "d/MM/yyyy");
         Event = new QLabel(this);
         Birth = new QLabel(this);
@@ -28,20 +28,20 @@ public:
         QPixmap w = QPixmap(12, 12);
         w.fill(Qt::transparent);
         if (Ev) {
-            Event->setPixmap(QIcon(":/cal/Event.png").pixmap(15));
+            Event->setPixmap(QIcon(":/cal/Event.png").pixmap(12));
         } else {
             Event->setPixmap(w);
         }
         if (BDay) {
-            Birth->setPixmap(QIcon(":/cal/Birthday.png").pixmap(15));
+            Birth->setPixmap(QIcon(":/cal/Birthday.png").pixmap(12));
         } else {
             Birth->setPixmap(w);
         }
-        Add = new QPushButton(QIcon(w), "", this);
+        Add = new QPushButton(QIcon(QIcon(w).pixmap(12, 12)), "", this);
         Add->setStyleSheet("QPushButton {border: 0px solid white;}");
         Add->setEnabled(false);
         connect(Add, SIGNAL(clicked()), this, SLOT(addIN()));
-        QHBoxLayout *Layout = new QHBoxLayout(this);
+        QHBoxLayout* Layout = new QHBoxLayout(this);
         Layout->setSpacing(1);
         Layout->addWidget(Event);
         Layout->addWidget(Birth);
@@ -54,10 +54,10 @@ public:
     }
 private:
     QDate Date;
-    QLabel *Event;
-    QLabel *Birth;
-    QLabel *Label;
-    QPushButton *Add;
+    QLabel* Event;
+    QLabel* Birth;
+    QLabel* Label;
+    QPushButton* Add;
 private slots:
     void addIN() {
         emit addOUT(Date);
@@ -80,7 +80,7 @@ public:
         Labels[6]->setDisabled(true);
         Name = new QLineEdit(this);
         Category = new QLineEdit(Calendar->category, this);
-        QCompleter *completer = new QCompleter(Calendar->getCategories(), Category);
+        QCompleter* completer = new QCompleter(Calendar->getCategories(), Category);
         Category->setCompleter(completer);
         Priority = new QSlider(Qt::Horizontal, this);
         Priority->setRange(1, 5);
@@ -117,7 +117,7 @@ public:
         ActionButtons[1]->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
         ActionButtons[1]->setDefault(true);
         connect(ActionButtons[1], SIGNAL(clicked()), this, SLOT(add()));
-        QGridLayout *Lay = new QGridLayout(this);
+        QGridLayout* Lay = new QGridLayout(this);
         for (int i = 0; i < 7; i++) {
             Lay->addWidget(Labels[i], i, 0);
         }
@@ -142,18 +142,18 @@ public:
         setWindowTitle("Add event");
     }
 private:
-    QLabel *Labels[7];
-    QLineEdit *Name;
-    QLineEdit *Category;
-    QSlider *Priority;
-    QComboBox *Occurance;
-    QDateEdit *Starts1;
-    QTimeEdit *Starts2;
-    QDateEdit *Finish1;
-    QTimeEdit *Finish2;
-    QDateEdit *OccuraneEndDate;
-    QPushButton *ActionButtons[2];
-    qorgCalendar *Calendar;
+    QLabel* Labels[7];
+    QLineEdit* Name;
+    QLineEdit* Category;
+    QSlider* Priority;
+    QComboBox* Occurance;
+    QDateEdit* Starts1;
+    QTimeEdit* Starts2;
+    QDateEdit* Finish1;
+    QTimeEdit* Finish2;
+    QDateEdit* OccuraneEndDate;
+    QPushButton* ActionButtons[2];
+    qorgCalendar* Calendar;
 private slots:
     void lock(int i) {
         if (i == 0) {
@@ -272,7 +272,7 @@ public:
         Labels[6]->setDisabled(true);
         Name = new QLineEdit(this);
         Category = new QLineEdit(this);
-        QCompleter *completer = new QCompleter(Calendar->getCategories(), Category);
+        QCompleter* completer = new QCompleter(Calendar->getCategories(), Category);
         Category->setCompleter(completer);
         Priority = new QSlider(Qt::Horizontal, this);
         Priority->setRange(1, 5);
@@ -328,7 +328,7 @@ public:
             OccuraneEndDate->setDate(Calendar->Recurrent[ItemID%0xF0000000].edate);
         }
         connect(Starts2, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
-        QGridLayout *Lay = new QGridLayout(this);
+        QGridLayout* Lay = new QGridLayout(this);
         for (int i = 0; i < 7; i++) {
             Lay->addWidget(Labels[i], i, 0);
         }
@@ -353,18 +353,18 @@ public:
         setWindowTitle("Edit event");
     }
 private:
-    QLabel *Labels[7];
-    QLineEdit *Name;
-    QLineEdit *Category;
-    QSlider *Priority;
-    QComboBox *Occurance;
-    QDateEdit *Starts1;
-    QTimeEdit *Starts2;
-    QDateEdit *Finish1;
-    QTimeEdit *Finish2;
-    QDateEdit *OccuraneEndDate;
-    QPushButton *ActionButtons[2];
-    qorgCalendar *Calendar;
+    QLabel* Labels[7];
+    QLineEdit* Name;
+    QLineEdit* Category;
+    QSlider* Priority;
+    QComboBox* Occurance;
+    QDateEdit* Starts1;
+    QTimeEdit* Starts2;
+    QDateEdit* Finish1;
+    QTimeEdit* Finish2;
+    QDateEdit* OccuraneEndDate;
+    QPushButton* ActionButtons[2];
+    qorgCalendar* Calendar;
     uint ItemID;
 private slots:
     void lock(int i) {
@@ -476,7 +476,7 @@ private slots:
     }
 };
 
-qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
+qorgCalendar::qorgCalendar(QWidget* parent, qorgAB* AB) :QWidget(parent) {
     this->AB = AB;
     category="";
     currentDate = QDate::currentDate();
@@ -509,6 +509,7 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     Calendar->setMinimumWidth(400);
     Calendar->setFixedHeight(225);
     connect(Calendar, SIGNAL(itemActivated(QTableWidgetItem*)), this, SLOT(dayChanged(QTableWidgetItem*)));
+
     DayView = new QTreeWidget(this);
     DayView->setMaximumWidth(350);
     DayView->header()->hide();
@@ -530,6 +531,7 @@ qorgCalendar::qorgCalendar(QWidget *parent, qorgAB* AB) :QWidget(parent) {
     Incoming->header()->setSectionResizeMode(3, QHeaderView::Stretch);
     Incoming->setColumnWidth(4, 50);
     Incoming->setColumnWidth(5, 50);
+    connect(Incoming, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(doubleClick(QModelIndex)));
 
     QGridLayout* LayoutFx = new QGridLayout();
     LayoutFx->addWidget(Month, 0, 0);
@@ -623,6 +625,13 @@ QStringList qorgCalendar::getCategories() {
 }
 void qorgCalendar::setCategory(QString cat) {
     category = cat;
+    Month->blockSignals(true);
+    Month->setCurrentIndex(QDate::currentDate().month()-1);
+    Month->blockSignals(false);
+    Year->blockSignals(true);
+    Year->setCurrentIndex(Year->currentIndex()-(currentDate.year()-QDate::currentDate().year()));
+    Year->blockSignals(false);
+    currentDate = QDate::currentDate();
     updateAll();
 }
 QString qorgCalendar::getUpdate() {
@@ -696,7 +705,7 @@ void qorgCalendar::setCalendar() {
     Calendar->clearContents();
     DayView->clear();
     QDateTime Tmp = QDateTime(currentDate, QTime(0, 0));
-    QTreeWidgetItem *Hours[24];
+    QTreeWidgetItem* Hours[24];
     for (int i = 0; i < 24; i++) {
         Hours[i]=new QTreeWidgetItem(DayView);
         Hours[i]->setText(0, Tmp.toString("HH"));
@@ -705,7 +714,7 @@ void qorgCalendar::setCalendar() {
             QList  <QString>  B = checkBd(currentDate);
             if (i == 8) {
                 for (int j = 0; j < B.size(); j++) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Hours[i]);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
                     Itm->setToolTip(0, B[j]);
                     Itm->setText(0, B[j]);
                     Itm->setText(1, "08:00");
@@ -716,7 +725,7 @@ void qorgCalendar::setCalendar() {
                 }
             } else if (i > 8&&i < 12) {
                 for (int j = 0; j < B.size(); j++) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Hours[i]);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
                     Itm->setToolTip(0, B[j]);
                     Itm->setText(0, B[j]);
                     Itm->setText(1, "");
@@ -727,7 +736,7 @@ void qorgCalendar::setCalendar() {
                 }
             } else if (i == 12) {
                 for (int j = 0; j < B.size(); j++) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Hours[i]);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
                     Itm->setToolTip(0, B[j]);
                     Itm->setText(0, B[j]);
                     Itm->setText(1, "");
@@ -743,7 +752,7 @@ void qorgCalendar::setCalendar() {
             QList  <uint>  R = checkEvR(currentDate, j);
             for (int k = 0; k < N.size(); k++) {
                 if (Tmp >= QDateTime(Normal[N[k]].datet.date(), QTime(Normal[N[k]].datet.time().hour(), 0))&&Tmp <= QDateTime(Normal[N[k]].edatet.date(), QTime(Normal[N[k]].edatet.time().hour(), 0))) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Hours[i]);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
                     Itm->setToolTip(0, Normal[N[k]].name);
                     Itm->setText(0, Normal[N[k]].name);
                     Itm->setText(1, "");
@@ -756,10 +765,10 @@ void qorgCalendar::setCalendar() {
                     if (Tmp.date() == Normal[N[k]].edatet.date()&&Tmp.time().hour() == Normal[N[k]].edatet.time().hour()) {
                         Itm->setText(2, Normal[N[k]].edatet.time().toString("HH:mm"));
                     }
-                    QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, N[k]);
+                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, N[k]);
                     DayView->setItemWidget(Itm, 3, Edit);
                     connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, N[k]);
+                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, N[k]);
                     DayView->setItemWidget(Itm, 4, Delete);
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                     colorItem(Itm, j);
@@ -767,7 +776,7 @@ void qorgCalendar::setCalendar() {
             }
             for (int k = 0; k < R.size(); k++) {
                 if (Tmp >= QDateTime(currentDate, QTime(Recurrent[R[k]].datet.time().hour(), 0))&&Tmp <= QDateTime(currentDate, QTime(Recurrent[R[k]].edatet.time().hour(), 0))) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Hours[i]);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
                     Itm->setToolTip(0, Recurrent[R[k]].name);
                     Itm->setText(0, Recurrent[R[k]].name);
                     Itm->setText(1, "");
@@ -780,10 +789,10 @@ void qorgCalendar::setCalendar() {
                     if (Tmp.time().hour() == QDateTime(currentDate, Recurrent[R[k]].edatet.time()).time().hour()) {
                         Itm->setText(2, Recurrent[R[k]].edatet.time().toString("HH:mm"));
                     }
-                    QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, R[k]|0xF0000000);
+                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, R[k]|0xF0000000);
                     DayView->setItemWidget(Itm, 3, Edit);
                     connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, R[k]|0xF0000000);
+                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, R[k]|0xF0000000);
                     DayView->setItemWidget(Itm, 4, Delete);
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                     colorItem(Itm, j);
@@ -845,7 +854,7 @@ void qorgCalendar::setCalendar() {
                     break;
                 }
             }
-            QTableCalendarWidget *Day = new QTableCalendarWidget(Items[i]->toolTip(), Ev, Bd, this);
+            QTableCalendarWidget* Day = new QTableCalendarWidget(Items[i]->toolTip(), Ev, Bd, this);
             Calendar->setCellWidget(Items[i]->row(), Items[i]->column(), Day);
             if (i == ItmSel) {
                 Day->AddB();
@@ -924,7 +933,7 @@ void qorgCalendar::updateAll() {
         if (category.isEmpty()||category == "Birthdays") {
             QList  <QString>  B = checkBd(QDate::currentDate().addDays(i));
             for (int k = 0; k < B.size(); k++) {
-                QTreeWidgetItem *Itm = new QTreeWidgetItem(Incoming);
+                QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
                 Itm->setText(0, B[k]);
                 Itm->setToolTip(0, B[k]);
                 Itm->setText(1, "08:00 "+QDate::currentDate().addDays(i).toString("dd/MM/yyyy"));
@@ -942,7 +951,7 @@ void qorgCalendar::updateAll() {
             j+=(N.size()+R.size());
             for (int l = 0; l < N.size(); l++) {
                 if (!(DUID.contains(N[l]))) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Incoming);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
                     Itm->setText(0, Normal[N[l]].name);
                     Itm->setToolTip(0, Normal[N[l]].name);
                     Itm->setText(1, Normal[N[l]].datet.toString("HH:mm dd/MM/yyyy"));
@@ -950,10 +959,10 @@ void qorgCalendar::updateAll() {
                     Itm->setText(3, Normal[N[l]].category);
                     Itm->setText(4, "");
                     Itm->setText(5, "");
-                    QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, N[l]);
+                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, N[l]);
                     Incoming->setItemWidget(Itm, 4, Edit);
                     connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, N[l]);
+                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, N[l]);
                     Incoming->setItemWidget(Itm, 5, Delete);
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                     colorItem(Itm, k);
@@ -962,7 +971,7 @@ void qorgCalendar::updateAll() {
             }
             for (int l = 0; l < R.size(); l++) {
                 if (!DUID.contains(R[l]|0xF0000000)) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Incoming);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
                     Itm->setText(0, Recurrent[R[l]].name);
                     Itm->setToolTip(0, Recurrent[R[l]].name);
                     QString DateS;
@@ -979,10 +988,10 @@ void qorgCalendar::updateAll() {
                     Itm->setText(3, Recurrent[R[l]].category);
                     Itm->setText(4, "");
                     Itm->setText(5, "");
-                    QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, R[l]|0xF0000000);
+                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, R[l]|0xF0000000);
                     Incoming->setItemWidget(Itm, 4, Edit);
                     connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, R[l]|0xF0000000);
+                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, R[l]|0xF0000000);
                     Incoming->setItemWidget(Itm, 5, Delete);
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                     DUID.append(R[l]|0xF0000000);
@@ -994,7 +1003,7 @@ void qorgCalendar::updateAll() {
             if (category.isEmpty()||category == "Birthdays") {
                 QList  <QString>  B = checkBd(QDate(2012, 2, 29));
                 for (int k = 0; k < B.size(); k++) {
-                    QTreeWidgetItem *Itm = new QTreeWidgetItem(Incoming);
+                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
                     Itm->setText(0, B[k]);
                     Itm->setToolTip(0, B[k]);
                     Itm->setText(1, "08:00 29/02/"+QDate::currentDate().toString("yyyy"));
@@ -1011,7 +1020,7 @@ void qorgCalendar::updateAll() {
                     if (QDate::currentDate().addDays(i) >= Recurrent[l].datet.date()&&QDate::currentDate().addDays(i+1) <= Recurrent[l].edate) {
                         if ((category == Recurrent[l].category||category.isEmpty())&&Recurrent[l].priority == k&&Recurrent[l].type == 4) {
                             if (29 == Recurrent[l].datet.date().day()&&2 == Recurrent[l].datet.date().month()) {
-                                QTreeWidgetItem *Itm = new QTreeWidgetItem(Incoming);
+                                QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
                                 Itm->setText(0, Recurrent[l].name);
                                 Itm->setToolTip(0, Recurrent[l].name);
                                 Itm->setText(1, Recurrent[l].datet.time().toString("HH:mm")+" 29/02/"+QDate::currentDate().toString("yyyy"));
@@ -1019,10 +1028,10 @@ void qorgCalendar::updateAll() {
                                 Itm->setText(3, Recurrent[l].category);
                                 Itm->setText(4, "");
                                 Itm->setText(5, "");
-                                QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i|0xF0000000);
+                                QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i|0xF0000000);
                                 Incoming->setItemWidget(Itm, 4, Edit);
                                 connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                                QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i|0xF0000000);
+                                QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i|0xF0000000);
                                 Incoming->setItemWidget(Itm, 5, Delete);
                                 connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                                 colorItem(Itm, k);
@@ -1042,11 +1051,11 @@ void qorgCalendar::sort() {
             bool Sorted = true;
             for (uint i = 0; i < Normal.size()-1; i++) {
                 if (Normal[i].priority < Normal[i+1].priority) {
-                    swap(Normal[i], Normal[i+1]);
+                    std::swap(Normal[i], Normal[i+1]);
                     Sorted = false;
                 } else if (Normal[i].priority == Normal[i+1].priority) {
                     if (Normal[i].datet > Normal[i+1].datet) {
-                        swap(Normal[i], Normal[i+1]);
+                        std::swap(Normal[i], Normal[i+1]);
                         Sorted = false;
                     }
                 }
@@ -1061,11 +1070,11 @@ void qorgCalendar::sort() {
             bool Sorted = true;
             for (uint i = 0; i < Recurrent.size()-1; i++) {
                 if (Recurrent[i].priority < Recurrent[i+1].priority) {
-                    swap(Recurrent[i], Recurrent[i+1]);
+                    std::swap(Recurrent[i], Recurrent[i+1]);
                     Sorted = false;
                 } else if (Recurrent[i].priority == Recurrent[i+1].priority) {
                     if (Recurrent[i].datet.time() > Recurrent[i+1].datet.time()) {
-                        swap(Recurrent[i], Recurrent[i+1]);
+                        std::swap(Recurrent[i], Recurrent[i+1]);
                         Sorted = false;
                     }
                 }
@@ -1114,10 +1123,24 @@ void qorgCalendar::dayChanged(QTableWidgetItem* Input) {
         Year->blockSignals(true);
         Year->setCurrentIndex(Year->currentIndex()-(currentDate.year()-picked.year()));
         Year->blockSignals(false);
-        currentDate.setDate(picked.year(), picked.month(), picked.day());
+        currentDate = picked;
+        setCalendar();
     }
-    setCalendar();
 }
+void qorgCalendar::doubleClick(QModelIndex I) {
+    if (Incoming->topLevelItem(I.row()) != NULL) {
+        QDate D = QDateTime::fromString(Incoming->topLevelItem(I.row())->text(1), "HH:mm dd/MM/yyyy").date();
+        Month->blockSignals(true);
+        Month->setCurrentIndex(D.month()-1);
+        Month->blockSignals(false);
+        Year->blockSignals(true);
+        Year->setCurrentIndex(Year->currentIndex()-(currentDate.year()-D.year()));
+        Year->blockSignals(false);
+        currentDate = D;
+        setCalendar();
+    }
+}
+
 void qorgCalendar::monthChanged(int Input) {
     currentDate.setDate(currentDate.year(), Input+1, currentDate.day());
     setCalendar();
@@ -1125,7 +1148,7 @@ void qorgCalendar::monthChanged(int Input) {
 void qorgCalendar::yearChanged(QString Input) {
     if (Input.isEmpty()) {
         Year->blockSignals(true);
-        QPushButton *Ypom = qobject_cast<QPushButton*>(QObject::sender());
+        QPushButton* Ypom = qobject_cast<QPushButton*>(QObject::sender());
         if (Ypom == Yminus) {
             if (currentDate.year()-1 >= QDate::currentDate().year()-20) {
                 currentDate.setDate(currentDate.year()-1, currentDate.month(), currentDate.day());

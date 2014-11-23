@@ -17,9 +17,13 @@
 #include <qorglogin.h>
 #include <QApplication>
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     QApplication a(argc, argv);
-    QOrganizer *w = new QOrganizer();
+    QWebSettings::globalSettings()->setAttribute(QWebSettings::PrivateBrowsingEnabled, true);
+    QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
+    QWebSettings::globalSettings()->setMaximumPagesInCache(0);
+    QWebSettings::globalSettings()->setObjectCacheCapacities(0, 0, 0);
+    QOrganizer* w = new QOrganizer();
     w->setAttribute(Qt::WA_DeleteOnClose);
     if ((new qorgLogin(w))->exec() == QDialog::Accepted) {
        w->show();

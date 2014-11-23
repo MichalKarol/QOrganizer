@@ -17,6 +17,9 @@
 #include <algorithm>
 #include <vector>
 
+uint MAILthreadCounter = 0;
+QMutex MAILaccessToCounter;
+
 Structure::Structure() {
     this->Structure_Number.clear();
     this->Structure_Type.clear();
@@ -35,13 +38,14 @@ Structure::Structure() {
 }
 Email::Email() {
     this->Email_Subject.clear();
-    this->Email_From.Name.clear();
-    this->Email_From.EMailA.clear();
+    this->Email_From.clear();
     this->Email_Date.setMSecsSinceEpoch(0);
     this->Email_Body[0].clear();
     this->Email_Body[1].clear();
     this->Email_UID = 0;
     this->Email_Flags = 0;
+    this->Email_MessageID.clear();
+    this->Email_ReplyTo.clear();
     this->Structurev.clear();
     this->Email_Quene = 0;
 }
@@ -67,103 +71,143 @@ class SSLCON : public QThread {
     Q_OBJECT
 public:
     enum Method {
-        Sleep,
         Login,
         Mailboxes,
         Emails,
+
         Attachment,
         Send,
-        Delete,
+
+        CopyE,
+        DeleteE,
+        MoveE,
+
+        CreateM,
+        DeleteM,
+        RenameM,
+
+        Sleep,
         Stop,
     };
     explicit SSLCON(qorgMail*, Mail*);
-    void setMethod(Method);
-    void DownloadAttachmentData(int B, int E, int A, QString P) {
-        this->M = M;
+    ~SSLCON();
+    void setMethod(Method I) {
+        Current = I;
+    }
+    void setMailbox(Mailbox* B) {
         this->B = B;
+    }
+    void setEmail(Email* E) {
         this->E = E;
+    }
+    void setAttachment(Structure* A) {
         this->A = A;
-        this->Path = P;
     }
-    void SetBE(int B, int E) {
-        this->B = B;
-        this->E = E;
+    void setData(QList <QString> D) {
+        this->Data = D;
     }
-    void SendEmail(QString header, QList  <QString >  to, QString data, QList  < QString>  Att) {
-        this->Header = header;
-        this->To = to;
-        this->Data = data;
-        this->Att = Att;
-    }
-    Mail *M;
-    int B;
-    int E;
-    int A;
+
+    Mail* M;
+    Mailbox* B;
+    Email* E;
+    Structure* A;
+    QList <QString> Data;
     bool Cancelled;
 private:
     Method Current;
-    QString Path;
-    QString Header;
-    QList  <QString>  To;
-    QString Data;
-    QList  <QString>  Att;
     void SecureLogin();
     void DownloadMBoxVector();
     void DownloadEmails();
+
     void DownloadAttachment();
     void SendEmail();
+
+    void CopyEmail();
     void DeleteEmail();
-    void run();
+    void MoveEmail();
+    void AddFlagEmail();
+    void DelFlagEmail();
+
+    void CreateMailbox();
+    void DeleteMailbox();
+    void RenameMailbox();
     QByteArray readAll(QSslSocket*);
     QByteArray readIMAP(QSslSocket*);
+    QByteArray readSMTP(QSslSocket*);
+    void closeIMAP(QSslSocket*);
     QList <QString> splitBS(QString);
     QString NILCleaner(QString);
+protected:
+    void run();
 public slots:
     void Canceled();
 signals:
     void changeValue(int);
     void end();
+
     void LoginS(bool, QString);
     void MailboxesS(bool, QString);
     void EmailS(bool, QString);
+
     void AttachmentS(bool, QString);
     void SendEmailS(bool, QString);
-    void DeleteS(bool, QString);
+
+    void CopyES(bool, QString);
+    void DeleteES(bool, QString);
+    void MoveES(bool, QString);
+
+    void CreateMS(bool, QString);
+    void DeleteMS(bool, QString);
+    void RenameMS(bool, QString);
 };
-SSLCON::SSLCON(qorgMail*parent, Mail* I) :QThread(parent) {
+SSLCON::SSLCON(qorgMail* parent, Mail* I) :QThread(parent) {
+    QMutexLocker L(&MAILaccessToCounter);
+    MAILthreadCounter++;
     M = I;
     Cancelled = false;
     Current = Sleep;
     connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }
-void SSLCON::setMethod(Method I) {
-    Current = I;
+SSLCON::~SSLCON() {
+    QMutexLocker L(&MAILaccessToCounter);
+    MAILthreadCounter--;
 }
+
 void SSLCON::run() {
     while (Current != Stop) {
-        if (M != NULL&&Current != Sleep) {
+        if (Current != Sleep) {
             if (Current == Login) {
                 Current = Sleep;
                 SecureLogin();
-            }
-            if (Current == Mailboxes) {
+            } else if (Current == Mailboxes) {
                 Current = Sleep;
                 DownloadMBoxVector();
-            }
-            if (Current == Emails) {
+            } else if (Current == Emails) {
                 DownloadEmails();
                 break;
-            }
-            if (Current == Attachment) {
+            } else if (Current == Attachment) {
                 DownloadAttachment();
                 break;
-            }
-            if (Current == Send) {
+            } else if (Current == Send) {
                 SendEmail();
                 break;
-            }
-            if (Current == Delete) {
+            } else if (Current == CopyE) {
+                CopyEmail();
+                break;
+            } else if (Current == DeleteE) {
                 DeleteEmail();
+                break;
+            } else if (Current == MoveE) {
+                MoveEmail();
+                break;
+            } else if (Current == CreateM) {
+                CreateMailbox();
+                break;
+            } else if (Current == DeleteM) {
+                DeleteMailbox();
+                break;
+            } else if (Current == RenameM) {
+                RenameMailbox();
                 break;
             }
         } else if (Current != Stop) {
@@ -175,19 +219,22 @@ void SSLCON::run() {
     }
     emit end();
 }
-QByteArray SSLCON::readAll(QSslSocket *S) {
+QByteArray SSLCON::readAll(QSslSocket* S) {
     QByteArray Reply;
-    if (!Cancelled && S->waitForReadyRead()) {
+    if (S->state() == QAbstractSocket::ConnectingState) {
+        S->waitForConnected();
+    }
+    if (!Cancelled && (S->state() == QAbstractSocket::ConnectedState)) {
         Reply.append(S->readAll());
-        while (S->waitForReadyRead(10)&&S->bytesAvailable() != 0) {
+        while (S->waitForReadyRead(500)&&S->bytesAvailable() != 0) {
             Reply.append(S->readAll());
         }
     }
     return Reply;
 }
-QByteArray SSLCON::readIMAP(QSslSocket *S) {
+QByteArray SSLCON::readIMAP(QSslSocket* S) {
     QByteArray Reply;
-    if (!Cancelled && S->waitForReadyRead()) {
+    if (!Cancelled && (S->state() == QSslSocket::ConnectedState) && S->waitForReadyRead()) {
         Reply.append(S->readAll());
         while (!(Reply.contains("TAG OK") || Reply.contains("TAG NO") || Reply.contains("TAG BAD"))) {
             if (S->waitForReadyRead() && S->bytesAvailable() != 0) {
@@ -196,6 +243,21 @@ QByteArray SSLCON::readIMAP(QSslSocket *S) {
         }
     }
     return Reply;
+}
+QByteArray SSLCON::readSMTP(QSslSocket* S) {
+    QByteArray Reply;
+    if (!Cancelled && (S->state() == QSslSocket::ConnectedState) && S->waitForReadyRead()) {
+        Reply.append(S->readAll());
+        while (S->waitForReadyRead(100)&&S->bytesAvailable() != 0) {
+            Reply.append(S->readAll());
+        }
+    }
+    return Reply;
+}
+void SSLCON::closeIMAP(QSslSocket* S) {
+    S->write(QString("TAG LOGOUT\r\n").toUtf8());
+    readIMAP(S);
+    S->close();
 }
 QList <QString> SSLCON::splitBS(QString I) {
     QList <QString> Output;
@@ -260,6 +322,13 @@ void SSLCON::SecureLogin() {
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit LoginS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
@@ -283,21 +352,27 @@ void SSLCON::SecureLogin() {
     if (Reply.isEmpty() || Cancelled) {
         emit LoginS(false, "ERROR: No response from server.");
         return;
-    }
-    S.write(QString("TAG LOGOUT\r\n").toUtf8());
-    S.close();
-    if (Reply.contains("TAG OK") && !Cancelled) {
-        emit changeValue(12);
-        emit LoginS(true, "Logged in.");
-    } else {
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
         emit LoginS(false, "ERROR: Authentication failed.");
+        return;
     }
+    closeIMAP(&S);
+    emit changeValue(10);
+    emit LoginS(true, "Logged in.");
 }
 void SSLCON::DownloadMBoxVector() {
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit MailboxesS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
@@ -320,8 +395,8 @@ void SSLCON::DownloadMBoxVector() {
     if (Reply.isEmpty() || Cancelled) {
         emit MailboxesS(false, "ERROR: No response from server.");
         return;
-    }
-    if (!Reply.contains("TAG OK")) {
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
         emit MailboxesS(false, "ERROR: Authentication failed.");
         return;
     }
@@ -330,14 +405,17 @@ void SSLCON::DownloadMBoxVector() {
     if (Reply.isEmpty() || Cancelled) {
         emit MailboxesS(false, "ERROR: No response from server.");
         return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit MailboxesS(false, "ERROR: Cannot list mailboxes.");
+        return;
     }
-    S.write(QString("TAG LOGOUT\r\n").toUtf8());
-    S.close();
+    closeIMAP(&S);
     QStringList A = Reply.split("\n", QString::SkipEmptyParts);
     A.removeLast();
     QString Split;
     for (int i = 0; i < A.size(); i++) {
-        Mailbox *temp = new Mailbox();
+        Mailbox* temp = new Mailbox();
         QString Atts = A[i].mid(A[i].indexOf("(")+1, A[i].indexOf(")")-A[i].indexOf("(")-1);
         if (Atts.contains("\\HasChildren")) {
             temp->Mbox_Attrybutes|=Mailbox::HasChildren;
@@ -366,8 +444,7 @@ void SSLCON::DownloadMBoxVector() {
         if (Atts.contains("\\Sent")) {
             temp->Mbox_Attrybutes|=Mailbox::Sent;
         }
-        int pos = 0;
-        pos = A[i].indexOf(")")+2;
+        int pos = A[i].indexOf(")")+2;
         QString N = A[i].mid(pos+4, A[i].length()-pos-4).simplified();
         if (N[0] == '"'&&N[N.length()-1] == '"') {
             N = N.mid(1, N.length()-2);
@@ -379,7 +456,6 @@ void SSLCON::DownloadMBoxVector() {
         if (i == 0) {
             Split = A[i].mid(pos+1, 1);
         }
-        temp->Mbox_Name.lastIndexOf(Split);
         temp->Mbox_Showname = temp->Mbox_Name.mid(temp->Mbox_Name.lastIndexOf(Split)+1, temp->Mbox_Name.length()-temp->Mbox_Name.lastIndexOf(Split)-1);
         temp->Mbox_Showname = Bit7ToBit8(temp->Mbox_Showname);
         M->Mboxv.push_back(temp);
@@ -396,18 +472,21 @@ void SSLCON::DownloadMBoxVector() {
             M->Mboxv[i]->Mbox_Top = true;
         }
     }
-    if (Cancelled) {
-        emit MailboxesS(false, "Cancelled.");
-    } else {
-        emit MailboxesS(true, "Mailboxes tree downloaded.");
-        emit changeValue(25);
-    }
+    emit changeValue(15);
+    emit MailboxesS(true, "Mailboxes tree downloaded.");
 }
 void SSLCON::DownloadEmails() {
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit EmailS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
@@ -431,8 +510,8 @@ void SSLCON::DownloadEmails() {
     if (Reply.isEmpty() || Cancelled) {
         emit EmailS(false, "ERROR: No response from server.");
         return;
-    }
-    if (!Reply.contains("TAG OK")) {
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
         emit EmailS(false, "ERROR: Authentication failed.");
         return;
     }
@@ -443,388 +522,597 @@ void SSLCON::DownloadEmails() {
             if (Reply.isEmpty() || Cancelled) {
                 emit EmailS(false, "ERROR: No response from server.");
                 return;
+            } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+                closeIMAP(&S);
+                emit EmailS(false, "ERROR: Cannot select mailbox.");
+                return;
             }
-            QStringList A = Reply.split("*", QString::SkipEmptyParts);
-            for (int j = 0; j < A.size(); j++) {
-                if (A[j].contains("EXISTS")) {
-                    emit changeValue(30);
-                    vector  <Email*> *Vec=&M->Mboxv[i]->Emailv;
-                    uint Fn = 1;
-                    QString Enu = A[j].mid(1, A[j].indexOf(" EXISTS")-1);
-                    uint En = Enu.toInt();
-                    if (En > 0) {
-                        QString UIDS;
-                        {
-                            for (uint k = Fn; k + 100 < En; k += 100) {
-                                S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" UID\r\n").toUtf8());
-                                QString Tmp = readIMAP(&S);
-                                Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
-                                UIDS.append(Tmp);
-                            }
-                            S.write(QString("TAG FETCH "+QString::number(En - En%100 + 1)+":"+Enu+" UID\r\n").toUtf8());
-                            UIDS.append(readIMAP(&S));
-                            if (UIDS.isEmpty() || Cancelled) {
-                                emit EmailS(false, "ERROR: No response from server.");
-                                return;
-                            }
-                            QList <QString> UIDL = UIDS.split("UID");
-                            QList  <uint>  UIDLi;
-                            UIDL.removeFirst();
-                            for (int k = 0; k < UIDL.size(); k++) {
-                                UIDLi.append(UIDL[k].mid(1, UIDL[k].indexOf(")")-1).toInt());
-                            }
-                            for (uint k = 0; k < Vec->size(); k++) {
-                                if (UIDLi.size()-1 < static_cast<int>(k) || (*Vec)[k]->Email_UID != UIDLi[k]) {
-                                    Vec->erase(Vec->begin()+k);
-                                    k--;
-                                }
-                            }
-                            if (Vec->size() != 0) {
-                                for (int k = UIDLi.size()-1; k > -1; k--) {
-                                    if (UIDLi[k] <= Vec->back()->Email_UID) {
-                                        Fn = k+2;
-                                        break;
-                                    }
-                                }
-                            }
-                            for (uint k = 0; k < En-Fn+1; k++) {
-                                Vec->push_back(new Email());
-                                (*Vec)[Fn+k-1]->Email_UID = UIDLi[Fn+k-1];
-                            }
-                        }
-                        if (Fn <= En) {
-                            emit changeValue(35);
-                            QString Subjects;
-                            {
-                                for (uint k = Fn; k + 100 < En; k +=100) {
-                                    S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
-                                    QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
-                                    Subjects.append(Tmp);
-                                }
-                                S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
-                                Subjects.append(readIMAP(&S));
-                                if (Subjects.isEmpty() || Cancelled) {
-                                    for (uint k = En; k >= Fn; k--) {
-                                        delete (*Vec)[k-1];
-                                        Vec->erase(Vec->begin()+k-1);
-                                    }
-                                    emit EmailS(false, "ERROR: No response from server.");
-                                    return;
-                                }
-                                QList <QString> SubL = Subjects.split(")\r\n*");
-                                for (uint k = 0; k < En-Fn+1; k++) {
-                                    if (SubL[k].contains("Subject:")) {
-                                        QString Sub = SubL[k].mid(SubL[k].indexOf("Subject: ")+9, SubL[k].indexOf("\r\n)", SubL[k].indexOf("Subject: ")+9)-SubL[k].indexOf("Subject:")-9);
-                                        Sub.remove("\r\n");
-                                        Sub = NameFilter(Sub);
-                                        if (Sub.simplified().isEmpty()) {
-                                            Sub="(no subject)";
-                                        }
-                                        Sub.replace("<", "&lt;");
-                                        Sub.replace(">", "&gt;");
-                                        QTextDocument D;
-                                        D.setHtml(Sub.simplified());
-                                        (*Vec)[Fn+k-1]->Email_Subject = D.toPlainText();
-                                    }
-                                }
-                            }
-                            emit changeValue(40);
-                            QString Dates;
-                            {
-                                for (uint k = Fn; k + 100 < En; k +=100) {
-                                    S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Date)]\r\n").toUtf8());
-                                    QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
-                                    Dates.append(Tmp);
-                                }
-                                S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Date)]\r\n").toUtf8());
-                                Dates.append(readIMAP(&S));
-                                if (Dates.isEmpty() || Cancelled) {
-                                    for (uint k = En; k >= Fn; k--) {
-                                        delete (*Vec)[k-1];
-                                        Vec->erase(Vec->begin()+k-1);
-                                    }
-                                    emit EmailS(false, "ERROR: No response from server.");
-                                    return;
-                                }
-                                QList <QString> DateL = Dates.split(")\r\n*");
-                                for (uint k = 0; k < En-Fn+1; k++) {
-                                    if (DateL[k].contains("Date:")) {
-                                        QString Dat = DateL[k].mid(DateL[k].indexOf("Date: ")+6, DateL[k].indexOf("\r\n)", DateL[k].indexOf("Date: ")+6)-DateL[k].indexOf("Date: ")-6);
-                                        if (Dat.contains(", ")) {
-                                            Dat = Dat.mid(Dat.indexOf(", ")+2, Dat.length()-Dat.indexOf(", ")-2);
-                                        }
-                                        QList <QString> D = Dat.simplified().split(" ");
-                                        if (D.size() >= 4) {
-                                            QList <QString> Mon;
-                                            QDateTime Tmp;
-                                            Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
-                                            Tmp.setTimeSpec(Qt::UTC);
-                                            Tmp.setDate(QDate(D[2].toInt(), Mon.indexOf(D[1])+1, D[0].toInt()));
-                                            QStringList H = D[3].split(":");
-                                            Tmp.setTime(QTime(H[0].toInt(), H[1].toInt(), H[2].toInt()));
-                                            if (D.size() > 4) {
-                                                if (D[4] != "GMT") {
-                                                    char H = D[4].mid(1, 2).toShort();
-                                                    char M = D[4].mid(3, 2).toShort();
-                                                    int Sec = H*3600+M*60;
-                                                    if (D[4][0] == '+') {
-                                                        Tmp = Tmp.addSecs(-Sec);
-                                                    } else {
-                                                        Tmp = Tmp.addSecs(Sec);
-                                                    }
-                                                }
-                                                (*Vec)[Fn+k-1]->Email_Date = Tmp.toLocalTime();
-                                            } else {
-                                                (*Vec)[Fn+k-1]->Email_Date = Tmp;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            emit changeValue(45);
-                            QString Froms;
-                            {
-                                for (uint k = Fn; k + 100 < En; k +=100) {
-                                    S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
-                                    QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
-                                    Froms.append(Tmp);
-                                }
-                                S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
-                                Froms.append(readIMAP(&S));
-                                if (Froms.isEmpty() || Cancelled) {
-                                    for (uint k = En; k >= Fn; k--) {
-                                        delete (*Vec)[k-1];
-                                        Vec->erase(Vec->begin()+k-1);
-                                    }
-                                    emit EmailS(false, "ERROR: No response from server.");
-                                    return;
-                                }
-                                QList <QString> FromsL = Froms.split(")\r\n*");
-                                for (uint k = 0; k < En-Fn+1; k++) {
-                                    if (FromsL[k].contains("From:")) {
-                                        QString From = FromsL[k].mid(FromsL[k].indexOf("From: ")+6, FromsL[k].indexOf("\r\n)", FromsL[k].indexOf("From: ")+6)-FromsL[k].indexOf("From: ")-6);
-                                        QString Name = From.mid(0, From.indexOf("<"));
-                                        Name = NameFilter(Name);
-                                        QString EMA = From.mid(From.indexOf("<")+1, From.indexOf(">")-From.indexOf("<")-1).simplified();
-                                        (*Vec)[Fn+k-1]->Email_From.Name = Name.simplified();
-                                        (*Vec)[Fn+k-1]->Email_From.EMailA = EMA;
-                                    }
-                                }
-                            }
-                            emit changeValue(50);
-                            QString Flags;
-                            {
-                                for (uint k = Fn; k + 100 < En; k +=100) {
-                                    S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" FLAGS\r\n").toUtf8());
-                                    QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
-                                    Flags.append(Tmp);
-                                }
-                                S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" FLAGS\r\n").toUtf8());
-                                Flags.append(readIMAP(&S));
-                                if (Flags.isEmpty() || Cancelled) {
-                                    for (uint k = En; k >= Fn; k--) {
-                                        delete (*Vec)[k-1];
-                                        Vec->erase(Vec->begin()+k-1);
-                                    }
-                                    emit EmailS(false, "ERROR: No response from server.");
-                                    return;
-                                }
-                                QList <QString> FlagsL = Flags.split("FLAGS (");
-                                FlagsL.removeFirst();
-                                for (uint k = 0; k < En-Fn+1; k++) {
-                                    QString Fla = FlagsL[k].mid(0, FlagsL[k].indexOf(")"));
-                                    char Flag = 0;
-                                    if (Fla.contains("\\Answered")) {
-                                        Flag|=Email::Answered;
-                                    }
-                                    if (Fla.contains("\\Flagged")) {
-                                        Flag|=Email::Flagged;
-                                    }
-                                    if (Fla.contains("\\Draft")) {
-                                        Flag|=Email::Draft;
-                                    }
-                                    if (Fla.contains("\\Deleted")) {
-                                        Flag|=Email::Deleted;
-                                    }
-                                    if (Fla.contains("\\Seen")) {
-                                        Flag|=Email::Seen;
-                                    }
-                                    (*Vec)[Fn+k-1]->Email_Flags = Flag;
-                                }
-                            }
-                            emit changeValue(55);
-                            QString BS;
-                            {
-                                for (uint k = Fn; k + 100 < En; k +=100) {
-                                    S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODYSTRUCTURE\r\n").toUtf8());
-                                    QString Tmp = readIMAP(&S);
-                                    Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
-                                    BS.append(Tmp);
-                                }
-                                S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODYSTRUCTURE\r\n").toUtf8());
-                                BS.append(readIMAP(&S));
-                                if (BS.isEmpty() || Cancelled) {
-                                    for (uint k = En; k >= Fn; k--) {
-                                        delete (*Vec)[k-1];
-                                        Vec->erase(Vec->begin()+k-1);
-                                    }
-                                    emit EmailS(false, "ERROR: No response from server.");
-                                    return;
-                                }
-                                QList  <QString>  BSL = BS.split("BODYSTRUCTURE (");
-                                BSL.removeFirst();
-                                for (uint k = 0; k < En-Fn+1; k++) {
-                                    QList <QString> RBS = splitBS(BSL[k].mid(0, BSL[k].lastIndexOf(")")-1));
-                                    for (int l = 0; l < RBS.size(); l++) {
-                                        Structure *Tmp = new Structure();
-                                        QList <QString> IL;
-                                        int L = 0;
-                                        QString Data;
-                                        for (int m = 0; m < RBS[l].length(); m++) {
-                                            if (RBS[l][m] == ' '&&L == 0) {
-                                                IL.append(Data);
-                                                Data.clear();
-                                            } else {
-                                                if (RBS[l][m] == '(') {
-                                                    L++;
-                                                }
-                                                if (RBS[l][m] == ')') {
-                                                    L--;
-                                                }
-                                                Data.append(RBS[l][m]);
-                                            }
-                                        }
-                                        IL.append(Data);
-                                        for (int m = 0; m < IL.size(); m++) {
-                                            IL[m].remove("(");
-                                            IL[m].remove(")");
-                                            if (m != 10) {
-                                                IL[m].remove("\"");
-                                            }
-                                        }
-                                        Tmp->Structure_Number = IL[0];
-                                        Tmp->Structure_Type = NILCleaner(IL[1]).toUpper();
-                                        Tmp->Structure_Subtype = NILCleaner(IL[2]).toUpper();
-                                        QList  <QString>  ILL = NILCleaner(IL[3]).toUpper().split(" ");
-                                        QList  <QString>  ILLD = IL[3].split(" ");
-                                        if (ILL.indexOf("CHARSET") != -1) {
-                                            Tmp->Structure_Attrybutes.Charset = ILL[ILL.indexOf("CHARSET")+1];
-                                        }
-                                        if (ILL.indexOf("NAME") != -1) {
-                                            Tmp->Structure_Attrybutes.Name = ILLD[ILL.indexOf("NAME")+1];
-                                        }
-                                        if (IL[4].contains("<")&&IL[4].contains(">")) {
-                                            IL[4]=IL[4].mid(1, IL[4].length()-2);
-                                        }
-                                        Tmp->Structure_CID = NILCleaner(IL[4]);
-                                        Tmp->Structure_Descryption = NILCleaner(IL[5]).toUpper();
-                                        Tmp->Structure_Encoding = NILCleaner(IL[6]).toUpper();
-                                        Tmp->Structure_Size = IL[7].toInt();
-                                        if (Tmp->Structure_Type == "TEXT") {
-                                            Tmp->Structure_Lines = IL[8].toInt();
-                                            Tmp->Structure_MD5 = NILCleaner(IL[9]);
-                                            QList  <QString>  ILL = NILCleaner(IL[10]).toUpper().split("\" \"");
-                                            Tmp->Structure_Disposition = ILL[0].remove("\"");
-                                            QList  <QString>  ILLD = IL[10].split("\" \"");
-                                            if (ILL.indexOf("FILENAME") != -1) {
-                                                Tmp->Structure_Attrybutes.Name = ILLD[ILL.indexOf("FILENAME")+1];
-                                            }
-                                            Tmp->Structure_Language = NILCleaner(IL[11]).toUpper();
-                                            if (IL.size() == 13) {
-                                                Tmp->Structure_Location = NILCleaner(IL[12]);
-                                            }
-                                        } else {
-                                            Tmp->Structure_MD5 = NILCleaner(IL[8]);
-                                            QList  <QString>  ILL = NILCleaner(IL[9]).toUpper().split(" ");
-                                            Tmp->Structure_Disposition = ILL[0];
-                                            QList  <QString>  ILLD = IL[9].split(" ");
-                                            if (ILL.indexOf("FILENAME") != -1) {
-                                                Tmp->Structure_Attrybutes.Name = ILLD[ILL.indexOf("FILENAME")+1];
-                                            }
-                                            Tmp->Structure_Language = NILCleaner(IL[10]).toUpper();
-                                            if (IL.size() == 12) {
-                                                Tmp->Structure_Location = NILCleaner(IL[11]);
-                                            }
-                                        }
-                                        (*Vec)[Fn+k-1]->Structurev.push_back(Tmp);
-                                    }
-                                }
-                            }
-                            emit changeValue(60);
-                            {
-                                double VA=(static_cast<double>(40)/static_cast<double>(En-Fn+1));
-                                for (uint k = 0; k < En-Fn+1; k++) {
-                                    for (uint l = 0; l < (*Vec)[Fn+k-1]->Structurev.size()&&l < 2; l++) {
-                                        QByteArray Text;
-                                        int t = 0;
-                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Type == "TEXT" &&
-                                                (*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Name.isEmpty()) {
-                                            if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Subtype == "HTML") {
-                                                t = 1;
-                                            }
-                                            if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Size != 0) {
-                                                for (uint m = 0; m < (*Vec)[Fn+k-1]->Structurev[l]->Structure_Size; m += 10000) {
-                                                    S.write(QString("TAG UID FETCH "+QString::number((*Vec)[Fn+k-1]->Email_UID)+" BODY["+(*Vec)[Fn+k-1]->Structurev[l]->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
-                                                    QByteArray Tmp = readIMAP(&S);
-                                                    Text.append(Tmp.mid(Tmp.indexOf("}")+1, Tmp.indexOf(")\r\nTAG OK")-Tmp.indexOf("}")-1));
-                                                }
-                                                if (Text.isEmpty() || Cancelled) {
-                                                    for (uint m = En; m >= Fn; m--) {
-                                                        for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
-                                                            delete (*Vec)[m-1]->Structurev[n-1];
-                                                            (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
-                                                        }
-                                                        delete (*Vec)[m-1];
-                                                        Vec->erase(Vec->begin()+m-1);
-                                                    }
-                                                    emit EmailS(false, "ERROR: No response from server.");
-                                                    return;
-                                                }
-                                                if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "BASE64") {
-                                                    Text = QByteArray::fromBase64(Text);
-                                                } else if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "QUOTED-PRINTABLE") {
-                                                    Text = QPDecode(Text);
-                                                }
-                                                if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset != "UTF-8" && (!(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.isEmpty())) {
-                                                    QTextCodec *C = QTextCodec::codecForName((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.toUtf8());
-                                                    (*Vec)[Fn+k-1]->Email_Body[t] = C->toUnicode(Text);
-                                                } else {
-                                                    (*Vec)[Fn+k-1]->Email_Body[t] = Text;
-                                                }
-                                            }
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                    emit changeValue(static_cast<int>(60+(k+1)*VA));
-                                }
-                            }
-                        }
-                    } else {
-                        Vec->clear();
+            int existsIndex = Reply.indexOf(" EXISTS");
+            int starIndex = Reply.mid(0, existsIndex).lastIndexOf("* ");
+            emit changeValue(20);
+            vector  <Email*>* Vec=&M->Mboxv[i]->Emailv;
+            uint Fn = 1;
+            QString Enu = Reply.mid(starIndex+2, existsIndex-starIndex-2);
+            uint En = Enu.toInt();
+            if (En > 0) {
+                QString UIDS;
+                {
+                    for (uint k = Fn; k + 100 < En; k += 100) {
+                        S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" UID\r\n").toUtf8());
+                        QString Tmp = readIMAP(&S);
+                        Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                        UIDS.append(Tmp);
                     }
-                    break;
+                    S.write(QString("TAG FETCH "+QString::number(En - En%100 + 1)+":"+Enu+" UID\r\n").toUtf8());
+                    UIDS.append(readIMAP(&S));
+                    if (UIDS.isEmpty() || Cancelled) {
+                        emit EmailS(false, "ERROR: No response from server.");
+                        return;
+                    } else if (UIDS.contains("TAG NO") || UIDS.contains("TAG BAD")) {
+                        closeIMAP(&S);
+                        emit EmailS(false, "ERROR: Cannot fetch uids.");
+                        return;
+                    }
+                    QList <QString> UIDL = UIDS.split("UID");
+                    QList  <uint>  UIDLi;
+                    UIDL.removeFirst();
+                    for (int k = 0; k < UIDL.size(); k++) {
+                        UIDLi.append(UIDL[k].mid(1, UIDL[k].indexOf(")")-1).toInt());
+                    }
+                    for (uint k = 0; k < Vec->size(); k++) {
+                        if (UIDLi.size()-1 < static_cast<int>(k) || (*Vec)[k]->Email_UID != UIDLi[k]) {
+                            Vec->erase(Vec->begin()+k);
+                            k--;
+                        }
+                    }
+                    if (Vec->size() != 0) {
+                        for (int k = UIDLi.size()-1; k > -1; k--) {
+                            if (UIDLi[k] <= Vec->back()->Email_UID) {
+                                Fn = k+2;
+                                break;
+                            }
+                        }
+                    }
+                    for (uint k = 0; k < En-Fn+1; k++) {
+                        Vec->push_back(new Email());
+                        (*Vec)[Fn+k-1]->Email_UID = UIDLi[Fn+k-1];
+                    }
                 }
+                if (Fn <= En) {
+                    emit changeValue(25);
+                    QString Subjects;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            Subjects.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
+                        Subjects.append(readIMAP(&S));
+                        if (Subjects.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (Subjects.contains("TAG NO") || Subjects.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch subjects.");
+                            return;
+                        }
+                        QList <QString> SubL = Subjects.split(")\r\n*");
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            if (SubL[k].contains("Subject:", Qt::CaseInsensitive)) {
+                                QString Sub = SubL[k].mid(SubL[k].indexOf("Subject: ")+9, SubL[k].indexOf("\r\n)", SubL[k].indexOf("Subject: ")+9)-SubL[k].indexOf("Subject:")-9);
+                                Sub.remove("\r\n");
+                                Sub = NameFilter(Sub);
+                                if (Sub.simplified().isEmpty()) {
+                                    Sub="(no subject)";
+                                }
+                                Sub.replace("<", "&lt;");
+                                Sub.replace(">", "&gt;");
+                                QTextDocument D;
+                                D.setHtml(Sub.simplified());
+                                (*Vec)[Fn+k-1]->Email_Subject = D.toPlainText();
+                            }
+                        }
+                    }
+                    emit changeValue(30);
+                    QString Dates;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" INTERNALDATE\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            Dates.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" INTERNALDATE\r\n").toUtf8());
+                        Dates.append(readIMAP(&S));
+                        if (Dates.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (Dates.contains("TAG NO") || Dates.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch internaldates.");
+                            return;
+                        }
+                        QList <QString> DateL = Dates.split("INTERNALDATE \"");
+                        DateL.removeFirst();
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            QString Date = DateL[k].mid(0, DateL[k].indexOf("\""));
+                            QList <QString> Mon;
+                            Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
+                            QDateTime Tmp;
+                            Tmp.setTimeSpec(Qt::UTC);
+                            int Month = Mon.indexOf(Date.mid(3, 3));
+                            if (Month < 9) {
+                                Date.replace(Date.mid(3, 3), "0"+QString::number(Month+1));
+                            } else {
+                                Date.replace(Date.mid(3, 3), QString::number(Month+1));
+                            }
+                            Tmp.setDate(QDate::fromString(Date.mid(0, 10), "dd-MM-yyyy"));
+                            Tmp.setTime(QTime::fromString(Date.mid(11, 8), "HH:mm:ss"));
+                            if (Date[20] == '+') {
+                                Tmp = Tmp.addSecs(-(Date.mid(21, 2).toInt()*3600+Date.mid(23, 2).toInt()*60));
+                                Tmp.setTimeSpec(Qt::UTC);
+                            } else {
+                                Tmp = Tmp.addSecs(Date.mid(21, 2).toInt()*3600+Date.mid(23, 2).toInt()*60);
+                                Tmp.setTimeSpec(Qt::UTC);
+                            }
+                            (*Vec)[Fn+k-1]->Email_Date = Tmp.toLocalTime();
+                        }
+                    }
+                    emit changeValue(35);
+                    QString Froms;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            Froms.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
+                        Froms.append(readIMAP(&S));
+                        if (Froms.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (Froms.contains("TAG NO") || Froms.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch froms.");
+                            return;
+                        }
+                        QList <QString> FromsL = Froms.split(")\r\n*");
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            if (FromsL[k].contains("From:", Qt::CaseInsensitive)) {
+                                QString From = FromsL[k].mid(FromsL[k].indexOf("From: ", Qt::CaseInsensitive)+6, FromsL[k].indexOf("\r\n)", FromsL[k].indexOf("From: ", Qt::CaseInsensitive)+6)-FromsL[k].indexOf("From: ", Qt::CaseInsensitive)-6);
+                                (*Vec)[Fn+k-1]->Email_From = From.mid(From.indexOf("<")+1, From.indexOf(">")-From.indexOf("<")-1).simplified();
+                            }
+                        }
+                    }
+                    emit changeValue(40);
+                    QString Flags;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" FLAGS\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            Flags.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" FLAGS\r\n").toUtf8());
+                        Flags.append(readIMAP(&S));
+                        if (Flags.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (Flags.contains("TAG NO") || Flags.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch flags.");
+                            return;
+                        }
+                        QList <QString> FlagsL = Flags.split("FLAGS (");
+                        FlagsL.removeFirst();
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            QString Fla = FlagsL[k].mid(0, FlagsL[k].indexOf(")"));
+                            char Flag = 0;
+                            if (Fla.contains("\\Seen")) {
+                                Flag |= Email::Seen;
+                            }
+                            if (Fla.contains("\\Answered")) {
+                                Flag |= Email::Answered;
+                            }
+                            if (Fla.contains("\\Flagged")) {
+                                Flag |= Email::Flagged;
+                            }
+                            if (Fla.contains("\\Deleted")) {
+                                Flag |= Email::Deleted;
+                            }
+                            if (Fla.contains("\\Draft")) {
+                                Flag |= Email::Draft;
+                            }
+                            if (Fla.contains("\\Recent")) {
+                                Flag |= Email::Recent;
+                            }
+                            (*Vec)[Fn+k-1]->Email_Flags = Flag;
+                        }
+                    }
+                    emit changeValue(45);
+                    QString MessageID;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Message-ID)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            MessageID.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Message-ID)]\r\n").toUtf8());
+                        MessageID.append(readIMAP(&S));
+                        if (MessageID.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (MessageID.contains("TAG NO") || MessageID.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch message IDs.");
+                            return;
+                        }
+                        QList <QString> MIDL = MessageID.split(")\r\n*");
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            if (MIDL[k].contains("Message-ID:", Qt::CaseInsensitive)) {
+                                (*Vec)[Fn+k-1]->Email_MessageID = MIDL[k].mid(MIDL[k].indexOf("<")+1, MIDL[k].indexOf(">", MIDL[k].indexOf("<")+1)-MIDL[k].indexOf("<")-1);
+                            }
+                        }
+                    }
+                    emit changeValue(50);
+                    QString ReplyTo;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Reply-To)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            ReplyTo.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Reply-To)]\r\n").toUtf8());
+                        ReplyTo.append(readIMAP(&S));
+                        if (ReplyTo.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (ReplyTo.contains("TAG NO") || ReplyTo.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch reply-to.");
+                            return;
+                        }
+                        QList <QString> RPLL = ReplyTo.split(")\r\n*");
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            if (RPLL[k].contains("Reply-to:", Qt::CaseInsensitive)) {
+                                (*Vec)[Fn+k-1]->Email_ReplyTo = RPLL[k].mid(RPLL[k].indexOf("<")+1, RPLL[k].indexOf(">", RPLL[k].indexOf("<")+1)-RPLL[k].indexOf("<")-1);
+                            }
+                        }
+                    }
+                    emit changeValue(55);
+                    QString FetchTo;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (To)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            FetchTo.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (To)]\r\n").toUtf8());
+                        FetchTo.append(readIMAP(&S));
+                        if (FetchTo.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (FetchTo.contains("TAG NO") || FetchTo.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch to.");
+                            return;
+                        }
+                        QList <QString> FTL = FetchTo.split(")\r\n*");
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            if (FTL[k].contains("To:", Qt::CaseInsensitive)) {
+                                FTL[k] = FTL[k].mid(FTL[k].indexOf("To: ", Qt::CaseInsensitive)+4, FTL[k].indexOf("\r\n)", FTL[k].indexOf("To: ", Qt::CaseInsensitive)+4)-FTL[k].indexOf("To: ", Qt::CaseInsensitive)-4);
+                                QList <QString> FTLL = FTL[k].split(",");
+                                for (int l = 0; l < FTLL.size(); l++) {
+                                    QString Email =  FTLL[l].mid(FTLL[l].indexOf("<")+1, FTLL[l].indexOf(">")-FTLL[l].indexOf("<")-1).simplified();
+                                    if (find((*Vec)[Fn+k-1]->Email_RecipientsTo.begin(), (*Vec)[Fn+k-1]->Email_RecipientsTo.end(), Email) == (*Vec)[Fn+k-1]->Email_RecipientsTo.end() &&
+                                            Email != M->User.mid(0, M->User.indexOf("@"))+"@"+M->IMAPserver.mid(M->IMAPserver.indexOf(".")+1, M->IMAPserver.length()-M->IMAPserver.indexOf(".")-1)) {
+                                        (*Vec)[Fn+k-1]->Email_RecipientsTo.push_back(Email);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    emit changeValue(60);
+                    QString FetchCC;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (CC)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            FetchCC.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (CC)]\r\n").toUtf8());
+                        FetchCC.append(readIMAP(&S));
+                        if (FetchCC.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (FetchCC.contains("TAG NO") || FetchCC.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch cc.");
+                            return;
+                        }
+                        QList <QString> FCL = FetchCC.split(")\r\n*");
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            if (FCL[k].contains("CC:", Qt::CaseInsensitive)) {
+                                FCL[k] = FCL[k].mid(FCL[k].indexOf("Cc: ", Qt::CaseInsensitive)+4, FCL[k].indexOf("\r\n)", FCL[k].indexOf("Cc: ", Qt::CaseInsensitive)+4)-FCL[k].indexOf("Cc: ", Qt::CaseInsensitive)-4);
+                                QList <QString> FTLL = FCL[k].split(",");
+                                for (int l = 0; l < FTLL.size(); l++) {
+                                    QString Email =  FTLL[l].mid(FTLL[l].indexOf("<")+1, FTLL[l].indexOf(">")-FTLL[l].indexOf("<")-1).simplified();
+                                    if (find((*Vec)[Fn+k-1]->Email_RecipientsCC.begin(), (*Vec)[Fn+k-1]->Email_RecipientsCC.end(), Email) == (*Vec)[Fn+k-1]->Email_RecipientsCC.end() &&
+                                            Email != M->User.mid(0, M->User.indexOf("@"))+"@"+M->IMAPserver.mid(M->IMAPserver.indexOf(".")+1, M->IMAPserver.length()-M->IMAPserver.indexOf(".")-1)) {
+                                        (*Vec)[Fn+k-1]->Email_RecipientsCC.push_back(Email);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    emit changeValue(65);
+                    QString BS;
+                    {
+                        for (uint k = Fn; k + 100 < En; k +=100) {
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODYSTRUCTURE\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
+                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            BS.append(Tmp);
+                        }
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODYSTRUCTURE\r\n").toUtf8());
+                        BS.append(readIMAP(&S));
+                        if (BS.isEmpty() || Cancelled) {
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: No response from server.");
+                            return;
+                        } else if (BS.contains("TAG NO") || BS.contains("TAG BAD")) {
+                            closeIMAP(&S);
+                            for (uint k = En; k >= Fn; k--) {
+                                delete (*Vec)[k-1];
+                                Vec->erase(Vec->begin()+k-1);
+                            }
+                            emit EmailS(false, "ERROR: Cannot fetch bodystructures.");
+                            return;
+                        }
+                        QList  <QString>  BSL = BS.split("BODYSTRUCTURE (");
+                        BSL.removeFirst();
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            QList <QString> RBS = splitBS(BSL[k].mid(0, BSL[k].lastIndexOf(")")-1));
+                            for (int l = 0; l < RBS.size(); l++) {
+                                Structure* Tmp = new Structure();
+                                QList <QString> IL;
+                                int L = 0;
+                                QString Data;
+                                for (int m = 0; m < RBS[l].length(); m++) {
+                                    if (RBS[l][m] == ' '&&L == 0) {
+                                        IL.append(Data);
+                                        Data.clear();
+                                    } else {
+                                        if (RBS[l][m] == '(') {
+                                            L++;
+                                        }
+                                        if (RBS[l][m] == ')') {
+                                            L--;
+                                        }
+                                        Data.append(RBS[l][m]);
+                                    }
+                                }
+                                IL.append(Data);
+                                for (int m = 0; m < IL.size(); m++) {
+                                    IL[m].remove("(");
+                                    IL[m].remove(")");
+                                    IL[m].remove("\"");
+                                }
+                                Tmp->Structure_Number = IL[0];
+                                Tmp->Structure_Type = NILCleaner(IL[1]).toUpper();
+                                Tmp->Structure_Subtype = NILCleaner(IL[2]).toUpper();
+                                QList  <QString>  ILL = IL[3].split(" ");
+                                QList <QString> BILL = IL[3].toUpper().split(" ");
+                                if (BILL.indexOf("CHARSET", 0) >= 0) {
+                                    Tmp->Structure_Attrybutes.Charset = ILL[BILL.indexOf("CHARSET", 0)+1].toUpper();
+                                }
+                                if (BILL.indexOf("NAME", 0) >= 0) {
+                                    Tmp->Structure_Attrybutes.Name = ILL[BILL.indexOf("NAME", 0)+1];
+                                }
+                                if (IL[4].contains("<")&&IL[4].contains(">")) {
+                                    IL[4]=IL[4].mid(1, IL[4].length()-2);
+                                }
+                                Tmp->Structure_CID = NILCleaner(IL[4]);
+                                Tmp->Structure_Descryption = NILCleaner(IL[5]).toUpper();
+                                Tmp->Structure_Encoding = NILCleaner(IL[6]).toUpper();
+                                Tmp->Structure_Size = IL[7].toInt();
+                                if (Tmp->Structure_Type == "TEXT") {
+                                    Tmp->Structure_Lines = IL[8].toInt();
+                                    Tmp->Structure_MD5 = NILCleaner(IL[9]);
+                                    QList  <QString>  ILL = IL[10].split(" ");
+                                    QList <QString> BILL = IL[10].toUpper().split(" ");
+                                    Tmp->Structure_Disposition = NILCleaner(ILL[0].remove("\"").toUpper());
+                                    if (BILL.indexOf("FILENAME", 0) >= 0) {
+                                        Tmp->Structure_Attrybutes.Name = ILL[BILL.indexOf("FILENAME", 0)+1];
+                                    }
+                                    Tmp->Structure_Language = NILCleaner(IL[11]).toUpper();
+                                    if (IL.size() == 13) {
+                                        Tmp->Structure_Location = NILCleaner(IL[12]);
+                                    }
+                                } else {
+                                    Tmp->Structure_MD5 = NILCleaner(IL[8]);
+                                    QList <QString> ILL = IL[9].split(" ");
+                                    QList <QString> BILL = IL[9].toUpper().split(" ");
+                                    Tmp->Structure_Disposition = NILCleaner(ILL[0].remove("\"").toUpper());
+                                    if (BILL.indexOf("FILENAME", 0) >= 0) {
+                                        Tmp->Structure_Attrybutes.Name = ILL[BILL.indexOf("FILENAME", 0)+1];
+                                    }
+                                    Tmp->Structure_Language = NILCleaner(IL[10]).toUpper();
+                                    if (IL.size() == 12) {
+                                        Tmp->Structure_Location = NILCleaner(IL[11]);
+                                    }
+                                }
+                                (*Vec)[Fn+k-1]->Structurev.push_back(Tmp);
+                            }
+                        }
+                    }
+                    emit changeValue(70);
+                    {
+                        double VA=(static_cast<double>(30)/static_cast<double>(En-Fn+1));
+                        for (uint k = 0; k < En-Fn+1; k++) {
+                            for (uint l = 0; l < (*Vec)[Fn+k-1]->Structurev.size()&&l < 2; l++) {
+                                QByteArray Text;
+                                int t = 0;
+                                if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Type == "TEXT" &&
+                                        (*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Name.isEmpty()) {
+                                    if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Subtype == "HTML") {
+                                        t = 1;
+                                    }
+                                    if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Size != 0) {
+                                        for (uint m = 0; m < (*Vec)[Fn+k-1]->Structurev[l]->Structure_Size; m += 10000) {
+                                            S.write(QString("TAG UID FETCH "+QString::number((*Vec)[Fn+k-1]->Email_UID)+" BODY["+(*Vec)[Fn+k-1]->Structurev[l]->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
+                                            QByteArray Tmp = readIMAP(&S);
+                                            Tmp.remove(0, Tmp.indexOf("}\r\n")+3);
+                                            Tmp.remove(Tmp.lastIndexOf(")"), Tmp.length()-Tmp.lastIndexOf(")"));
+                                            Text.append(Tmp);
+                                        }
+                                        if (Text.isEmpty() || Cancelled) {
+                                            for (uint m = En; m >= Fn; m--) {
+                                                for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
+                                                    delete (*Vec)[m-1]->Structurev[n-1];
+                                                    (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
+                                                }
+                                                delete (*Vec)[m-1];
+                                                Vec->erase(Vec->begin()+m-1);
+                                            }
+                                            emit EmailS(false, "ERROR: No response from server.");
+                                            return;
+                                        } else if (Text.contains("TAG NO") || Text.contains("TAG BAD")) {
+                                            closeIMAP(&S);
+                                            for (uint m = En; m >= Fn; m--) {
+                                                for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
+                                                    delete (*Vec)[m-1]->Structurev[n-1];
+                                                    (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
+                                                }
+                                                delete (*Vec)[m-1];
+                                                Vec->erase(Vec->begin()+m-1);
+                                            }
+                                            emit EmailS(false, "ERROR: Cannot fetch bodies.");
+                                            return;
+                                        }
+                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "BASE64") {
+                                            Text = QByteArray::fromBase64(Text);
+                                        } else if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "QUOTED-PRINTABLE") {
+                                            Text = QPDecode(Text);
+                                        }
+                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset != "UTF-8" && (!(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.isEmpty())) {
+                                            if (QTextCodec::availableCodecs().contains((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.toUtf8())) {
+                                                QTextCodec* C = QTextCodec::codecForName((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.toUtf8());
+                                                (*Vec)[Fn+k-1]->Email_Body[t] = C->toUnicode(Text);
+                                            }
+                                        } else {
+                                            (*Vec)[Fn+k-1]->Email_Body[t] = Text;
+                                        }
+                                        if (t == 0) {
+                                            (*Vec)[Fn+k-1]->Email_Body[0].replace("<", "&lt;");
+                                            (*Vec)[Fn+k-1]->Email_Body[0].replace(">", "&gt;");
+                                        }
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            emit changeValue(static_cast<int>(70+(k+1)*VA));
+                        }
+                    }
+                }
+            } else {
+                Vec->clear();
             }
+            S.write(QString("TAG CLOSE\r\n").toUtf8());
+            readIMAP(&S);
         }
     }
-    S.write(QString("TAG LOGOUT\r\n").toUtf8());
-    S.close();
-    if (Cancelled) {
-        emit EmailS(false, "Cancelled");
-    } else {
-        emit EmailS(true, "Emails header fields and bodies downloaded.");
-    }
+    closeIMAP(&S);
+    emit EmailS(true, "Emails header fields and bodies downloaded.");
 }
+
 void SSLCON::DownloadAttachment() {
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit AttachmentS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
@@ -838,50 +1126,61 @@ void SSLCON::DownloadAttachment() {
         }
     }
     Reply = readAll(&S);
-    if (Reply.isEmpty()) {
+    if (Reply.isEmpty() || Cancelled) {
         emit AttachmentS(false,  "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     P.clear();
     Reply = readIMAP(&S);
-    if (Reply.isEmpty()) {
+    if (Reply.isEmpty() || Cancelled) {
         emit AttachmentS(false, "ERROR: No response from server.");
         return;
-    }
-    if (!Reply.contains("TAG OK")) {
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
         emit AttachmentS(false, "ERROR: Authentication failed.");
         return;
     }
-    S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
+    S.write(QString("TAG SELECT \""+B->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
-    if (Reply.isEmpty()) {
+    if (Reply.isEmpty() || Cancelled) {
         emit AttachmentS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit AttachmentS(false, "ERROR: Cannot select mailbox.");
         return;
     }
     Reply.clear();
-    for (uint m = 0; m < M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Size; m += 10000) {
-        S.write(QString("TAG UID FETCH "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" BODY["+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
+    for (uint m = 0; m < A->Structure_Size; m += 10000) {
+        S.write(QString("TAG UID FETCH "+QString::number(E->Email_UID)+" BODY["+A->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
         QByteArray Tmp = readIMAP(&S);
-        Reply.append(Tmp.mid(Tmp.indexOf("}")+1, Tmp.indexOf(")\r\nTAG OK")-Tmp.indexOf("}")-1));
+        Tmp.remove(0, Tmp.indexOf("}\r\n")+3);
+        Tmp.remove(Tmp.indexOf(")\r\nTAG OK"), Tmp.length()-Tmp.indexOf(")\r\nTAG OK"));
+        Reply.append(Tmp);
     }
-    if (Reply.isEmpty()) {
+    if (Reply.isEmpty() || Cancelled) {
         emit AttachmentS(false, "ERROR: No response from server.");
         return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit AttachmentS(false, "ERROR: Cannot fetch attachment.");
+        return;
     }
-    S.write(QString("TAG LOGOUT\r\n").toUtf8());
-    S.close();
+    closeIMAP(&S);
     QByteArray Array;
-    if (M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Encoding == "BASE64") {
+    if (A->Structure_Encoding == "BASE64") {
         Array = QByteArray::fromBase64(Reply.toUtf8());
-    } else if (M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Encoding == "QUOTED-PRINTABLE") {
+    } else if (A->Structure_Encoding == "QUOTED-PRINTABLE") {
         Array = QPDecode(Reply.toUtf8());
     }
-    if (M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Attrybutes.Charset != "UTF-8"&&!(M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Attrybutes.Charset.isEmpty())) {
-        QTextCodec *C = QTextCodec::codecForName(M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Attrybutes.Charset.toUtf8());
-        Array = C->toUnicode(Array).toUtf8();
+    if (A->Structure_Attrybutes.Charset != "UTF-8"&&!(A->Structure_Attrybutes.Charset.isEmpty())) {
+        if (QTextCodec::availableCodecs().contains(A->Structure_Attrybutes.Charset.toUtf8())) {
+            QTextCodec* C = QTextCodec::codecForName(A->Structure_Attrybutes.Charset.toUtf8());
+            Array = C->toUnicode(Array).toUtf8();
+        }
     }
-    QFile F(Path);
+    QFile F(Data.first());
     F.open(QIODevice::WriteOnly);
     F.write(Array);
     F.close();
@@ -892,108 +1191,156 @@ void SSLCON::SendEmail() {
     QString Reply;
     QSslSocket S;
     Email* EM;
-    if (E == -1) {
+    if (E == NULL) {
         EM = new Email;
     } else {
-        EM = M->Mboxv[B]->Emailv[E];
+        EM = E;
+    }
+    QString Header;
+    QList <QString> To;
+    QList <QString> Bodies;
+    QList <QString> Attachments;
+    for (int i = 0, j = 0; i < Data.size(); i++) {
+        if (Data[i].isEmpty()) {
+            j++;
+        } else {
+            switch (j) {
+            case 0: {
+                Header = Data[i];
+            }break;
+            case 1: {
+                To.append(Data[i]);
+            }break;
+            case 2: {
+                Bodies.append(Data[i]);
+            }break;
+            case 3: {
+                Attachments.append(Data[i]);
+            }break;
+            }
+        }
     }
     QString Output;
-    QString boundry = QCryptographicHash::hash(Data.toUtf8(), QCryptographicHash::Md5).toHex();
-    Output.append(Header+"\r\n");
+    QString boundry = QCryptographicHash::hash(Header.toUtf8(), QCryptographicHash::Md5).toHex();
+    Output.append(Header);
     Output.append("Content-Type: multipart/mixed; boundary=\"------"+boundry+"\"\nThis is a multi-part message in MIME format.\n\n");
     Output.append("--------"+boundry+"\n");
     Output.append("Content-Type: text/plain; charset=UTF-8\n");
     Output.append("Content-Transfer-Encoding: base64\n\n");
-    Output.append(Data.toUtf8().toBase64()+"\n\n");
-    if (Att.size() != 0&&Att[0][0] != '<' && EM->Structurev[Att[0].toInt()]->Structure_Type == "TEXT" && EM->Structurev[Att[0].toInt()]->Structure_Subtype == "HTML") {
+    Output.append(Bodies[0].toUtf8().toBase64()+"\n\n");
+    if (Bodies.size() == 2) {
         Output.append("--------"+boundry+"\n");
         Output.append("Content-Type: text/html; charset=UTF-8\n");
         Output.append("Content-Transfer-Encoding: base64\n\n");
-        Output.append(EM->Email_Body[1].toUtf8().toBase64()+"\n\n");
-        Att.removeFirst();
+        Output.append(Bodies[1].toUtf8().toBase64()+"\n\n");
     }
-    S.connectToHostEncrypted(M->IMAPserver, 993);
-    if (!S.waitForEncrypted()) {
-        if (!S.sslErrors().isEmpty()) {
-            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
-            if (P->SSLSocketError(S.sslErrors())) {
-                S.ignoreSslErrors(S.sslErrors());
-                S.connectToHostEncrypted(M->IMAPserver, 993);
-            } else {
-                emit SendEmailS(false, "ERROR(IMAP): Problem with SSL certificate. Check your SSL Manager.");
+    if (E != NULL) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            S.connectToHostEncrypted(M->IMAPserver, 993);
+            if (!S.waitForConnected()) {
+                emit SendEmailS(false, "ERROR: Problem with connection.");
                 return;
             }
         }
+        if (!S.waitForEncrypted()) {
+            if (!S.sslErrors().isEmpty()) {
+                qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+                if (P->SSLSocketError(S.sslErrors())) {
+                    S.ignoreSslErrors(S.sslErrors());
+                    S.connectToHostEncrypted(M->IMAPserver, 993);
+                } else {
+                    emit SendEmailS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                    return;
+                }
+            }
+        }
+        Reply = readAll(&S);
+        if (Reply.isEmpty()) {
+            emit SendEmailS(false, "ERROR(IMAP): No HELLO message.");
+            return;
+        }
+        S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
+        Reply = readIMAP(&S);
+        if (Reply.isEmpty()) {
+            emit SendEmailS(false, "ERROR: No response from server.");
+            return;
+        } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+            closeIMAP(&S);
+            emit SendEmailS(false, "ERROR(IMAP): Authentication failed.");
+            return;
+        }
+        S.write(QString("TAG SELECT \""+B->Mbox_Name+"\"\r\n").toUtf8());
+        Reply = readIMAP(&S);
+        if (Reply.isEmpty()) {
+            emit SendEmailS(false, "ERROR: No response from server.");
+            return;
+        } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+            closeIMAP(&S);
+            emit SendEmailS(false, "ERROR: Cannot select mailbox.");
+            return;
+        }
     }
-    Reply = readAll(&S);
-    if (Reply.isEmpty()) {
-        emit SendEmailS(false, "ERROR(IMAP): No HELLO message.");
-        return;
-    }
-    S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
-    Reply = readIMAP(&S);
-    if (Reply.isEmpty()) {
-        emit SendEmailS(false, "ERROR: No response from server.");
-        return;
-    }
-    if (!Reply.contains("TAG OK")) {
-        emit SendEmailS(false, "ERROR(IMAP): Authentication failed.");
-        return;
-    }
-    S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
-    Reply = readIMAP(&S);
-    if (Reply.isEmpty()) {
-        emit SendEmailS(false, "ERROR: No response from server.");
-        return;
-    }
-    for (int i = 0; i < Att.size(); i++) {
+    for (int i = 0; i < Attachments.size(); i++) {
         Output.append("--------"+boundry+"\n");
-        if (Att[i][0] == '<') {
+        if (Attachments[i][0] == '<') {
             QMimeDatabase db;
-            QString Path = Att[i].mid(1, Att[i].length()-2);
-            QFile *F = new QFile(Path);
+            QString Path = Attachments[i].mid(1, Attachments[i].length()-2);
+            QFile* F = new QFile(Path);
             F->open(QFile::ReadOnly);
             QByteArray Array = F->readAll();
             Output.append("Content-Type: "+db.mimeTypeForData(Array).name());
-            Output.append("; name=\""+Path.mid(Path.lastIndexOf("/")+1, Path.length()-Path.lastIndexOf("/")-1)+"\"\n");
-            Output.append("Content-Disposition: attachment; filename=\""+Path.mid(Path.lastIndexOf("/")+1, Path.length()-Path.lastIndexOf("/")-1)+"\"\n");
+            Output.append("; name=\""+Path.mid(Path.lastIndexOf(QDir::separator())+1, Path.length()-Path.lastIndexOf(QDir::separator())-1)+"\"\n");
+            Output.append("Content-Disposition: attachment; filename=\""+Path.mid(Path.lastIndexOf(QDir::separator())+1, Path.length()-Path.lastIndexOf(QDir::separator())-1)+"\"\n");
             Output.append("Content-Transfer-Encoding: base64\n\n");
             Output.append(Array.toBase64()+"\n\n");
             F->close();
         } else {
-            S.write(QString("TAG UID FETCH "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" BODY["+M->Mboxv[B]->Emailv[E]->Structurev[Att[i].toInt()]->Structure_Number+"]\r\n").toUtf8());
-            Reply = readIMAP(&S);
-            if (Reply.isEmpty()) {
-                emit SendEmailS(false, "ERROR: No response from server.");
-                return;
+            if (E != NULL) {
+                S.write(QString("TAG UID FETCH "+QString::number(E->Email_UID)+" BODY["+E->Structurev[Attachments[i].toInt()]->Structure_Number+"]\r\n").toUtf8());
+                Reply = readIMAP(&S);
+                if (Reply.isEmpty()) {
+                    emit SendEmailS(false, "ERROR: No response from server.");
+                    return;
+                } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+                    closeIMAP(&S);
+                    emit SendEmailS(false, "ERROR: Cannot fetch attachment.");
+                    return;
+                }
+                Reply = Reply.mid(Reply.indexOf("}")+1, Reply.indexOf(")\r\nTAG OK")-Reply.indexOf("}")-1);
+                Output.append("Content-Type: "+EM->Structurev[Attachments[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Attachments[i].toInt()]->Structure_Subtype.toLower())+"\n";
+                Output.append("Content-Transfer-Encoding: "+EM->Structurev[Attachments[i].toInt()]->Structure_Encoding+"\n");
+                if (!EM->Structurev[Attachments[i].toInt()]->Structure_Attrybutes.Name.isEmpty()) {
+                    Output.append("Content-Disposition: attachment; filename=\""+EM->Structurev[Attachments[i].toInt()]->Structure_Attrybutes.Name+"\"\n");
+                }
+                if (!EM->Structurev[Attachments[i].toInt()]->Structure_CID.isEmpty()) {
+                    Output.append("Content-ID: <"+EM->Structurev[Attachments[i].toInt()]->Structure_CID+">\n");
+                }
+                Output.append("Content-Transfer-Encoding: "+EM->Structurev[Attachments[i].toInt()]->Structure_Encoding+"\n\n");
+                Output.append(Reply+"\n\n");
             }
-            Reply = Reply.mid(Reply.indexOf("}")+1, Reply.indexOf(")\r\nTAG OK")-Reply.indexOf("}")-1);
-            if (EM->Structurev[Att[i].toInt()]->Structure_CID != "NIL") {
-                Output.append("Content-Type: "+EM->Structurev[Att[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Att[i].toInt()]->Structure_Subtype.toLower());
-                Output.append("; name=\""+EM->Structurev[Att[i].toInt()]->Structure_CID+"\"\n");
-                Output.append("Content-Transfer-Encoding: "+EM->Structurev[Att[i].toInt()]->Structure_Encoding+"\n");
-                Output.append("Content-ID: <"+EM->Structurev[Att[i].toInt()]->Structure_CID+">\n\n");
-            } else {
-                Output.append("Content-Type: "+EM->Structurev[Att[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Att[i].toInt()]->Structure_Subtype.toLower());
-                Output.append("; name=\""+EM->Structurev[Att[i].toInt()]->Structure_Attrybutes.Name+"\"\n");
-                Output.append("Content-Disposition: attachment; filename=\""+EM->Structurev[Att[i].toInt()]->Structure_Attrybutes.Name+"\"\n");
-                Output.append("Content-Transfer-Encoding: "+EM->Structurev[Att[i].toInt()]->Structure_Encoding+"\n");
-            }
-            Output.append(Reply+"\n\n");
         }
     }
-    S.write(QString("TAG LOGOUT\r\n").toUtf8());
+    if (E != NULL) {
+        closeIMAP(&S);
+    }
     Output.append("--------"+boundry+"--");
-    S.close();
     S.connectToHostEncrypted(M->SMTPserver, 465);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->SMTPserver, 465);
+        if (!S.waitForConnected()) {
+            emit SendEmailS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
             if (P->SSLSocketError(S.sslErrors())) {
                 S.ignoreSslErrors(S.sslErrors());
-                S.connectToHostEncrypted(M->IMAPserver, 465);
+                S.connectToHostEncrypted(M->SMTPserver, 465);
             } else {
-                emit SendEmailS(false, "ERROR(SMTP): Problem with SSL certificate. Check your SSL Manager.");
+                emit SendEmailS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
@@ -1004,26 +1351,26 @@ void SSLCON::SendEmail() {
         return;
     }
     S.write(QString("EHLO "+M->SMTPserver.mid(5, M->SMTPserver.length()-5)+"\r\n").toUtf8());
-    Reply = readAll(&S);
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString("AUTH LOGIN\r\n").toUtf8());
-    Reply = readAll(&S);
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString(M->User.toUtf8().toBase64()+"\r\n").toUtf8());
-    Reply = readAll(&S);
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString(P.toBase64()+"\r\n").toUtf8());
     P.clear();
-    Reply = readAll(&S);
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
@@ -1032,28 +1379,28 @@ void SSLCON::SendEmail() {
         emit SendEmailS(false, "ERROR(SMTP): Authentication failed.");
         return;
     }
-    S.write(QString("MAIL FROM: <"+M->User+"@"+M->IMAPserver.mid(5, M->IMAPserver.length()-5)+">\r\n").toUtf8());
-    Reply = readAll(&S);
+    S.write(QString("MAIL FROM: <"+M->User+"@"+M->IMAPserver.mid(M->IMAPserver.indexOf(".")+1, M->IMAPserver.length()-M->IMAPserver.indexOf(".")-1)+">\r\n").toUtf8());
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     for (int i = 0; i < To.size(); i++) {
         S.write(QString("RCPT TO: <"+To[i]+">\r\n").toUtf8());
-        Reply = readAll(&S);
+        Reply = readSMTP(&S);
         if (Reply.isEmpty()) {
             emit SendEmailS(false, "ERROR: No response from server.");
             return;
         }
     }
     S.write(QString("DATA\r\n").toUtf8());
-    Reply = readAll(&S);
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
     }
     S.write(QString(Output+"\r\n.\r\n").toUtf8());
-    Reply = readAll(&S);
+    Reply = readSMTP(&S);
     if (Reply.isEmpty()) {
         emit SendEmailS(false, "ERROR: No response from server.");
         return;
@@ -1065,11 +1412,19 @@ void SSLCON::SendEmail() {
     S.close();
     emit SendEmailS(true, "Email sent.");
 }
-void SSLCON::DeleteEmail() {
+
+void SSLCON::CopyEmail() {
     QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
     QString Reply;
     QSslSocket S;
     S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit CopyES(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
     if (!S.waitForEncrypted()) {
         if (!S.sslErrors().isEmpty()) {
             qorgMail* P = qobject_cast<qorgMail*>(this->parent());
@@ -1077,63 +1432,417 @@ void SSLCON::DeleteEmail() {
                 S.ignoreSslErrors(S.sslErrors());
                 S.connectToHostEncrypted(M->IMAPserver, 993);
             } else {
-                emit DeleteS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                emit CopyES(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
                 return;
             }
         }
     }
     Reply = readAll(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false,  "ERROR: No HELLO message.");
+        emit CopyES(false,  "ERROR: No HELLO message.");
         return;
     }
     S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
     P.clear();
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false, "ERROR: No response from server.");
+        emit CopyES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CopyES(false, "ERROR: Authentication failed.");
         return;
     }
-    if (!Reply.contains("TAG OK")) {
-        emit DeleteS(false, "ERROR: Authentication failed.");
-        return;
-    }
-    S.write(QString("TAG SELECT \""+M->Mboxv[B]->Mbox_Name+"\"\r\n").toUtf8());
+    S.write(QString("TAG SELECT \""+B->Mbox_Name+"\"\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false, "ERROR: No response from server.");
+        emit CopyES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CopyES(false, "ERROR: Cannot select mailbox.");
+        return;
+    }
+    S.write(QString("TAG UID COPY "+QString::number(E->Email_UID)+" \""+Data.first()+"\"\r\n").toUtf8());
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit CopyES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CopyES(false, "ERROR: Cannot copy email.");
+        return;
+    }
+    closeIMAP(&S);
+    emit CopyES(true, "Copied.");
+}
+void SSLCON::DeleteEmail() {
+    QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
+    QString Reply;
+    QSslSocket S;
+    S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit DeleteES(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if (P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit DeleteES(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                return;
+            }
+        }
+    }
+    Reply = readAll(&S);
+    if (Reply.isEmpty()) {
+        emit DeleteES(false,  "ERROR: No HELLO message.");
+        return;
+    }
+    S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit DeleteES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit DeleteES(false, "ERROR: Authentication failed.");
+        return;
+    }
+    S.write(QString("TAG SELECT \""+B->Mbox_Name+"\"\r\n").toUtf8());
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit DeleteES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit DeleteES(false, "ERROR: Cannot select mailbox.");
         return;
     }
     for (uint i = 0; i < M->Mboxv.size(); i++) {
         if (M->Mboxv[i]->Mbox_Attrybutes&Mailbox::Trash) {
-            S.write(QString("TAG UID COPY "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" \""+M->Mboxv[i]->Mbox_Name+"\"\r\n").toUtf8());
+            S.write(QString("TAG UID COPY "+QString::number(E->Email_UID)+" \""+M->Mboxv[i]->Mbox_Name+"\"\r\n").toUtf8());
             Reply = readIMAP(&S);
             if (Reply.isEmpty()) {
-                emit DeleteS(false, "ERROR: No response from server.");
+                emit DeleteES(false, "ERROR: No response from server.");
+                return;
+            } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+                closeIMAP(&S);
+                emit DeleteES(false, "ERROR: Cannot copy email to trash.");
                 return;
             }
             break;
         }
     }
-    S.write(QString("TAG UID STORE "+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+" +FLAGS (\\Deleted)\r\n").toUtf8());
+    S.write(QString("TAG UID STORE "+QString::number(E->Email_UID)+" +FLAGS (\\Deleted)\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false, "ERROR: No response from server.");
+        emit DeleteES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit DeleteES(false, "ERROR: Cannot set \\Deleted flag.");
         return;
     }
     S.write(QString("TAG EXPUNGE\r\n").toUtf8());
     Reply = readIMAP(&S);
     if (Reply.isEmpty()) {
-        emit DeleteS(false, "ERROR: No response from server.");
+        emit DeleteES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit DeleteES(false, "ERROR: Cannot expunge email.");
         return;
     }
-    S.write(QString("TAG LOGOUT\r\n").toUtf8());
-    S.close();
-    emit DeleteS(true, "Deleted");
+    closeIMAP(&S);
+    emit DeleteES(true, "Deleted");
 }
+void SSLCON::MoveEmail() {
+    QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
+    QString Reply;
+    QSslSocket S;
+    S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit MoveES(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if (P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit MoveES(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                return;
+            }
+        }
+    }
+    Reply = readAll(&S);
+    if (Reply.isEmpty()) {
+        emit MoveES(false,  "ERROR: No HELLO message.");
+        return;
+    }
+    S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit MoveES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit MoveES(false, "ERROR: Authentication failed.");
+        return;
+    }
+    S.write(QString("TAG SELECT \""+B->Mbox_Name+"\"\r\n").toUtf8());
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit MoveES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit MoveES(false, "ERROR: Cannot select mailbox.");
+        return;
+    }
+    S.write(QString("TAG UID COPY "+QString::number(E->Email_UID)+" \""+Data.first()+"\"\r\n").toUtf8());
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit MoveES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit MoveES(false, "ERROR: Cannot copy email.");
+        return;
+    }
+    S.write(QString("TAG UID STORE "+QString::number(E->Email_UID)+" +FLAGS (\\Deleted)\r\n").toUtf8());
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit MoveES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit MoveES(false, "ERROR: Cannot set \\Deleted flag.");
+        return;
+    }
+    S.write(QString("TAG EXPUNGE\r\n").toUtf8());
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit MoveES(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit MoveES(false, "ERROR: Cannot expunge email.");
+        return;
+    }
+    closeIMAP(&S);
+    emit MoveES(true, "Moved.");
+}
+
+void SSLCON::CreateMailbox() {
+    QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
+    QString Reply;
+    QSslSocket S;
+    S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit CreateMS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if (P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit CreateMS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                return;
+            }
+        }
+    }
+    Reply = readAll(&S);
+    if (Reply.isEmpty()) {
+        emit CreateMS(false,  "ERROR: No HELLO message.");
+        return;
+    }
+    S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit CreateMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CreateMS(false, "ERROR: Authentication failed.");
+        return;
+    }
+    S.write(QString("TAG LIST \"\" \"\"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit CreateMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CreateMS(false, "ERROR: Cannot receive hierarchy separator.");
+        return;
+    }
+    QString hierarchySeparator = Reply.mid(Reply.indexOf(")")+3, 1);
+    if (Data[0].isEmpty()) {
+        S.write(QString("TAG CREATE \""+Bit8ToBit7(Data[1]).remove(hierarchySeparator)+"\"\r\n").toUtf8());
+    } else {
+        S.write(QString("TAG CREATE \""+Data[0]+hierarchySeparator+Bit8ToBit7(Data[1]).remove(hierarchySeparator)+"\"\r\n").toUtf8());
+    }
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit CreateMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CreateMS(false, "ERROR: Cannot create mailbox.");
+        return;
+    }
+    closeIMAP(&S);
+    emit CreateMS(true, "Mailbox created.");
+}
+void SSLCON::DeleteMailbox() {
+    QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
+    QString Reply;
+    QSslSocket S;
+    S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit DeleteMS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if (P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit DeleteMS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                return;
+            }
+        }
+    }
+    Reply = readAll(&S);
+    if (Reply.isEmpty()) {
+        emit DeleteMS(false,  "ERROR: No HELLO message.");
+        return;
+    }
+    S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit DeleteMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit DeleteMS(false, "ERROR: Authentication failed.");
+        return;
+    }
+    S.write(QString("TAG DELETE \""+Data[0]+"\"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit DeleteMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit DeleteMS(false, "ERROR: Cannot delete mailbox.");
+        return;
+    }
+    closeIMAP(&S);
+    emit DeleteMS(true, "Mailbox deleted.");
+}
+void SSLCON::RenameMailbox() {
+    QString P = QString(calculateXOR(QByteArray::fromBase64(M->Password.toUtf8()), QCryptographicHash::hash(M->User.toUtf8(), QCryptographicHash::Sha3_512)));
+    QString Reply;
+    QSslSocket S;
+    S.connectToHostEncrypted(M->IMAPserver, 993);
+    if (!S.waitForConnected()) {
+        S.connectToHostEncrypted(M->IMAPserver, 993);
+        if (!S.waitForConnected()) {
+            emit RenameMS(false, "ERROR: Problem with connection.");
+            return;
+        }
+    }
+    if (!S.waitForEncrypted()) {
+        if (!S.sslErrors().isEmpty()) {
+            qorgMail* P = qobject_cast<qorgMail*>(this->parent());
+            if (P->SSLSocketError(S.sslErrors())) {
+                S.ignoreSslErrors(S.sslErrors());
+                S.connectToHostEncrypted(M->IMAPserver, 993);
+            } else {
+                emit RenameMS(false, "ERROR: Problem with SSL certificate. Check your SSL Manager.");
+                return;
+            }
+        }
+    }
+    Reply = readAll(&S);
+    if (Reply.isEmpty()) {
+        emit RenameMS(false,  "ERROR: No HELLO message.");
+        return;
+    }
+    S.write(QString("TAG LOGIN "+M->User+" "+P+"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit RenameMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit RenameMS(false, "ERROR: Authentication failed.");
+        return;
+    }
+    S.write(QString("TAG LIST \"\" \"\"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit CreateMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit CreateMS(false, "ERROR: Cannot receive hierarchy separator.");
+        return;
+    }
+    QString hierarchySeparator = Reply.mid(Reply.indexOf(")")+3, 1);
+    S.write(QString("TAG RENAME \""+Data[0]+"\" \""+Data[0].mid(0, Data[0].lastIndexOf(hierarchySeparator)+1)+Bit8ToBit7(Data[1]).remove(hierarchySeparator)+"\"\r\n").toUtf8());
+    P.clear();
+    Reply = readIMAP(&S);
+    if (Reply.isEmpty()) {
+        emit RenameMS(false, "ERROR: No response from server.");
+        return;
+    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+        closeIMAP(&S);
+        emit RenameMS(false, "ERROR: Cannot rename mailbox.");
+        return;
+    }
+    closeIMAP(&S);
+    emit RenameMS(true, "Mailbox renamed.");
+}
+
 void SSLCON::Canceled() {
     Cancelled = true;
 }
+
 
 class Services {
 public:
@@ -1147,11 +1856,10 @@ public:
     QString SMTP;
 };
 QList  <Services>  AvailableServices;
-
 class QItemCheckBox :public QCheckBox {
     Q_OBJECT
 public:
-    QItemCheckBox(QWidget *parent, uint IID) :QCheckBox(parent) {
+    QItemCheckBox(QWidget* parent, uint IID) :QCheckBox(parent) {
         ItemID = IID;
     }
     uint ItemID;
@@ -1159,11 +1867,11 @@ public:
 class MailboxTree : public QDialog {
     Q_OBJECT
 public:
-    MailboxTree(Mail *M, QWidget *parent) :QDialog(parent) {
+    MailboxTree(Mail* M, QWidget* parent) :QDialog(parent) {
         vec=&M->Mboxv;
         setWindowTitle("Choose mailboxes to use.");
         setWindowIcon(QIcon(":/main/QOrganizer.png"));
-        QGridLayout *Layout = new QGridLayout(this);
+        QGridLayout* Layout = new QGridLayout(this);
         Tree = new QTreeWidget(this);
         Tree->header()->hide();
         Tree->setColumnCount(2);
@@ -1181,9 +1889,9 @@ public:
         Layout->addWidget(OK, 1, 1);
         for (uint i = 0; i < vec->size(); i++) {
             if ((*vec)[i]->Mbox_Top) {
-                QTreeWidgetItem *Item = new QTreeWidgetItem(Tree);
+                QTreeWidgetItem* Item = new QTreeWidgetItem(Tree);
                 Item->setText(0, (*vec)[i]->Mbox_Showname);
-                QItemCheckBox *W = new QItemCheckBox(this, i);
+                QItemCheckBox* W = new QItemCheckBox(this, i);
                 W->setChecked((*vec)[i]->Mbox_Refresh);
                 if ((*vec)[i]->Mbox_Attrybutes & Mailbox::Noselect) {
                     W->setDisabled(true);
@@ -1199,11 +1907,11 @@ public:
     ~MailboxTree() {
         vec = NULL;
     }
-    void AddChildren(Mailbox *I, QTreeWidgetItem* T) {
+    void AddChildren(Mailbox* I, QTreeWidgetItem* T) {
         for (uint i = 0; i < I->Mbox_Children.size(); i++) {
-            QTreeWidgetItem *ItemC = new QTreeWidgetItem(T);
+            QTreeWidgetItem* ItemC = new QTreeWidgetItem(T);
             ItemC->setText(0, I->Mbox_Children[i]->Mbox_Showname);
-            QItemCheckBox *W = new QItemCheckBox(this, std::find(vec->begin(), vec->end(), I->Mbox_Children[i])-vec->begin());
+            QItemCheckBox* W = new QItemCheckBox(this, std::find(vec->begin(), vec->end(), I->Mbox_Children[i])-vec->begin());
             W->setChecked(I->Mbox_Children[i]->Mbox_Refresh);
             if (I->Mbox_Children[i]->Mbox_Attrybutes & Mailbox::Noselect) {
                 W->setDisabled(true);
@@ -1211,21 +1919,21 @@ public:
                 W->setChecked(true);
             }
             Tree->setItemWidget(ItemC, 1, W);
-            QItemCheckBox *ParentCheckBox = qobject_cast  < QItemCheckBox* > (Tree->itemWidget(T, 1));
+            QItemCheckBox* ParentCheckBox = qobject_cast  < QItemCheckBox* > (Tree->itemWidget(T, 1));
             connect(ParentCheckBox, SIGNAL(toggled(bool)), W, SLOT(setChecked(bool)));
             AddChildren(I->Mbox_Children[i], ItemC);
         }
     }
 private:
-    QTreeWidget *Tree;
-    vector  <Mailbox*>  *vec;
-    QPushButton *Cancel;
-    QPushButton *OK;
-    void OKChildren(QTreeWidgetItem *Itm) {
+    QTreeWidget* Tree;
+    vector  <Mailbox*>* vec;
+    QPushButton* Cancel;
+    QPushButton* OK;
+    void OKChildren(QTreeWidgetItem* Itm) {
         for (int i = 0; i < Itm->childCount(); i++) {
             OKChildren(Itm->child(i));
         }
-        QItemCheckBox *W = qobject_cast<QItemCheckBox*>(Tree->itemWidget(Itm, 1));
+        QItemCheckBox* W = qobject_cast<QItemCheckBox*>(Tree->itemWidget(Itm, 1));
         (*vec)[W->ItemID]->Mbox_Refresh = W->isChecked();
     }
 private slots:
@@ -1242,7 +1950,7 @@ private slots:
 class EditDialog :public QDialog {
     Q_OBJECT
 public:
-    EditDialog(Mail *A, QWidget *parent) :QDialog(parent) {
+    EditDialog(Mail* A, QWidget* parent) :QDialog(parent) {
         M = A;
         setWindowTitle("Edit mail settings.");
         setWindowIcon(QIcon(":/main/QOrganizer.png"));
@@ -1261,7 +1969,7 @@ public:
         Cancel = new QPushButton(this);
         Cancel->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
         connect(Cancel, SIGNAL(clicked()), this, SLOT(Can()));
-        QGridLayout *L = new QGridLayout(this);
+        QGridLayout* L = new QGridLayout(this);
         L->addWidget(User, 0, 0);
         L->addWidget(U, 0, 1);
         L->addWidget(Passwd, 1, 0);
@@ -1270,26 +1978,23 @@ public:
         L->addWidget(I, 2, 1);
         L->addWidget(SMTP, 3, 0);
         L->addWidget(S, 3, 1);
-        QHBoxLayout *H = new QHBoxLayout();
+        QHBoxLayout* H = new QHBoxLayout();
         H->addWidget(Cancel);
         H->addWidget(OKB);
         L->addLayout(H, 4, 1, 1, 2);
     }
-    ~EditDialog() {
-        M = NULL;
-    }
 private:
-    Mail *M;
-    QLabel *User;
-    QLabel *Passwd;
-    QLabel *IMAP;
-    QLabel *SMTP;
-    QLineEdit *U;
-    QLineEdit *P;
-    QLineEdit *I;
-    QLineEdit *S;
-    QPushButton *OKB;
-    QPushButton *Cancel;
+    Mail* M;
+    QLabel* User;
+    QLabel* Passwd;
+    QLabel* IMAP;
+    QLabel* SMTP;
+    QLineEdit* U;
+    QLineEdit* P;
+    QLineEdit* I;
+    QLineEdit* S;
+    QPushButton* OKB;
+    QPushButton* Cancel;
 private slots:
     void OK() {
         if (U->text().isEmpty()) {
@@ -1326,7 +2031,7 @@ private slots:
         this->reject();
     }
     void row(QString Input) {
-        QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
+        QLineEdit* I = qobject_cast<QLineEdit*>(QObject::sender());
         if (Input.isEmpty()) {
             I->setStyleSheet("QLineEdit{background: #FF8888;}");
         } else {
@@ -1339,99 +2044,165 @@ class Sender :public QDialog {
 public:
     enum Type {
         Normal,
-        Forward,
-        Reply
+        Reply,
+        ReplyAll,
+        Forward
     };
-    Sender(Email *E, Type I, QCompleter *C, SSLCON *SSL, QWidget *parent) :QDialog(parent) {
+    Sender(Email* E, Type I, QStringList Z, SSLCON* SSL, QWidget* parent) :QDialog(parent) {
         setWindowTitle("Send Mail");
         setWindowIcon(QIcon(":/main/QOrganizer.png"));
         setMinimumWidth(600);
         this->SSL = SSL;
-        S = new QLabel("Subject: ", this);
-        T = new QLabel("To: ", this);
-        A = new QLabel("Attachments", this);
+        this->Z = Z;
+        Descriptions[0] = new QLabel("Subject: ", this);
+        Descriptions[1] = new QLabel("To: ", this);
+        Descriptions[2] = new QLabel("CC: ", this);
+        Descriptions[3] = new QLabel("BCC: ", this);
+        Header.append("From: "+SSL->M->User.mid(0, SSL->M->User.indexOf("@"))+"@"+SSL->M->IMAPserver.mid(SSL->M->IMAPserver.indexOf(".")+1, SSL->M->IMAPserver.length()-SSL->M->IMAPserver.indexOf(".")-1)+"\r\n");
+        Header.append("Reply-To: "+SSL->M->User.mid(0, SSL->M->User.indexOf("@"))+"@"+SSL->M->IMAPserver.mid(SSL->M->IMAPserver.indexOf(".")+1, SSL->M->IMAPserver.length()-SSL->M->IMAPserver.indexOf(".")-1)+"\r\n");
+        Header.append("Message-ID: <"+QCryptographicHash::hash(QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8(), QCryptographicHash::Md5).toHex()+".QOrganizer@localhost>\r\n");
+
         Subject = new QLineEdit(this);
         To = new QLineEdit(this);
-        To->setCompleter(C);
+        connect(To, SIGNAL(textChanged(QString)), this, SLOT(textChanged(QString)));
+        CC = new QLineEdit(this);
+        connect(CC, SIGNAL(textChanged(QString)), this, SLOT(textChanged(QString)));
+        BCC = new QLineEdit(this);
+        connect(BCC, SIGNAL(textChanged(QString)), this, SLOT(textChanged(QString)));
+
         Text = new QTextBrowser(this);
         Text->setReadOnly(false);
-        Receivers = new QListWidget(this);
-        connect(Receivers, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(DelTo(QModelIndex)));
+        Text->setAcceptRichText(false);
+
+        Html = new QWebView(this);
+        Html->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
+        connect(Html->page(), SIGNAL(linkClicked(QUrl)), this, SLOT(linkClicked(QUrl)));
+        Html->setHtml(E->Email_Body[1]);
+
+        HtmlEdit = new QTextBrowser(this);
+        HtmlEdit->setReadOnly(false);
+        HtmlEdit->setAcceptRichText(false);
+        HtmlEdit->setPlainText(E->Email_Body[1]);
+
         Attachments = new QListWidget(this);
+        Attachments->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
         connect(Attachments, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(DelAt(QModelIndex)));
-        AddTo = new QPushButton(this);
-        AddTo->setIcon(QIcon(":/main/Add.png"));
-        connect(AddTo, SIGNAL(clicked()), this, SLOT(ATo()));
         AddAttchment = new QPushButton(this);
         AddAttchment->setIcon(QIcon(":/main/Add.png"));
         connect(AddAttchment, SIGNAL(clicked()), this, SLOT(AAt()));
+
         OKB = new QPushButton(this);
         OKB->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
         connect(OKB, SIGNAL(clicked()), this, SLOT(OK()));
         Cancel = new QPushButton(this);
         Cancel->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
         connect(Cancel, SIGNAL(clicked()), this, SLOT(Can()));
-        if (I == Forward) {
-            Subject->setText("Fwd: "+E->Email_Subject);
-            Text->setPlainText("Message forwarded:\n----------"+E->Email_Body[0]+"----------");
-        }
-        if (I == Reply) {
-            Subject->setText("Re: "+E->Email_Subject);
-            if (!E->Email_From.EMailA.contains("noreply")) {
-                QListWidgetItem *Itm = new QListWidgetItem(E->Email_From.EMailA+" "+E->Email_From.Name);
-                Receivers->addItem(Itm);
-            }
-            Text->setPlainText("Message replied:\n----------\n"+E->Email_Body[0]+"\n----------\n");
-        }
-        for (uint i = 0; i < E->Structurev.size(); i++) {
-            if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN") {
-                i++;
-            }
-            if (i == E->Structurev.size()) {
-                break;
-            }
-            QListWidgetItem *Itm;
-            if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
-                if (E->Structurev[i]->Structure_CID.isEmpty()) {
-                    Itm = new QListWidgetItem("text."+E->Structurev[i]->Structure_Subtype.toLower(), Attachments);
-                } else {
-                    Itm = new QListWidgetItem(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower(), Attachments);
-                }
-            } else {
-                Itm = new QListWidgetItem(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name), Attachments);
-            }
-            Itm->setToolTip(QString::number(i));
-        }
-        QGridLayout *L = new QGridLayout(this);
-        L->addWidget(S, 0, 0);
-        L->addWidget(Subject, 0, 1);
-        L->addWidget(T, 1, 0);
-        L->addWidget(Receivers, 1, 1);
-        L->addWidget(AddTo, 2, 0);
-        L->addWidget(To, 2, 1);
-        L->addWidget(Text, 3, 0, 1, 2);
-        L->addWidget(A, 4, 0);
-        L->addWidget(Attachments, 4, 1, 2, 1);
-        L->addWidget(AddAttchment, 5, 0);
-        QHBoxLayout *B = new QHBoxLayout();
+
+        QTabWidget* Tab = new QTabWidget(this);
+        connect(Tab, SIGNAL(currentChanged(int)), this, SLOT(tabChanged(int)));
+        Tab->addTab(Text, "Text edit");
+        Tab->addTab(Html, "HTML");
+        Tab->addTab(HtmlEdit, "HTML edit");
+        QGridLayout* L = new QGridLayout(this);
+        L->addWidget(Descriptions[0], 0, 0);
+        L->addWidget(Subject, 0, 1, 1, 2);
+        L->addWidget(Descriptions[1], 1, 0);
+        L->addWidget(To, 1, 1, 1, 2);
+        L->addWidget(Descriptions[2], 2, 0);
+        L->addWidget(CC, 2, 1, 1, 2);
+        L->addWidget(Descriptions[3], 3, 0);
+        L->addWidget(BCC, 3, 1, 1, 2);
+        L->addWidget(Tab, 4, 0, 3, 3);
+        QHBoxLayout* A = new QHBoxLayout();
+        A->addWidget(Attachments);
+        A->addWidget(AddAttchment);
+        L->addLayout(A, 7, 0, 2, 3);
+        QHBoxLayout* B = new QHBoxLayout();
         B->addWidget(Cancel);
         B->addWidget(OKB);
-        L->addLayout(B, 6, 0, 1, 2);
+        L->addLayout(B, 9, 0, 1, 3);
+
+        QString Str = E->Email_Body[0];
+        Str.replace("<", "&lt;");
+        Str.replace(">", "&gt;");
+        Str.replace("&amp;", "&");
+        QTextDocument D;
+        D.setHtml(Str);
+        Str = D.toPlainText();
+
+        if (I == Reply) {
+            Subject->setText("Re: "+E->Email_Subject);
+            Header.append("In-Reply-To: <"+E->Email_MessageID+">\r\n");
+            if (!E->Email_ReplyTo.isEmpty()) {
+                To->setText(E->Email_ReplyTo);
+            } else if (!(E->Email_From.contains("noreply") || E->Email_From.contains("no-reply"))) {
+                To->setText(E->Email_From);
+            }
+            Text->setText("Message replied:\n----------\n"+Str+"\n----------\n");
+        } else if (I == ReplyAll) {
+            Subject->setText("Re: "+E->Email_Subject);
+            Header.append("In-Reply-To: <"+E->Email_MessageID+">\r\n");
+            QString StringTo;
+            QString StringCC;
+            if (!E->Email_ReplyTo.isEmpty()) {
+                StringTo = E->Email_ReplyTo;
+            } else if (!(E->Email_From.contains("noreply") || E->Email_From.contains("no-reply"))) {
+                StringTo = E->Email_From;
+            }
+            for (uint i =  0; i < E->Email_RecipientsTo.size(); i++) {
+                StringTo.append(","+E->Email_RecipientsTo[i]);
+            }
+            for (uint i =  0; i < E->Email_RecipientsCC.size(); i++) {
+                StringCC.append(E->Email_RecipientsCC[i]);
+                if (i != E->Email_RecipientsCC.size()-1) {
+                    StringCC.append(",");
+                }
+            }
+            To->setText(StringTo);
+            CC->setText(StringCC);
+            Text->setText("Message replied:\n----------\n"+Str+"\n----------\n");
+        } else if (I == Forward) {
+            Subject->setText("Fwd: "+E->Email_Subject);
+            Text->setText("Message forwarded:\n----------\n"+Str+"\n----------\n");
+        }
+        for (uint i = 0; i < E->Structurev.size(); i++) {
+            if (!(E->Structurev[i]->Structure_Type == "TEXT" && E->Structurev[i]->Structure_Disposition.isEmpty())) {
+                QListWidgetItem* Itm = new QListWidgetItem(Attachments);
+                if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
+                    if (E->Structurev[i]->Structure_CID.isEmpty()) {
+                        Itm->setText("attachment."+E->Structurev[i]->Structure_Subtype.toLower());
+                    } else {
+                        Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                    }
+                } else {
+                    Itm->setText(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name));
+                }
+                Itm->setData(Qt::UserRole, QString::number(i));
+            }
+        }
+
+
     }
 private:
-    SSLCON *SSL;
-    QLabel *S;
-    QLabel *T;
-    QLabel *A;
-    QLineEdit *Subject;
-    QLineEdit *To;
-    QTextBrowser *Text;
-    QListWidget *Receivers;
-    QListWidget *Attachments;
-    QPushButton *AddTo;
-    QPushButton *AddAttchment;
-    QPushButton *OKB;
-    QPushButton *Cancel;
+    SSLCON* SSL;
+    QStringList Z;
+    QLabel* Descriptions[4];
+    QString Header;
+    QLineEdit* Subject;
+    QLineEdit* To;
+    QCompleter* ToC;
+    QLineEdit* CC;
+    QCompleter* CCC;
+    QLineEdit* BCC;
+    QCompleter* BCCC;
+    QTextBrowser* Text;
+    QWebView* Html;
+    QTextBrowser* HtmlEdit;
+    QListWidget* Attachments;
+    QPushButton* AddAttchment;
+    QPushButton* OKB;
+    QPushButton* Cancel;
+
 private slots:
     void OK() {
         if (Subject->text().isEmpty()) {
@@ -1439,28 +2210,57 @@ private slots:
                 connect(Subject, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
             }
             Subject->setStyleSheet("QLineEdit{background: #FF8888;}");
-        } else if (Receivers->count() == 0) {
+        } else if (To->text().isEmpty() && CC->text().isEmpty() && BCC->text().isEmpty()) {
             if (To->styleSheet() != "QLineEdit{background: #FF8888;}") {
-                connect(To, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
+                connect(To, SIGNAL(textChanged(QString)), this, SLOT(emailrow(QString)));
+                connect(CC, SIGNAL(textChanged(QString)), this, SLOT(emailrow(QString)));
+                connect(BCC, SIGNAL(textChanged(QString)), this, SLOT(emailrow(QString)));
             }
             To->setStyleSheet("QLineEdit{background: #FF8888;}");
         } else {
             QString Months[12]={"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-            QString Header="Subject: =?UTF-8?B?"+Subject->text().toUtf8().toBase64()+"?=\r\nDate: "+QDateTime::currentDateTime().toString("dd ")+Months[QDateTime::currentDateTime().date().month()-1]+QDateTime::currentDateTime().toString(" yyyy hh:mm:ss");
-            QList  <QString>  To;
-            for (int i = 0; i < Receivers->count(); i++) {
-                QString M = Receivers->item(i)->text();
-                To.append(M.mid(0, M.indexOf(" ")));
+            Header.append("Subject: =?UTF-8?B?"+Subject->text().toUtf8().toBase64()+"?=\r\n");
+            Header.append("Date: "+QDateTime::currentDateTime().toString("dd ")+Months[QDateTime::currentDateTime().date().month()-1]+QDateTime::currentDateTime().toString(" yyyy hh:mm:ss")+"\r\n");
+            QList <QString> RcptL;
+            QList <QString> ToL = To->text().split(",", QString::SkipEmptyParts);
+            QList <QString> CcL = CC->text().split(",", QString::SkipEmptyParts);
+            QList <QString> BccL = BCC->text().split(",", QString::SkipEmptyParts);
+            if (!ToL.isEmpty()) {
+                Header.append("To: ");
+                for (int i = 0; i < ToL.size(); i++) {
+                    RcptL.append(ToL[i]);
+                    Header.append(ToL[i]);
+                    if (i+1 != ToL.size()) {
+                        Header.append(",");
+                    } else {
+                        Header.append("\r\n");
+                    }
+                }
+            }
+            if (!CcL.isEmpty()) {
+                Header.append("CC: ");
+                for (int i = 0; i < CcL.size(); i++) {
+                    RcptL.append(CcL[i]);
+                    Header.append(CcL[i]);
+                    if (i+1 != CcL.size()) {
+                        Header.append(",");
+                    } else {
+                        Header.append("\r\n");
+                    }
+                }
+            }
+            for (int i = 0; i < BccL.size(); i++) {
+                RcptL.append(BccL[i]);
             }
             QList  <QString>  Att;
             for (int i = 0; i < Attachments->count(); i++) {
-                if (QFile(Attachments->item(i)->toolTip()).exists()) {
-                    Att.append("<"+Attachments->item(i)->toolTip()+">");
-                } else {
-                    Att.append(Attachments->item(i)->toolTip());
-                }
+                Att.append(Attachments->item(i)->data(Qt::UserRole).toString());
             }
-            SSL->SendEmail(Header, To, Text->document()->toPlainText(), Att);
+            if (Html->page()->mainFrame()->toHtml() != "<html><head></head><body></body></html>") {
+                SSL->setData(QList <QString>() << Header << "" << RcptL << "" << Text->toPlainText() << Html->page()->mainFrame()->toHtml() << "" << Att);
+            } else {
+                SSL->setData(QList <QString>() << Header << "" << RcptL << "" << Text->toPlainText() << "" << Att);
+            }
             SSL->setMethod(SSLCON::Send);
             SSL->start();
             this->accept();
@@ -1469,66 +2269,86 @@ private slots:
     void Can() {
         this->reject();
     }
-    void ATo() {
-        if (!To->text().isEmpty()) {
-            bool OK = true;
-            for (int i = 0; i < Receivers->count(); i++) {
-                if (Receivers->item(i)->toolTip() == To->text()) {
-                    OK = false;
-                    break;
-                }
-            }
-            if (OK) {
-                QListWidgetItem *Itm = new QListWidgetItem(To->text());
-                Itm->setToolTip(To->text());
-                Receivers->addItem(Itm);
-                To->setText(" ");
-                disconnect(To, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
-                To->clear();
-            }
-        }
-    }
     void AAt() {
         QString Path = QFileDialog::getOpenFileName(this, "Add attachment", QDir::homePath());
         if (!Path.isEmpty()) {
             bool OK = true;
             for (int i = 0; i < Attachments->count(); i++) {
-                if (Attachments->item(i)->toolTip() == Path) {
+                if (Attachments->item(i)->data(Qt::UserRole) == Path) {
                     OK = false;
                     break;
                 }
             }
             if (OK) {
-                QString Name = Path.mid(Path.lastIndexOf("/")+1, Path.length()-Path.lastIndexOf("/")-1);
-                QListWidgetItem *Itm = new QListWidgetItem(Name);
-                Itm->setToolTip(Path);
+                QString Name = Path.mid(Path.lastIndexOf(QDir::separator())+1, Path.length()-Path.lastIndexOf(QDir::separator())-1);
+                QListWidgetItem* Itm = new QListWidgetItem(Name);
+                Itm->setData(Qt::UserRole, "<"+Path+">");
                 Attachments->addItem(Itm);
                 disconnect(Subject, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
             }
         }
     }
-    void DelTo(QModelIndex I) {
-        delete Receivers->item(I.row());
-    }
     void DelAt(QModelIndex I) {
         delete Attachments->item(I.row());
     }
     void row(QString Input) {
-        QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
+        QLineEdit* I = qobject_cast<QLineEdit*>(QObject::sender());
         if (Input.isEmpty()) {
             I->setStyleSheet("QLineEdit{background: #FF8888;}");
         } else {
             I->setStyleSheet("QQLineEdit{background: white;}");
         }
     }
+    void emailrow(QString Input) {
+        if (Input.isEmpty()) {
+            To->setStyleSheet("QLineEdit{background: #FF8888;}");
+        } else {
+            To->setStyleSheet("QQLineEdit{background: white;}");
+        }
+    }
+    void linkClicked(QUrl link) {
+        QDesktopServices::openUrl(link);
+    }
+    void tabChanged(int I) {
+        if (I == 1) {
+            Html->setHtml(HtmlEdit->toPlainText());
+        }
+    }
+    void textChanged(QString I) {
+        if (!I.isEmpty()) {
+            QLineEdit* E = qobject_cast<QLineEdit*>(QObject::sender());
+            QString text = I.mid(0, E->cursorPosition());
+            QString newWord;
+            QString prefix;
+            if (text.contains(",")) {
+                newWord = text.mid(text.lastIndexOf(",")+1, text.length()-text.lastIndexOf(",")-1);
+                prefix = text.mid(0, text.lastIndexOf(",")+1);
+            } else {
+                newWord = text;
+            }
+            if (!newWord.isEmpty()) {
+                for (int i = 0; i < Z.size(); i++) {
+                    if (Z[i].startsWith(newWord)) {
+                        E->setText(prefix+newWord+Z[i].mid(newWord.length(), Z[i].length()-newWord.length()));
+                        E->setCursorPosition(text.length());
+                        return;
+                    }
+                }
+                E->setText(prefix+newWord);
+            } else {
+                E->setText(prefix);
+            }
+        }
+    }
 };
+
 
 qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :QWidget(parent) {
     this->AdressBook = AdressBook;
     this->Options = Options;
     currentMail = -1;
-    isRefreshingDeleting = false;
-    isLoading = false;
+    mailboxAction = false;
+    emailAction = false;
     AvailableServices.append(Services("AOL", "imap.aol.com", "smtp.aol.com"));
     AvailableServices.append(Services("Gmail", "imap.gmail.com", "smtp.gmail.com"));
     AvailableServices.append(Services("Interia.pl", "imap.interia.pl", "smtp.interia.pl"));
@@ -1540,11 +2360,15 @@ qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :Q
     AvailableServices.append(Services("Yahoo!", "imap.mail.yahoo.com", "smtp.mail.yahoo.com"));
     Layout = new QGridLayout(this);
     Layout->setMargin(0);
+
     Mailboxes = new QTreeWidget(this);
     Mailboxes->header()->hide();
     Mailboxes->setFixedWidth(110);
     Mailboxes->setIndentation(10);
+    Mailboxes->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(Mailboxes, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(chooseMbox(QTreeWidgetItem*)));
+    connect(Mailboxes, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(MailboxesMenu(QPoint)));
+
     MailView = new QTreeWidget(this);
     MailView->setColumnCount(3);
     MailView->setHeaderLabels(QStringList() << "Topic" << "From" << "Date");
@@ -1552,20 +2376,33 @@ qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :Q
     MailView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
     MailView->header()->setSectionResizeMode(1, QHeaderView::Stretch);
     MailView->setColumnWidth(2, 120);
+    MailView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(MailView, SIGNAL(clicked(QModelIndex)), this, SLOT(chooseEmail(QModelIndex)));
-    ReadMail = new QWebView(this);
-    connect(ReadMail->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError>)),
+    connect(MailView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(MailViewMenu(QPoint)));
+
+    Tabs = new QTabWidget(this);
+    Tabs->setMinimumHeight(30);
+    MailText = new QTextBrowser(this);
+    MailText->hide();
+    MailText->setReadOnly(true);
+    MailText->setAcceptRichText(false);
+    MailHtml = new QWebView(this);
+    MailHtml->hide();
+    MailHtml->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
+    connect(MailHtml->page()->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*, QList <QSslError>)),
             this, SLOT(HTTPSS(QNetworkReply*, QList <QSslError>)));
+    connect(MailHtml->page(), SIGNAL(linkClicked(QUrl)), this, SLOT(linkClicked(QUrl)));
     AttachmentList = new QListWidget(this);
+    AttachmentList->setMinimumHeight(30);
     connect(AttachmentList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(downloadAttachment(QModelIndex)));
-    QWidget *Wi = new QWidget(this);
-    QVBoxLayout *V = new QVBoxLayout(Wi);
-    V->setMargin(0);
-    V->addWidget(ReadMail);
-    V->addWidget(AttachmentList);
+    InternalSplitter = new QSplitter(Qt::Vertical, this);
+    InternalSplitter->addWidget(Tabs);
+    InternalSplitter->addWidget(AttachmentList);
+    InternalSplitter->setSizes(QList<int>() << 177 <<30);
     Split = new QSplitter(Qt::Vertical, this);
     Split->addWidget(MailView);
-    Split->addWidget(Wi);
+    Split->addWidget(InternalSplitter);
+
     Refresh = new QPushButton(QIcon(":/main/Refresh.png"), "", this);
     Refresh->setToolTip("Refresh mail");
     connect(Refresh, SIGNAL(clicked()), this, SLOT(RefreshS()));
@@ -1575,13 +2412,16 @@ qorgMail::qorgMail(QWidget* parent, qorgAB* AdressBook, qorgOptions* Options) :Q
     Delete = new QPushButton(QIcon(":/main/Delete.png"), "", this);
     Delete->setToolTip("Delete email");
     connect(Delete, SIGNAL(clicked()), this, SLOT(DeleteEmail()));
-    Forward = new QPushButton(QIcon(":/mail/Forward.png"), "", this);
-    Forward->setToolTip("Forward email");
-    connect(Forward, SIGNAL(clicked()), this, SLOT(SendEmail()));
     Reply = new QPushButton(QIcon(":/mail/Reply.png"), "", this);
     Reply->setToolTip("Reply to email");
     connect(Reply, SIGNAL(clicked()), this, SLOT(SendEmail()));
-    F << Mailboxes << MailView << Split << Refresh << Send << Delete << Forward << Reply;
+    ReplyAll = new QPushButton(QIcon(":/mail/ReplyAll.png"), "", this);
+    ReplyAll->setToolTip("Reply everyone to email");
+    connect(ReplyAll, SIGNAL(clicked()), this, SLOT(SendEmail()));
+    Forward = new QPushButton(QIcon(":/mail/Forward.png"), "", this);
+    Forward->setToolTip("Forward email");
+    connect(Forward, SIGNAL(clicked()), this, SLOT(SendEmail()));
+    F << Mailboxes << MailView << Split << Refresh << Send << Delete << Reply << ReplyAll << Forward;
     List = new QTreeWidget(this);
     List->header()->hide();
     List->setColumnCount(3);
@@ -1624,8 +2464,9 @@ qorgMail::~qorgMail() {
             delete Mailv[i].Mboxv[j];
         }
     }
-    ReadMail->page()->deleteLater();
+    MailHtml->page()->deleteLater();
 }
+// Public
 QString qorgMail::output() {
     QString out;
     for (uint i = 0; i < Mailv.size(); i++) {
@@ -1652,13 +2493,24 @@ QString qorgMail::output() {
             out.append(Childrens+" \n");
             for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size(); k++) {
                 out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_Subject)+" ");
-                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_From.Name)+" ");
-                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_From.EMailA)+" ");
+                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_From)+" ");
                 out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_Date)+" ");
                 out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_Body[0])+" ");
                 out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_Body[1])+" ");
                 out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_UID)+" ");
-                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_Flags)+" \n");
+                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_Flags)+" ");
+                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_MessageID)+" ");
+                out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_ReplyTo)+" ");
+                QString To;
+                for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsTo.size(); l++) {
+                    To.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsTo[l])+",");
+                }
+                out.append(To+" ");
+                QString CC;
+                for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsCC.size(); l++) {
+                    CC.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsCC[l])+",");
+                }
+                out.append(CC+" \n");
                 for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
                     out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Structurev[l]->Structure_Number)+" ");
                     out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Structurev[l]->Structure_Type)+" ");
@@ -1685,9 +2537,9 @@ void qorgMail::input(QString Input) {
     if (!Input.isEmpty()) {
         QStringList A = Input.split("\n");
         vector < vector <uint> > MailConnections;
-        Mail *cMail;
-        Mailbox *cMailbox;
-        Email *cEmail;
+        Mail* cMail;
+        Mailbox* cMailbox;
+        Email* cEmail;
         for (int i = 0; i < A.size(); i++) {
             QStringList B = A[i].split(" ");
             switch (B.size()-1) {
@@ -1723,20 +2575,29 @@ void qorgMail::input(QString Input) {
                 }
                 MailConnections.push_back(Temp);
             }break;
-            case 8: {
+            case 11: {
                 cEmail = new Email();
                 cMailbox->Emailv.push_back(cEmail);
                 cEmail->Email_Subject = InputS(B[0]);
-                cEmail->Email_From.Name = InputS(B[1]);
-                cEmail->Email_From.EMailA = InputS(B[2]);
-                cEmail->Email_Date = InputDT(B[3]);
-                cEmail->Email_Body[0] = InputS(B[4]);
-                cEmail->Email_Body[1] = InputS(B[5]);
-                cEmail->Email_UID = InputI(B[6]);
-                cEmail->Email_Flags = InputC(B[7]);
+                cEmail->Email_From = InputS(B[1]);
+                cEmail->Email_Date = InputDT(B[2]);
+                cEmail->Email_Body[0] = InputS(B[3]);
+                cEmail->Email_Body[1] = InputS(B[4]);
+                cEmail->Email_UID = InputI(B[5]);
+                cEmail->Email_Flags = InputC(B[6]);
+                cEmail->Email_MessageID = InputS(B[7]);
+                cEmail->Email_ReplyTo = InputS(B[8]);
+                QStringList C = B[9].split(",", QString::SkipEmptyParts);
+                for (int i = 0; i < C.size(); i++) {
+                    cEmail->Email_RecipientsTo.push_back(InputS(C[i]));
+                }
+                QStringList D = B[10].split(",", QString::SkipEmptyParts);
+                for (int i = 0; i < D.size(); i++) {
+                    cEmail->Email_RecipientsCC.push_back(InputS(D[i]));
+                }
             }break;
             case 14: {
-                Structure *cStruct = new Structure();
+                Structure* cStruct = new Structure();
                 cEmail->Structurev.push_back(cStruct);
                 cStruct->Structure_Number = InputS(B[0]);
                 cStruct->Structure_Type = InputS(B[1]);
@@ -1778,7 +2639,11 @@ void qorgMail::setMail(int setMail) {
                 if (Mailv[currentMail].Mboxv[i]->Mbox_Top) {
                     QTreeWidgetItem* Itm = new QTreeWidgetItem();
                     Itm->setText(0, Mailv[currentMail].Mboxv[i]->Mbox_Showname);
-                    Itm->setToolTip(0, Bit7ToBit8(Mailv[currentMail].Mboxv[i]->Mbox_Name));
+                    Itm->setToolTip(0, Mailv[currentMail].Mboxv[i]->Mbox_Showname);
+                    Itm->setData(0, Qt::UserRole, i);
+                    if (Mailv[currentMail].Mboxv[i]->Mbox_Attrybutes & Mailbox::Noselect) {
+                        Itm->setFlags(Qt::ItemIsEnabled);
+                    }
                     if (Mailv[currentMail].Mboxv[i]->Mbox_Children.size() != 0) {
                         addChildren(Mailv[currentMail].Mboxv[i], Itm);
                     }
@@ -1793,27 +2658,6 @@ void qorgMail::setMail(int setMail) {
         }
     }
 }
-void qorgMail::setMailbox(int I) {
-    isRefreshingDeleting = false;
-    isLoading = false;
-    currentMailbox = I;
-    MailView->clear();
-    ReadMail->setHtml("");
-    AttachmentList->clear();
-    for (int i = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-1; i > -1; i--) {
-        QTreeWidgetItem *Itm = new QTreeWidgetItem();
-        if (!(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Flags&Email::Seen)) {
-            Itm->setFont(0, QFont("", Itm->font(0).pixelSize(), QFont::Bold));
-        }
-        Itm->setText(0, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Subject);
-        Itm->setToolTip(0, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Subject);
-        Itm->setText(1, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_From.EMailA);
-        Itm->setToolTip(1, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_From.EMailA);
-        Itm->setText(2, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Date.toString("dd/MM/yyyy hh:mm"));
-        MailView->addTopLevelItem(Itm);
-    }
-    MailView->scrollToTop();
-}
 QStringList qorgMail::getCategories() {
     QStringList list;
     for (uint i = 0; i < Mailv.size(); i++) {
@@ -1821,16 +2665,110 @@ QStringList qorgMail::getCategories() {
     }
     return list;
 }
+uint qorgMail::threadNumber() {
+    QMutexLocker L(&MAILaccessToCounter);
+    return MAILthreadCounter;
+}
+bool qorgMail::SSLSocketError(QList<QSslError> I) {
+    int response = Options->checkCertificate(I.first().certificate());
+    if (response == 0) {
+        Options->addForVeryfication(I.first().certificate());
+        return false;
+    } else if (response == 1) {
+        return true;
+    }
+    return false;
+}
+void qorgMail::getUpdate() {
+    UpdateQuene = 0;
+    if (Mailv.size() != 0) {
+        for (uint i = 0; i < Mailv.size(); i++) {
+            Mail* M = new Mail();
+            M->User = Mailv[i].User;
+            M->Password = Mailv[i].Password;
+            M->IMAPserver = Mailv[i].IMAPserver;
+            for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
+                if (Mailv[i].Mboxv[j]->Mbox_Attrybutes&Mailbox::INBOX) {
+                    M->Mboxv.push_back(Mailv[i].Mboxv[j]);
+                    break;
+                }
+            }
+            SSLCON* T = new SSLCON(this, M);
+            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateS()));
+            T->setMethod(SSLCON::Emails);
+            T->start();
+            ++UpdateQuene;
+        }
+    } else {
+        emit sendUpdate("Mail: No mails.");
+    }
+}
+// Private
+void qorgMail::setMailbox(int I) {
+    mailboxAction = false;
+    emailAction = false;
+    currentMailbox = I;
+    MailView->clear();
+    Tabs->clear();
+    MailText->clear();
+    MailHtml->setHtml("");
+    AttachmentList->clear();
+    for (int i = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-1; i > -1; i--) {
+        QTreeWidgetItem* Itm = new QTreeWidgetItem();
+        if (!(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Flags&Email::Seen)) {
+            Itm->setFont(0, QFont("", Itm->font(0).pixelSize(), QFont::Bold));
+        }
+        Itm->setText(0, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Subject);
+        Itm->setToolTip(0, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Subject);
+        Itm->setText(1, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_From);
+        Itm->setToolTip(1, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_From);
+        Itm->setText(2, Mailv[currentMail].Mboxv[currentMailbox]->Emailv[i]->Email_Date.toString("dd/MM/yyyy hh:mm"));
+        MailView->addTopLevelItem(Itm);
+    }
+    MailView->scrollToTop();
+}
+void qorgMail::setLayoutF() {
+    for (int i = 0; i < C.size(); i++) {
+        Layout->removeWidget(C[i]);
+        C[i]->hide();
+    }
+    Layout->addWidget(Refresh, 0, 0);
+    Layout->addWidget(Send, 0, 1);
+    Layout->addWidget(Delete, 0, 2);
+    Layout->addWidget(Reply, 0, 3);
+    Layout->addWidget(ReplyAll, 0, 4);
+    Layout->addWidget(Forward, 0, 5);
+    Layout->addWidget(Mailboxes, 0, 6, 2, 1);
+    Layout->addWidget(Split, 1, 0, 1, 6);
+    for (int i = 0; i < F.size(); i++) {
+        F[i]->show();
+    }
+}
+void qorgMail::addChildren(Mailbox* I, QTreeWidgetItem* W) {
+    for (uint i = 0; i < I->Mbox_Children.size(); i++) {
+        QTreeWidgetItem* Itm = new QTreeWidgetItem();
+        Itm->setText(0, I->Mbox_Children[i]->Mbox_Showname);
+        Itm->setToolTip(0, I->Mbox_Children[i]->Mbox_Showname);
+        Itm->setData(0, Qt::UserRole, static_cast<uint>(std::find(Mailv[currentMail].Mboxv.begin(), Mailv[currentMail].Mboxv.end(), I->Mbox_Children[i])-Mailv[currentMail].Mboxv.begin()));
+        if (I->Mbox_Children[i]->Mbox_Attrybutes & Mailbox::Noselect) {
+            Itm->setFlags(Qt::ItemIsEnabled);
+        }
+        if (I->Mbox_Children[i]->Mbox_Children.size() != 0) {
+            addChildren(I->Mbox_Children[i], Itm);
+        }
+        W->addChild(Itm);
+    }
+}
 void qorgMail::setLayoutC() {
     List->clear();
     for (uint i = 0; i < Mailv.size(); i++) {
-        QTreeWidgetItem *Itm = new QTreeWidgetItem(List);
+        QTreeWidgetItem* Itm = new QTreeWidgetItem(List);
         Itm->setText(0, Mailv[i].Name);
-        QItemPushButton *Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i);
+        QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i);
         Edit->setStyleSheet("QPushButton {border: 0px solid white;}");
         connect(Edit, SIGNAL(clicked(uint)), this, SLOT(EditMail(uint)));
         List->setItemWidget(Itm, 1, Edit);
-        QItemPushButton *Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i);
+        QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i);
         connect(Delete, SIGNAL(clicked(uint)), this, SLOT(DeleteMail(uint)));
         List->setItemWidget(Itm, 2, Delete);
     }
@@ -1839,7 +2777,7 @@ void qorgMail::setLayoutC() {
         F[i]->hide();
     }
     Layout->addWidget(List, 0, 0, 2, 1);
-    QGridLayout *ADD = new QGridLayout();
+    QGridLayout* ADD = new QGridLayout();
     ADD->addWidget(Labels[0], 0, 0);
     ADD->addWidget(Username, 0, 1, 1, 2);
     ADD->addWidget(Labels[1], 1, 0);
@@ -1856,33 +2794,8 @@ void qorgMail::setLayoutC() {
         C[i]->show();
     }
 }
-void qorgMail::setLayoutF() {
-    for (int i = 0; i < C.size(); i++) {
-        Layout->removeWidget(C[i]);
-        C[i]->hide();
-    }
-    Layout->addWidget(Refresh, 0, 0);
-    Layout->addWidget(Send, 0, 1);
-    Layout->addWidget(Delete, 0, 2);
-    Layout->addWidget(Forward, 0, 3);
-    Layout->addWidget(Reply, 0, 4);
-    Layout->addWidget(Mailboxes, 0, 6, 2, 1);
-    Layout->addWidget(Split, 1, 0, 1, 5);
-    for (int i = 0; i < F.size(); i++) {
-        F[i]->show();
-    }
-}
-void qorgMail::addChildren(Mailbox *I, QTreeWidgetItem *W) {
-    for (uint i = 0; i < I->Mbox_Children.size(); i++) {
-        QTreeWidgetItem* Itm = new QTreeWidgetItem();
-        Itm->setText(0, I->Mbox_Children[i]->Mbox_Showname);
-        Itm->setToolTip(0, Bit7ToBit8(I->Mbox_Children[i]->Mbox_Name));
-        if (I->Mbox_Children[i]->Mbox_Children.size() != 0) {
-            addChildren(I->Mbox_Children[i], Itm);
-        }
-        W->addChild(Itm);
-    }
-}
+// Private slots
+// Categories
 void qorgMail::testInput() {
     if (Username->text().isEmpty()) {
         if (Username->styleSheet() != "QLineEdit{background: #FF8888;}") {
@@ -1909,7 +2822,7 @@ void qorgMail::testInput() {
         disconnect(Passwd, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
         disconnect(IMAPS, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
         disconnect(SMTPS, SIGNAL(textChanged(QString)), this, SLOT(row(QString)));
-        Mail *M = new Mail;
+        Mail* M = new Mail;
         bool EX = false;
         for (uint i = 0; i < Mailv.size(); i++) {
             if (Mailv[i].IMAPserver == IMAPS->text()&&Mailv[i].User == Username->text()) {
@@ -1924,11 +2837,11 @@ void qorgMail::testInput() {
             M->IMAPserver = IMAPS->text();
             M->SMTPserver = SMTPS->text();
             M->Name = M->User+" ("+M->IMAPserver+")";
-            SSLCON *T = new SSLCON(this, M);
+            SSLCON* T = new SSLCON(this, M);
             connect(T, SIGNAL(LoginS(bool, QString)), this, SLOT(LoginS(bool, QString)));
             connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(MailboxesS(bool, QString)));
             connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(EmailS(bool, QString)));
-            QProgressDialog *Bar = new QProgressDialog();
+            QProgressDialog* Bar = new QProgressDialog();
             Bar->setAutoReset(false);
             Bar->setWindowTitle("Add mail bar");
             Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
@@ -1943,11 +2856,12 @@ void qorgMail::testInput() {
             QMessageBox::critical(this, "Mail error", "Mail already exist.");
         }
         Username->clear();
+        Choose->setCurrentIndex(0);
     }
     Passwd->clear();
 }
 void qorgMail::row(QString Input) {
-    QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
+    QLineEdit* I = qobject_cast<QLineEdit*>(QObject::sender());
     if (Input.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
@@ -1967,17 +2881,33 @@ void qorgMail::Click(QModelIndex I) {
     setMail(I.row());
     emit doubleClick(Mailv[I.row()].Name);
 }
+void qorgMail::DeleteMail(uint IID) {
+    Mail* I=&Mailv[IID];
+    for (uint j = 0; j < I->Mboxv.size(); j++) {
+        for (uint k = 0; k < I->Mboxv[j]->Emailv.size(); k++) {
+            for (uint l = 0; l < I->Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
+                delete I->Mboxv[j]->Emailv[k]->Structurev[l];
+            }
+            delete I->Mboxv[j]->Emailv[k];
+        }
+        delete I->Mboxv[j];
+    }
+    Mailv.erase(Mailv.begin()+IID);
+    currentMail = -1;
+    sortMail();
+}
+
 void qorgMail::EditMail(uint IID) {
-    Mail *I = &Mailv[IID];
-    Mail *A = new Mail;
+    Mail* I = &Mailv[IID];
+    Mail* A = new Mail;
     A->User = I->User;
     A->IMAPserver = I->IMAPserver;
     A->SMTPserver = I->SMTPserver;
     if ((new EditDialog(A, this))->exec() == QDialog::Accepted) {
         currentMail = IID;
-        SSLCON *T = new SSLCON(this, A);
+        SSLCON* T = new SSLCON(this, A);
         connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(EditMailS(bool)));
-        QProgressDialog *Bar = new QProgressDialog();
+        QProgressDialog* Bar = new QProgressDialog();
         Bar->setAutoReset(false);
         Bar->setWindowTitle("Edit mail bar");
         Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
@@ -1991,7 +2921,7 @@ void qorgMail::EditMail(uint IID) {
     }
 }
 void qorgMail::EditMailS(bool I) {
-    SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         Mailv[currentMail].Name = T->M->User+" ("+T->M->IMAPserver+")";
         Mailv[currentMail].IMAPserver = T->M->IMAPserver;
@@ -2037,8 +2967,8 @@ void qorgMail::EditMailS(bool I) {
         T->setMethod(SSLCON::Stop);
         if ((new MailboxTree(&Mailv[currentMail], this))->exec() == QDialog::Accepted) {
             T = new SSLCON(this, &Mailv[currentMail]);
-            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateMail()));
-            QProgressDialog *Bar = new QProgressDialog();
+            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateMail(bool, QString)));
+            QProgressDialog* Bar = new QProgressDialog();
             Bar->setAutoReset(false);
             Bar->setWindowTitle("Edit mail bar");
             Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
@@ -2046,7 +2976,6 @@ void qorgMail::EditMailS(bool I) {
             connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
             connect(T, SIGNAL(end()), Bar, SLOT(close()));
             connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
-            connect(Bar, SIGNAL(canceled()), this, SLOT(UpdateMail()));
             T->setMethod(SSLCON::Emails);
             T->start();
             Bar->exec();
@@ -2056,100 +2985,10 @@ void qorgMail::EditMailS(bool I) {
         QMessageBox::critical(this, "Error", "Wrong settings.");
     }
 }
-void qorgMail::DeleteMail(uint IID) {
-    Mail *I=&Mailv[IID];
-    for (uint j = 0; j < I->Mboxv.size(); j++) {
-        for (uint k = 0; k < I->Mboxv[j]->Emailv.size(); k++) {
-            for (uint l = 0; l < I->Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
-                delete I->Mboxv[j]->Emailv[k]->Structurev[l];
-            }
-            delete I->Mboxv[j]->Emailv[k];
-        }
-        delete I->Mboxv[j];
-    }
-    Mailv.erase(Mailv.begin()+IID);
-    currentMail = -1;
-    sortMail();
-}
-void qorgMail::chooseMbox(QTreeWidgetItem *I) {
-    int Int = 0;
-    currentEmail = -1;
-    for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
-        if (Bit7ToBit8(Mailv[currentMail].Mboxv[i]->Mbox_Name) == I->toolTip(0)) {
-            Int = i;
-        }
-    }
-    if (!(Mailv[currentMail].Mboxv[Int]->Mbox_Attrybutes&Mailbox::Noselect)) {
-        setMailbox(Int);
-    }
-}
-void qorgMail::chooseEmail(QModelIndex I) {
-    if (!isRefreshingDeleting) {
-        isLoading = true;
-        currentEmail = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-I.row()-1;
-        ReadMail->setHtml("<html><body>Loading. Please wait.<body></html>");
-        Email *E = Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
-        if (E->Email_Body[1].isEmpty()) {
-            QString Text = E->Email_Body[0];
-            Text="<html><body>"+Text+"</body ></html>";
-            Text.replace("\n", "<br/>");
-            ReadMail->setHtml(Text);
-        } else {
-            QString HTML = E->Email_Body[1];
-            if (HTML.contains("\"cid:")) {
-                Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene = 0;
-                uint position = 0;
-                QList <QString> AlreadyDownlading;
-                while (HTML.indexOf("\"cid:", position) != -1) {
-                    int s = HTML.indexOf("\"cid:", position);
-                    int e = HTML.indexOf("\"", s+5);
-                    position = e;
-                    QString CID = HTML.mid(s+5, e-s-5).trimmed();
-                    if (!AlreadyDownlading.contains(CID)) {
-                        for (uint i = 1; i < E->Structurev.size(); i++) {
-                            if (E->Structurev[i]->Structure_CID == CID) {
-                                AlreadyDownlading.append(CID);
-                                downloadAttachment(i, QDir::tempPath()+"/"+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (AlreadyDownlading.isEmpty()) {
-                    ReadMail->setHtml(HTML);
-                    isLoading = false;
-                }
-            } else {
-                ReadMail->setHtml(HTML);
-                isLoading = false;
-            }
-        }
-        if (!(E->Email_Flags&Email::Seen)) {
-            E->Email_Flags|=Email::Seen;
-            MailView->selectedItems().first()->setFont(0, QFont());
-        }
-        AttachmentList->clear();
-        for (uint i = 0; i < E->Structurev.size(); i++) {
-            if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i < E->Structurev.size()-1) {
-                i++;
-            } else if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i == E->Structurev.size()-1) {
-                break;
-            }
-            QListWidgetItem *Itm = new QListWidgetItem(AttachmentList);
-            if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
-                if (E->Structurev[i]->Structure_CID.isEmpty()) {
-                    Itm->setText("text."+E->Structurev[i]->Structure_Subtype.toLower());
-                } else {
-                    Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                }
-            } else {
-                Itm->setText(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name));
-            }
-        }
-    }
-}
+// Main
+// SSLCON signals slots
 void qorgMail::LoginS(bool I, QString R) {
-    SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         T->setMethod(SSLCON::Mailboxes);
     } else {
@@ -2160,7 +2999,7 @@ void qorgMail::LoginS(bool I, QString R) {
     }
 }
 void qorgMail::MailboxesS(bool I, QString R) {
-    SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         if ((new MailboxTree(T->M, this))->exec() == QDialog::Accepted) {
             T->setMethod(SSLCON::Emails);
@@ -2177,133 +3016,16 @@ void qorgMail::MailboxesS(bool I, QString R) {
         }
     }
 }
-void qorgMail::EmailS(bool I, QString R) {
-    SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
-    if (I) {
-        Mailv.push_back((*T->M));
-        delete T->M;
-        currentMail = Mailv.size()-1;
-        sortMail();
-    } else {
-        for (uint i = 0; i < T->M->Mboxv.size(); i++) {
-            delete T->M->Mboxv[i];
-        }
-        delete T->M;
-        if (!T->Cancelled) {
-            QMessageBox::critical(this, "Email error", R);
-        }
-    }
-}
-void qorgMail::downloadAttachment(QModelIndex I) {
-    QString name = AttachmentList->item(I.row())->text();
-    QString path = QFileDialog::getSaveFileName(this, "Save attachment to:", QDir::homePath()+"/"+name);
-    if (!path.isEmpty()) {
-        SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-        QLabel *L = new QLabel("Downloading...");
-        L->setAttribute(Qt::WA_DeleteOnClose);
-        L->setStyleSheet("background-color: #FF8888;");
-        L->setWindowTitle(name);
-        connect(T, SIGNAL(end()), L, SLOT(close()));
-        L->show();
-        if (Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[0]->Structure_Type == "TEXT" &&
-                Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[0]->Structure_Subtype == "PLAIN") {
-            T->DownloadAttachmentData(currentMailbox, currentEmail, I.row()+1, path);
-        } else {
-            T->DownloadAttachmentData(currentMailbox, currentEmail, I.row(), path);
-        }
-        T->setMethod(SSLCON::Attachment);
-        T->start();
-    }
-}
-void qorgMail::downloadAttachment(uint I, QString path) {
-    SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-    connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool)));
-    T->DownloadAttachmentData(currentMailbox, currentEmail, I, path);
-    T->setMethod(SSLCON::Attachment);
-    T->start();
-    Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene++;
-}
-void qorgMail::AttachmentS(bool I) {
-    SSLCON *S = qobject_cast<SSLCON*>(QObject::sender());
-    Mail *M =S->M;
-    int B =S->B;
-    int E = S->E;
-    int A = S->A;
-    if (I) {
-        if (M->Mboxv[B]->Emailv[E]->Email_Quene == 1) {
-            QList  <QString>  ToClear;
-            QString HTML = M->Mboxv[B]->Emailv[E]->Email_Body[1];
-            uint position = 0;
-            QList <QString> AlreadyDeleted;
-            while (HTML.indexOf("\"cid:", position) != -1) {
-                int s = HTML.indexOf("\"cid:", position);
-                int e = HTML.indexOf("\"", s+5);
-                position = e;
-                QString CID = HTML.mid(s+5, e-s-5).trimmed();
-                if (!AlreadyDeleted.contains(CID)) {
-                    for (uint i = 1; i < M->Mboxv[B]->Emailv[E]->Structurev.size(); i++) {
-                        if (M->Mboxv[B]->Emailv[E]->Structurev[i]->Structure_CID == CID) {
-                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[i]->Structure_Subtype.toLower());
-                            ToClear.append(QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[i]->Structure_Subtype.toLower());
-                            AlreadyDeleted.append(CID);
-                            HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
-                            break;
-                        }
-                    }
-                }
-            }
-            if (E == currentEmail && isLoading) {
-                ReadMail->setHtml(HTML);
-                QEventLoop loop;
-                connect(ReadMail, SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
-                connect(ReadMail, SIGNAL(urlChanged(QUrl)), &loop, SLOT(quit()));
-                loop.exec();
-                isLoading = false;
-            }
-            for (int i = 0; i < ToClear.size(); i++) {
-                QFile::remove(ToClear[i]);
-            }
-        }
-        if (M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
-            M->Mboxv[B]->Emailv[E]->Email_Quene--;
-        }
-    } else {
-        if (M->Mboxv[B]->Emailv[E]->Email_Quene != 0) {
-            if (E == currentEmail && isLoading) {
-                SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-                connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool)));
-                T->DownloadAttachmentData(currentMailbox, currentEmail, A,
-                                          QDir::tempPath()+"/"+QString::number(M->Mboxv[B]->Emailv[E]->Email_UID)+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_CID+"."+M->Mboxv[B]->Emailv[E]->Structurev[A]->Structure_Subtype.toLower());
-                T->setMethod(SSLCON::Attachment);
-                T->start();
-            } else {
-                M->Mboxv[B]->Emailv[E]->Email_Quene--;
-            }
-        }
-    }
-}
-void qorgMail::RefreshS() {
-    if (!isRefreshingDeleting) {
-        isRefreshingDeleting = true;
-        Mail *M = new Mail();
-        M->IMAPserver = Mailv[currentMail].IMAPserver;
-        M->User = Mailv[currentMail].User;
-        M->Password = Mailv[currentMail].Password;
-        SSLCON *T = new SSLCON(this, M);
-        connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(RefreshS(bool)));
-        T->setMethod(SSLCON::Mailboxes);
-        T->start();
-    }
-}
 void qorgMail::RefreshS(bool I) {
-    SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
-    if (I) {
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
+    if (I && mailboxAction && (currentMail != -1) && ((T->M->User == Mailv[currentMail].User) && (T->M->IMAPserver == Mailv[currentMail].IMAPserver))) {
         bool change = false;
         if (T->M->Mboxv.size() != Mailv[currentMail].Mboxv.size()) {
             change = true;
         } else {
             for (uint i = 0; i < T->M->Mboxv.size(); i++) {
-                if (T->M->Mboxv[i]->Mbox_Name != Mailv[currentMail].Mboxv[i]->Mbox_Name) {
+                if (T->M->Mboxv[i]->Mbox_Name != Mailv[currentMail].Mboxv[i]->Mbox_Name ||
+                        T->M->Mboxv[i]->Mbox_Attrybutes != Mailv[currentMail].Mboxv[i]->Mbox_Attrybutes) {
                     change = true;
                     break;
                 }
@@ -2343,8 +3065,8 @@ void qorgMail::RefreshS(bool I) {
         }
         T->setMethod(SSLCON::Stop);
         T = new SSLCON(this, &Mailv[currentMail]);
-        connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateMail()));
-        QProgressDialog *Bar = new QProgressDialog();
+        connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateMail(bool, QString)));
+        QProgressDialog* Bar = new QProgressDialog();
         Bar->setAutoReset(false);
         Bar->setWindowTitle("Refresh bar");
         Bar->setWindowIcon(QIcon(":/main/QOrganizer.png"));
@@ -2352,90 +3074,43 @@ void qorgMail::RefreshS(bool I) {
         connect(T, SIGNAL(changeValue(int)), Bar, SLOT(setValue(int)));
         connect(T, SIGNAL(end()), Bar, SLOT(close()));
         connect(Bar, SIGNAL(canceled()), T, SLOT(Canceled()));
-        connect(Bar, SIGNAL(canceled()), this, SLOT(UpdateMail()));
         T->setMethod(SSLCON::Emails);
         T->start();
         Bar->show();
     } else {
         T->setMethod(SSLCON::Stop);
+        mailboxAction = false;
     }
 }
-void qorgMail::SendEmail() {
-    QPushButton *T = qobject_cast<QPushButton*>(QObject::sender());
-    SSLCON *S = new SSLCON(this, &Mailv[currentMail]);
-    connect(S, SIGNAL(SendEmailS(bool, QString)), this, SLOT(SendEmailS(bool, QString)));
-    S->SetBE(currentMailbox, currentEmail);
-    QStringList Z;
-    Z.append(AdressBook->getEmails());
-    for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
-        for (uint j = 0; j < Mailv[currentMail].Mboxv[i]->Emailv.size(); j++) {
-            if (!Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.EMailA.contains("noreply")) {
-                QString S = Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.EMailA+" "+Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.Name;
-                if (!Z.contains(S)) {
-                    Z.append(S);
-                }
-            }
-        }
-    }
-    QCompleter *Completer = new QCompleter(Z);
-    Completer->setCaseSensitivity(Qt::CaseInsensitive);
-    Z.clear();
-    if (T == Send) {
-        (new Sender((new Email), Sender::Normal, Completer, S, this))->exec();
-    } else if (T == Forward) {
-        if (currentEmail != -1) {
-            (new Sender(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail], Sender::Forward, Completer, S, this))->exec();
-        }
-    } else {
-        if (currentEmail != -1) {
-            (new Sender(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail], Sender::Reply, Completer, S, this))->exec();
-        }
-    }
-    Completer->deleteLater();
-}
-void qorgMail::SendEmailS(bool I, QString R) {
+void qorgMail::EmailS(bool I, QString R) {
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
-        QMessageBox::information(this, "Sending", R);
+        Mailv.push_back((*T->M));
+        delete T->M;
+        currentMail = Mailv.size()-1;
+        sortMail();
     } else {
-        QMessageBox::critical(this, "Mailboxes error", R);
-    }
-}
-void qorgMail::DeleteEmail() {
-    if (currentEmail != -1 && !isRefreshingDeleting) {
-        isRefreshingDeleting = true;
-        if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
-            SSLCON *T = new SSLCON(this, &Mailv[currentMail]);
-            connect(T, SIGNAL(DeleteS(bool, QString)), this, SLOT(DeleteEmailS(bool, QString)));
-            T->SetBE(currentMailbox, currentEmail);
-            T->setMethod(SSLCON::Delete);
-            T->start();
-        } else {
-            DeleteEmailS(true, "Delete from vector");
-            isRefreshingDeleting = false;
+        for (uint i = 0; i < T->M->Mboxv.size(); i++) {
+            delete T->M->Mboxv[i];
+        }
+        delete T->M;
+        if (!T->Cancelled) {
+            QMessageBox::critical(this, "Email error", R);
         }
     }
 }
-void qorgMail::DeleteEmailS(bool I, QString R) {
-    if (I) {
-        for (uint i = 0; i < Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev.size(); i++) {
-            delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i];
+void qorgMail::UpdateMail(bool I, QString R) {
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
+    if (!I) {
+        if (!T->Cancelled) {
+            QMessageBox::critical(this, "Mailboxes error", R);
         }
-        delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
-        Mailv[currentMail].Mboxv[currentMailbox]->Emailv.erase(Mailv[currentMail].Mboxv[currentMailbox]->Emailv.begin()+currentEmail);
-        if (isRefreshingDeleting) {
-            setMailbox(currentMailbox);
-        }
-    } else {
-        QMessageBox::critical(this, "Error", R);
     }
-    isRefreshingDeleting = false;
-}
-void qorgMail::UpdateMail() {
-    isRefreshingDeleting = false;
+    mailboxAction = false;
     sortMail();
 }
 void qorgMail::UpdateS() {
-    SSLCON *T = qobject_cast<SSLCON*>(QObject::sender());
+    SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
     delete T->M;
     if (UpdateQuene == 1) {
         uint unread = 0;
@@ -2460,31 +3135,361 @@ void qorgMail::UpdateS() {
         UpdateQuene--;
     }
 }
-void qorgMail::getUpdate() {
-    UpdateQuene = 0;
-    if (Mailv.size() != 0) {
-        for (uint i = 0; i < Mailv.size(); i++) {
-            Mail *M = new Mail();
-            M->User = Mailv[i].User;
-            M->Password = Mailv[i].Password;
-            M->IMAPserver = Mailv[i].IMAPserver;
-            for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
-                if (Mailv[i].Mboxv[j]->Mbox_Attrybutes&Mailbox::INBOX) {
-                    M->Mboxv.push_back(Mailv[i].Mboxv[j]);
-                    break;
+
+void qorgMail::AttachmentS(bool I, QString R) {
+    SSLCON* S = qobject_cast<SSLCON*>(QObject::sender());
+    Mailbox* B =S->B;
+    Email* E = S->E;
+    Structure* A = S->A;
+    QList <QString> Data = S->Data;
+    if (I) {
+        if (E->Email_Quene == 1) {
+            QList  <QString>  ToClear;
+            QString HTML = E->Email_Body[1];
+            uint position = 0;
+            QList <QString> AlreadyDeleted;
+            while (HTML.indexOf("\"cid:", position) != -1) {
+                int s = HTML.indexOf("\"cid:", position);
+                int e = HTML.indexOf("\"", s+5);
+                position = e;
+                QString CID = HTML.mid(s+5, e-s-5).trimmed();
+                if (!AlreadyDeleted.contains(CID)) {
+                    for (uint i = 1; i < E->Structurev.size(); i++) {
+                        if (E->Structurev[i]->Structure_CID == CID) {
+                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                            ToClear.append(QDir::tempPath()+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                            AlreadyDeleted.append(CID);
+                            HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
+                            break;
+                        }
+                    }
                 }
             }
-            SSLCON *T = new SSLCON(this, M);
-            connect(T, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateS()));
-            T->setMethod(SSLCON::Emails);
-            T->start();
-            ++UpdateQuene;
+            if (E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail] && emailAction) {
+                MailHtml->setHtml(HTML);
+                QEventLoop loop;
+                connect(MailHtml, SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
+                connect(MailHtml, SIGNAL(urlChanged(QUrl)), &loop, SLOT(quit()));
+                loop.exec();
+                emailAction = false;
+            }
+            for (int i = 0; i < ToClear.size(); i++) {
+                QFile::remove(ToClear[i]);
+            }
+        }
+        if (E->Email_Quene != 0) {
+            E->Email_Quene--;
         }
     } else {
-        emit sendUpdate("Mail: No mails.");
+        if (E->Email_Quene != 0) {
+            if (E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail] && emailAction && !((R == "ERROR: No response from server.") || (R == "ERROR: Problem with connection."))) {
+                SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
+                connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool, QString)));
+                T->setMailbox(B);
+                T->setEmail(E);
+                T->setAttachment(A);
+                T->setData(Data);
+                T->setMethod(SSLCON::Attachment);
+                T->start();
+            } else {
+                E->Email_Quene--;
+            }
+        }
+        if (E->Email_Quene == 0) {
+            MailHtml->setHtml(E->Email_Body[1]);
+        }
     }
 }
-void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
+void qorgMail::AttachmentSUser(bool I, QString R) {
+    SSLCON* S = qobject_cast<SSLCON*>(QObject::sender());
+    if (!I && !S->Cancelled && !((R == "ERROR: No response from server.") || (R == "ERROR: Problem with connection."))) {
+        Mailbox* B =S->B;
+        Email* E = S->E;
+        Structure* A = S->A;
+        QList <QString> Data = S->Data;
+        QLabel* L = new QLabel("Downloading...");
+        L->setAttribute(Qt::WA_DeleteOnClose);
+        L->setStyleSheet("background-color: #FF8888;");
+        L->setWindowTitle(S->Data.first().mid(S->Data.first().lastIndexOf(QDir::separator())+1, S->Data.first().length()-S->Data.first().lastIndexOf(QDir::separator())-1));
+        L->show();
+        SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
+        connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentSUser(bool, QString)));
+        connect(T, SIGNAL(end()), L, SLOT(close()));
+        T->setMailbox(B);
+        T->setEmail(E);
+        T->setAttachment(A);
+        T->setData(Data);
+        T->setMethod(SSLCON::Attachment);
+        T->start();
+    }
+}
+
+void qorgMail::SendEmailS(bool I, QString R) {
+    if (I) {
+        QMessageBox::information(this, "Sending", R);
+    } else {
+        QMessageBox::critical(this, "Sending error", R);
+    }
+}
+
+void qorgMail::CopyES(bool I, QString R) {
+    mailboxAction = false;
+    if (!I) {
+        QMessageBox::critical(this, "Copying error", R);
+    } else {
+        RefreshS();
+    }
+
+}
+void qorgMail::DeleteES(bool I, QString R) {
+    if (I) {
+        for (uint i = 0; i < Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev.size(); i++) {
+            delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i];
+        }
+        delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
+        Mailv[currentMail].Mboxv[currentMailbox]->Emailv.erase(Mailv[currentMail].Mboxv[currentMailbox]->Emailv.begin()+currentEmail);
+        if (mailboxAction) {
+            setMailbox(currentMailbox);
+        }
+    } else {
+        QMessageBox::critical(this, "Error", R);
+    }
+    mailboxAction = false;
+}
+void qorgMail::MoveES(bool I, QString R) {
+    mailboxAction = false;
+    if (!I) {
+        QMessageBox::critical(this, "Moving error", R);
+    } else {
+        RefreshS();
+    }
+}
+
+void qorgMail::CreateMS(bool I, QString R) {
+    mailboxAction = false;
+    if (!I) {
+        QMessageBox::critical(this, "Creating error", R);
+    } else {
+        RefreshS();
+    }
+}
+void qorgMail::DeleteMS(bool I, QString R) {
+    mailboxAction = false;
+    if (!I) {
+        QMessageBox::critical(this, "Deleting error", R);
+    } else {
+        RefreshS();
+    }
+}
+void qorgMail::RenameMS(bool I, QString R) {
+    mailboxAction = false;
+    if (!I) {
+        QMessageBox::critical(this, "Renaming error", R);
+    } else {
+        RefreshS();
+    }
+}
+
+
+// Other slots
+void qorgMail::chooseMbox(QTreeWidgetItem* I) {
+    currentEmail = -1;
+    setMailbox(I->data(0, Qt::UserRole).toUInt());
+}
+void qorgMail::chooseEmail(QModelIndex I) {
+    if (!mailboxAction) {
+        emailAction = true;
+        currentEmail = Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-I.row()-1;
+        Tabs->clear();
+        MailText->hide();
+        MailHtml->hide();
+        MailHtml->setHtml("<html><body>Loading. Please wait.<body></html>");
+        Email* E = Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
+        if (!E->Email_Body[0].isEmpty()) {
+            Tabs->addTab(MailText, "Text");
+            MailText->show();
+            MailText->setText(E->Email_Body[0]);
+        }
+        if (!E->Email_Body[1].isEmpty()) {
+            Tabs->addTab(MailHtml, "HTML");
+            Tabs->setCurrentIndex(1);
+            MailHtml->show();
+            QString HTML = E->Email_Body[1];
+            if (HTML.contains("\"cid:")) {
+                Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene = 0;
+                uint position = 0;
+                QList <QString> AlreadyDownlading;
+                while (HTML.indexOf("\"cid:", position) != -1) {
+                    int s = HTML.indexOf("\"cid:", position);
+                    int e = HTML.indexOf("\"", s+5);
+                    position = e;
+                    QString CID = HTML.mid(s+5, e-s-5).trimmed();
+                    if (!AlreadyDownlading.contains(CID)) {
+                        for (uint i = 1; i < E->Structurev.size(); i++) {
+                            if (E->Structurev[i]->Structure_CID == CID) {
+                                AlreadyDownlading.append(CID);
+                                downloadAttachment(i, QDir::tempPath()+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (AlreadyDownlading.isEmpty()) {
+                    MailHtml->setHtml(HTML);
+                    emailAction = false;
+                }
+            } else {
+                MailHtml->setHtml(HTML);
+                emailAction = false;
+            }
+        } else {
+            emailAction = false;
+        }
+        if (!(E->Email_Flags&Email::Seen)) {
+            E->Email_Flags |= Email::Seen;
+            MailView->selectedItems().first()->setFont(0, QFont());
+        }
+        AttachmentList->clear();
+        for (uint i = 0; i < E->Structurev.size(); i++) {
+            if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i < E->Structurev.size()-1) {
+                i++;
+            } else if (E->Structurev[i]->Structure_Type == "TEXT"&&E->Structurev[i]->Structure_Subtype == "PLAIN"&&i == E->Structurev.size()-1) {
+                break;
+            }
+            QListWidgetItem* Itm = new QListWidgetItem(AttachmentList);
+            if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
+                if (E->Structurev[i]->Structure_CID.isEmpty()) {
+                    Itm->setText("text."+E->Structurev[i]->Structure_Subtype.toLower());
+                } else {
+                    Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                }
+            } else {
+                Itm->setText(NameFilter(E->Structurev[i]->Structure_Attrybutes.Name));
+            }
+        }
+    }
+}
+
+void qorgMail::downloadAttachment(QModelIndex I) {
+    QString name = AttachmentList->item(I.row())->text();
+    QString path = QFileDialog::getSaveFileName(this, "Save attachment to:", QDir::homePath()+QDir::separator()+name);
+    if (!path.isEmpty()) {
+        SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
+        connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentSUser(bool, QString)));
+        QLabel* L = new QLabel("Downloading...");
+        L->setAttribute(Qt::WA_DeleteOnClose);
+        L->setStyleSheet("background-color: #FF8888;");
+        L->setWindowTitle(path.mid(path.lastIndexOf(QDir::separator())+1, path.length()-path.lastIndexOf(QDir::separator())-1));
+        connect(T, SIGNAL(end()), L, SLOT(close()));
+        connect(L, SIGNAL(destroyed()), T, SLOT(Canceled()));
+        L->show();
+        if (Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[0]->Structure_Type == "TEXT" &&
+                Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[0]->Structure_Subtype == "PLAIN") {
+            T->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+            T->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]);
+            T->setAttachment(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I.row()+1]);
+            T->setData(QList <QString>() << path);
+        } else {
+            T->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+            T->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]);
+            T->setAttachment(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I.row()]);
+            T->setData(QList <QString>() << path);
+        }
+        T->setMethod(SSLCON::Attachment);
+        T->start();
+    }
+}
+void qorgMail::downloadAttachment(uint I, QString path) {
+    SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
+    connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool, QString)));
+    T->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+    T->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]);
+    T->setAttachment(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[I]);
+    T->setData(QList <QString>() << path);
+    T->setMethod(SSLCON::Attachment);
+    T->start();
+    Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene++;
+}
+void qorgMail::RefreshS() {
+    if (!mailboxAction) {
+        mailboxAction = true;
+        Mail* M = new Mail();
+        M->IMAPserver = Mailv[currentMail].IMAPserver;
+        M->User = Mailv[currentMail].User;
+        M->Password = Mailv[currentMail].Password;
+        SSLCON* T = new SSLCON(this, M);
+        connect(T, SIGNAL(MailboxesS(bool, QString)), this, SLOT(RefreshS(bool)));
+        T->setMethod(SSLCON::Mailboxes);
+        T->start();
+    }
+}
+void qorgMail::SendEmail() {
+    QPushButton* T = qobject_cast<QPushButton*>(QObject::sender());
+    SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+    connect(S, SIGNAL(SendEmailS(bool, QString)), this, SLOT(SendEmailS(bool, QString)));
+    if (currentEmail == -1) {
+        S->setEmail(NULL);
+    } else {
+        S->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+        S->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]);
+    }
+    QStringList Z;
+    Z.append(AdressBook->getEmails());
+    for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
+        for (uint j = 0; j < Mailv[currentMail].Mboxv[i]->Emailv.size(); j++) {
+            if (!Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From.contains("noreply")) {
+                if (!Z.contains(Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From)) {
+                    Z.append(Mailv[currentMail].Mboxv[i]->Emailv[j]->Email_From);
+                }
+            }
+        }
+    }
+    if (T == Send) {
+        if ((new Sender((new Email), Sender::Normal, Z, S, this))->exec() != QDialog::Accepted) {
+            delete S;
+        }
+    } else if (T == Reply) {
+        if (currentEmail != -1) {
+            if ((new Sender(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail], Sender::Reply, Z, S, this))->exec() != QDialog::Accepted) {
+                delete S;
+            }
+        }
+    } else if (T == ReplyAll) {
+        if (currentEmail != -1) {
+            if ((new Sender(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail], Sender::ReplyAll, Z, S, this))->exec() != QDialog::Accepted) {
+                delete S;
+            }
+        }
+    } else {
+        if (currentEmail != -1) {
+            if ((new Sender(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail], Sender::Forward, Z, S, this))->exec() != QDialog::Accepted) {
+                delete S;
+            }
+        }
+    }
+}
+void qorgMail::DeleteEmail() {
+    if (currentEmail != -1 && !mailboxAction) {
+        mailboxAction = true;
+        if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
+            SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
+            connect(T, SIGNAL(DeleteES(bool, QString)), this, SLOT(DeleteES(bool, QString)));
+            T->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+            T->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]);
+            T->setMethod(SSLCON::DeleteE);
+            T->start();
+        } else {
+            DeleteES(true, "Delete from vector");
+            mailboxAction = false;
+        }
+    }
+}
+
+
+void qorgMail::linkClicked(QUrl link) {
+    QDesktopServices::openUrl(link);
+}
+void qorgMail::HTTPSS(QNetworkReply* QNR, QList<QSslError> I) {
     int response =Options->checkCertificate(I.first().certificate());
     if (response == 0) {
         if ((new CertAccept(I.first().certificate()))->exec() == QDialog::Accepted) {
@@ -2498,16 +3503,6 @@ void qorgMail::HTTPSS(QNetworkReply *QNR, QList<QSslError> I) {
     }
     connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
 }
-bool qorgMail::SSLSocketError(QList<QSslError> I) {
-    int response = Options->checkCertificate(I.first().certificate());
-    if (response == 0) {
-        Options->addForVeryfication(I.first().certificate());
-        return false;
-    } else if (response == 1) {
-        return true;
-    }
-    return false;
-}
 void qorgMail::sortMail() {
     if (Mailv.size() > 1) {
         while (true) {
@@ -2519,7 +3514,7 @@ void qorgMail::sortMail() {
                     } else if (i+1 == currentMail) {
                         currentMail--;
                     }
-                    swap(Mailv[i], Mailv[i+1]);
+                    std::swap(Mailv[i], Mailv[i+1]);
                     OKL = false;
                 }
             }
@@ -2533,4 +3528,140 @@ void qorgMail::sortMail() {
     setMail(tmp);
     emit updateTree();
 }
+// Menus and actions
+void qorgMail::MailViewMenu(QPoint P) {
+    if (!mailboxAction) {
+        mailboxAction = true;
+        QMenu* main = new QMenu(this);
+        QTreeWidgetItem* I = MailView->itemAt(P);
+        if (I == NULL) {
+            mailboxAction = false;
+            return;
+        }
+        QList <QAction*> CMailboxes;
+        QMenu* copy = new QMenu("Copy to: ", main);
+        QList <QAction*> MMailboxes;
+        QMenu* move = new QMenu("Move to: ", main);
+        for (uint i = 0; i < Mailv[currentMail].Mboxv.size(); i++) {
+            if (!(Mailv[currentMail].Mboxv[i]->Mbox_Attrybutes & Mailbox::Noselect) && i != currentMailbox) {
+                QAction* C= new QAction(Mailv[currentMail].Mboxv[i]->Mbox_Showname, copy);
+                QAction* M= new QAction(Mailv[currentMail].Mboxv[i]->Mbox_Showname, move);
+                C->setData(i);
+                M->setData(i);
+                CMailboxes.append(C);
+                MMailboxes.append(M);
+            }
+        }
+        copy->addActions(CMailboxes);
+        move->addActions(MMailboxes);
+        main->addMenu(copy);
+        main->addMenu(move);
+        QAction* Exe = main->exec(MailView->mapToGlobal(P));
+        if (Exe != NULL) {
+            if (CMailboxes.contains(Exe)) {
+                SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+                S->setMethod(SSLCON::CopyE);
+                S->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+                S->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-MailView->indexOfTopLevelItem(I)-1]);
+                S->setData(QList <QString>() << Mailv[currentMail].Mboxv[Exe->data().toUInt()]->Mbox_Name);
+                connect(S, SIGNAL(CopyES(bool, QString)), this, SLOT(CopyES(bool, QString)));
+                S->start();
+            } else if (MMailboxes.contains(Exe)) {
+                SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+                S->setMethod(SSLCON::MoveE);
+                S->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+                S->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-MailView->indexOfTopLevelItem(I)-1]);
+                S->setData(QList <QString>() << Mailv[currentMail].Mboxv[Exe->data().toUInt()]->Mbox_Name);
+                connect(S, SIGNAL(MoveES(bool, QString)), this, SLOT(MoveES(bool, QString)));
+                S->start();
+            }
+        } else {
+            mailboxAction = false;
+        }
+    }
+}
+void qorgMail::MailboxesMenu(QPoint P) {
+    if (!mailboxAction) {
+        mailboxAction = true;
+        QMenu* main = new QMenu(this);
+        QTreeWidgetItem* I = Mailboxes->itemAt(P);
+        QAction* C = new QAction("Create", main);
+        QAction* CS = new QAction("Create submailbox", main);
+        QAction* D = new QAction("Delete", main);
+        QAction* R = new QAction("Rename", main);
+        if (I != NULL) {
+            main->addAction(CS);
+            if (I->flags() & Qt::ItemIsSelectable) {
+                main->addAction(D);
+                main->addAction(R);
+            }
+        } else {
+            main->addAction(C);
+        }
+        QAction* Exe = main->exec(Mailboxes->mapToGlobal(P));
+        if (Exe != NULL) {
+            if (Exe == C) {
+                QString name = QInputDialog::getText(this, "Mailbox name", "Please enter name of new mailbox.\nMailbox name must be unique.\nDo not use / . % # -");
+                name.remove("/");
+                name.remove(".");
+                name.remove("%");
+                name.remove("#");
+                name.remove("&");
+                name.remove("-");
+                if (name.isEmpty()) {
+                    mailboxAction = false;
+                    return;
+                }
+                SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+                S->setMethod(SSLCON::CreateM);
+                S->setData(QList <QString>() << "" << name);
+                connect(S, SIGNAL(CreateMS(bool, QString)), this, SLOT(CreateMS(bool, QString)));
+                S->start();
+            } else if (Exe == CS) {
+                QString name = QInputDialog::getText(this, "Mailbox name", "Please enter name of new mailbox.\nMailbox name must be unique.\nDo not use / . % # -");
+                name.remove("/");
+                name.remove(".");
+                name.remove("%");
+                name.remove("#");
+                name.remove("&");
+                name.remove("-");
+                if (name.isEmpty()) {
+                    mailboxAction = false;
+                    return;
+                }
+                SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+                S->setMethod(SSLCON::CreateM);
+                S->setData(QList <QString>() << Mailv[currentMail].Mboxv[I->data(0, Qt::UserRole).toUInt()]->Mbox_Name << name);
+                connect(S, SIGNAL(CreateMS(bool, QString)), this, SLOT(CreateMS(bool, QString)));
+                S->start();
+            } else if (Exe == D) {
+                SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+                S->setMethod(SSLCON::DeleteM);
+                S->setData(QList <QString>() << Mailv[currentMail].Mboxv[I->data(0, Qt::UserRole).toUInt()]->Mbox_Name);
+                connect(S, SIGNAL(DeleteMS(bool, QString)), this, SLOT(DeleteMS(bool, QString)));
+                S->start();
+            } else if (Exe == R) {
+                QString name = QInputDialog::getText(this, "Mailbox name", "Please enter name of new mailbox.\nMailbox name must be unique.\nDo not use / . % # -");
+                name.remove("/");
+                name.remove(".");
+                name.remove("%");
+                name.remove("#");
+                name.remove("&");
+                name.remove("-");
+                if (name.isEmpty()) {
+                    mailboxAction = false;
+                    return;
+                }
+                SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+                S->setMethod(SSLCON::RenameM);
+                S->setData(QList <QString>() << Mailv[currentMail].Mboxv[I->data(0, Qt::UserRole).toUInt()]->Mbox_Name << name);
+                connect(S, SIGNAL(RenameMS(bool, QString)), this, SLOT(RenameMS(bool, QString)));
+                S->start();
+            }
+        } else {
+            mailboxAction = false;
+        }
+    }
+}
+
 #include "qorgmail.moc"

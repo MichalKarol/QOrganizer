@@ -41,10 +41,10 @@ private:
     vector <QSslCertificate> SSLCertA;
     vector <QSslCertificate> SSLCertB;
     QList <QSslCertificate> SSLCertTmp;
-    QTimer *UTimer;
-    QTimer *BTimer;
+    QTimer* UTimer;
+    QTimer* BTimer;
     uint currentW;
-    QGridLayout *Layout;
+    QGridLayout* Layout;
 
     QLabel* A[4];
     QLineEdit* CPassword;
@@ -56,9 +56,9 @@ private:
     QSpacerItem* Spacer;
     QList <QWidget*> W1;
 
-    QLabel *B[2];
-    QListWidget *Accepted;
-    QListWidget *Blacklisted;
+    QLabel* B[2];
+    QListWidget* Accepted;
+    QListWidget* Blacklisted;
     QList <QWidget*> W2;
 public slots:
     void start(bool);

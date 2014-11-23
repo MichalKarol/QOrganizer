@@ -26,5 +26,6 @@ class QOrganizer;
 namespace qorgIO {
    bool ReadFile(QString*, QString*, QOrganizer*, QString);
    void SaveFile(QString*, QString*, QOrganizer*, QString);
+   QString From102(QString);
 }
 #endif  // QORGIO_H_

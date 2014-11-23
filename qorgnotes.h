@@ -20,7 +20,6 @@
 #include <vector>
 
 using std::vector;
-using std::swap;
 struct Note {
     QString Topic;
     unsigned char Priority;
@@ -36,15 +35,15 @@ public:
     vector  <Note>  Notes;
 private:
     void updateList();
-    QGridLayout *Layout;
+    QGridLayout* Layout;
     QLabel* TLabel;
-    QLineEdit *Topic;
-    QSlider *Priority;
-    QTextEdit *Text;
-    QPushButton *OK;
-    QPushButton *Cancel;
-    QTreeWidget *List;
-    QPushButton *AddB;
+    QLineEdit* Topic;
+    QSlider* Priority;
+    QTextEdit* Text;
+    QPushButton* OK;
+    QPushButton* Cancel;
+    QTreeWidget* List;
+    QPushButton* AddB;
     int edited;
 private slots:
     void Add();

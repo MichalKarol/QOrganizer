@@ -20,11 +20,12 @@
 #include <qorgoptions.h>
 #include <QtWidgets>
 #include <QWebView>
+#include <QWebFrame>
 #include <QNetworkReply>
 #include <vector>
 
+
 using std::vector;
-using std::swap;
 class Structure {
 public:
     Structure();
@@ -49,25 +50,28 @@ public:
 class Email {
 public:
     Email();
-    enum Flags    {
-        Answered = 1,
-        Flagged = 2,
-        Draft = 4,
+    enum Flags {
+        Seen = 1,
+        Answered = 2,
+        Flagged = 4,
         Deleted = 8,
-        Seen = 16,
-    };
-    struct EUser    {
-        QString Name;
-        QString EMailA;
+        Draft = 16,
+        Recent = 32,
     };
     QString Email_Subject;
-    EUser Email_From;
+    QString Email_From;
     QDateTime Email_Date;
     QString Email_Body[2];
     uint Email_UID;
     uchar Email_Flags;
+    QString Email_MessageID;
+    QString Email_ReplyTo;
+    vector <QString> Email_RecipientsTo;
+    vector <QString> Email_RecipientsCC;
     vector  <Structure*> Structurev;
+    // Created during loading
     uint Email_Quene;
+
 };
 class Mailbox {
 public:
@@ -115,6 +119,7 @@ public:
     int getCurrent()    {
         return currentMail;
     }
+    uint threadNumber();
     bool SSLSocketError(QList<QSslError>);
     void getUpdate();
 private:
@@ -127,62 +132,85 @@ private:
     int currentMail;
     uint currentMailbox;
     int currentEmail;
+    bool mailboxAction;
+    bool emailAction;
+
     void setLayoutF();
     void addChildren(Mailbox*, QTreeWidgetItem*);
-    QTreeWidget *Mailboxes;
-    QTreeWidget *MailView;
-    QSplitter *Split;
-    QWebView *ReadMail;
+    QTreeWidget* Mailboxes;
+    QTreeWidget* MailView;
+    QSplitter* Split;
+    QSplitter* InternalSplitter;
+    QTabWidget* Tabs;
+    QTextBrowser* MailText;
+    QWebView* MailHtml;
     uint UpdateQuene;
-    QListWidget *AttachmentList;
-    QPushButton *Refresh;
-    QPushButton *Send;
-    QPushButton *Delete;
-    QPushButton *Forward;
-    QPushButton *Reply;
-    bool isRefreshingDeleting;
-    bool isLoading;
+    QListWidget* AttachmentList;
+    QPushButton* Refresh;
+    QPushButton* Send;
+    QPushButton* Delete;
+    QPushButton* Reply;
+    QPushButton* ReplyAll;
+    QPushButton* Forward;
     QList  <QWidget*>  F;
 
     void setLayoutC();
-    QTreeWidget *List;
-    QLabel *Labels[5];
-    QLineEdit *Username;
-    QLineEdit *Passwd;
-    QLineEdit *IMAPS;
-    QLineEdit *SMTPS;
-    QComboBox *Choose;
-    QPushButton *AddB;
+    QTreeWidget* List;
+    QLabel* Labels[5];
+    QLineEdit* Username;
+    QLineEdit* Passwd;
+    QLineEdit* IMAPS;
+    QLineEdit* SMTPS;
+    QComboBox* Choose;
+    QPushButton* AddB;
     QList  <QWidget*>  C;
 private slots:
-    // CAT
+    // Categories
     void testInput();
     void row(QString);
     void change(int);
     void Click(QModelIndex);
+    void DeleteMail(uint);
     void EditMail(uint);
     void EditMailS(bool);
-    void DeleteMail(uint);
 
-    // MAIN
-    void chooseMbox(QTreeWidgetItem*);
-    void chooseEmail(QModelIndex);
+    // Main
+    // SSLCON signals slots
     void LoginS(bool, QString);
     void MailboxesS(bool, QString);
+    void RefreshS(bool);
     void EmailS(bool, QString);
+    void UpdateMail(bool, QString);
+    void UpdateS();
+
+    void AttachmentS(bool, QString);
+    void AttachmentSUser(bool, QString);
+    void SendEmailS(bool, QString);
+
+    void CopyES(bool, QString);
+    void DeleteES(bool, QString);
+    void MoveES(bool, QString);
+
+    void CreateMS(bool, QString);
+    void DeleteMS(bool, QString);
+    void RenameMS(bool, QString);
+
+    // Other slots
+    void chooseMbox(QTreeWidgetItem*);
+    void chooseEmail(QModelIndex);
+
     void downloadAttachment(QModelIndex);
     void downloadAttachment(uint, QString);
-    void AttachmentS(bool);
     void RefreshS();
-    void RefreshS(bool);
     void SendEmail();
-    void SendEmailS(bool, QString);
     void DeleteEmail();
-    void DeleteEmailS(bool, QString);
-    void UpdateMail();
-    void UpdateS();
+
+    void linkClicked(QUrl);
     void HTTPSS(QNetworkReply*, QList <QSslError>);
     void sortMail();
+    // Menus and actions
+    void MailViewMenu(QPoint);
+    void MailboxesMenu(QPoint);
 signals:
     void updateTree();
     void doubleClick(QString);

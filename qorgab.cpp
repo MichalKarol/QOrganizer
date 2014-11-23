@@ -19,7 +19,7 @@
 class ListItem :public QWidget {
     Q_OBJECT
 public:
-    ListItem(Person* P, uint IID, QWidget *parent) :QWidget(parent) {
+    ListItem(Person* P, uint IID, QWidget* parent) :QWidget(parent) {
         ItemID = IID;
         L[0]=new QLabel(P->Name+" "+P->Surname, this);
         L[1]=new QLabel(P->Category, this);
@@ -45,10 +45,10 @@ public:
         Delete = new QPushButton(QIcon(":/main/Delete.png"), "", this);
         Delete->setStyleSheet("QPushButton {border: 0px solid white;}");
         connect(Delete, SIGNAL(clicked()), this, SLOT(DeleteIN()));
-        QGridLayout *La = new QGridLayout(this);
+        QGridLayout* La = new QGridLayout(this);
         La->addWidget(L[0], 0, 0);
         La->addWidget(L[1], 1, 0);
-        QHBoxLayout *H = new QHBoxLayout();
+        QHBoxLayout* H = new QHBoxLayout();
         H->addWidget(Edit);
         H->addWidget(Delete);
         La->addLayout(H, 0, 1);
@@ -61,9 +61,9 @@ public:
     }
     uint ItemID;
 private:
-    QLabel *L[7];
-    QPushButton *Edit;
-    QPushButton *Delete;
+    QLabel* L[7];
+    QPushButton* Edit;
+    QPushButton* Delete;
 private slots:
     void EditIN() {
         emit EditOUT(ItemID);
@@ -76,7 +76,7 @@ signals:
     void DeleteOUT(uint);
 };
 
-qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
+qorgAB::qorgAB(QWidget* parent) :QWidget(parent) {
     List = new QListWidget(this);
     connect(List, SIGNAL(clicked(QModelIndex)), this, SLOT(Click(QModelIndex)));
     QStringList A;
@@ -89,7 +89,7 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     }
     C = new QCompleter(E[2]);
     E[2]->setCompleter(C);
-    QIntValidator *V = new QIntValidator(this);
+    QIntValidator* V = new QIntValidator(this);
     E[5]->setValidator(V);
     E[6]->setValidator(V);
     D = new QDateEdit(QDate(2012, QDate::currentDate().month(), QDate::currentDate().day()), this);
@@ -105,7 +105,7 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     Cancel->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     connect(Cancel, SIGNAL(clicked()), this, SLOT(Can()));
     Cancel->hide();
-    QGridLayout *Layout = new QGridLayout(this);
+    QGridLayout* Layout = new QGridLayout(this);
     Layout->addWidget(List, 0, 0, 2, 1);
     Layout->setMargin(0);
     La = new QGridLayout();
@@ -118,7 +118,7 @@ qorgAB::qorgAB(QWidget *parent) :QWidget(parent) {
     La->addWidget(L[3], 3, 0);
     La->addWidget(E[3], 3, 1);
     La->addWidget(L[4], 4, 0);
-    QHBoxLayout *H = new QHBoxLayout();
+    QHBoxLayout* H = new QHBoxLayout();
     H->addWidget(E[4]);
     H->addSpacing(15);
     E[5]->setMaximumWidth(30);
@@ -199,7 +199,7 @@ QList  <QString>  qorgAB::getEmails() {
     QList  <QString>  EList;
     for (uint i = 0; i < Personv.size(); i++) {
         if (!Personv[i].Email.isEmpty()) {
-            EList.append(Personv[i].Email+" "+Personv[i].Name+" "+Personv[i].Surname);
+            EList.append(Personv[i].Email);
         }
     }
     return EList;
@@ -239,7 +239,7 @@ void qorgAB::AddS() {
     }
 }
 void qorgAB::row(QString Input) {
-    QLineEdit *I = qobject_cast<QLineEdit*>(QObject::sender());
+    QLineEdit* I = qobject_cast<QLineEdit*>(QObject::sender());
     if (Input.isEmpty()) {
         I->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
@@ -247,12 +247,12 @@ void qorgAB::row(QString Input) {
     }
 }
 void qorgAB::Click(QModelIndex I) {
-    QListWidgetItem *Itm = List->item(I.row());
+    QListWidgetItem* Itm = List->item(I.row());
     if (List->itemWidget(Itm) == NULL) {
         Itm->setSizeHint(QSize(Itm->sizeHint().width(), 120));
         for (uint i = 0; i < Personv.size(); i++) {
             if (Personv[i].Name+" "+Personv[i].Surname == Itm->text()) {
-                ListItem *W = new ListItem(&Personv[i], i, this);
+                ListItem* W = new ListItem(&Personv[i], i, this);
                 connect(W, SIGNAL(EditOUT(uint)), this, SLOT(Edit(uint)));
                 connect(W, SIGNAL(DeleteOUT(uint)), this, SLOT(Delete(uint)));
                 List->setItemWidget(Itm, W);
@@ -262,14 +262,14 @@ void qorgAB::Click(QModelIndex I) {
         Itm->setText("");
     } else {
         Itm->setSizeHint(QSize(Itm->sizeHint().width(), 15));
-        ListItem *W = qobject_cast <ListItem*>(List->itemWidget(Itm));
+        ListItem* W = qobject_cast <ListItem*>(List->itemWidget(Itm));
         Itm->setText(Personv[W->ItemID].Name+" "+Personv[W->ItemID].Surname);
         Itm->setToolTip(Personv[W->ItemID].Name+" "+Personv[W->ItemID].Surname);
         List->removeItemWidget(Itm);
     }
 }
 void qorgAB::Edit(uint IID) {
-    Person *I=&Personv[IID];
+    Person* I=&Personv[IID];
     E[0]->setText(I->Name);
     E[1]->setText(I->Surname);
     E[2]->setText(I->Category);
@@ -287,7 +287,7 @@ void qorgAB::Edit(uint IID) {
     E[8]->setText(I->Mobile);
     D->setDate(I->Birthday);
     Add->hide();
-    QHBoxLayout *H = new QHBoxLayout();
+    QHBoxLayout* H = new QHBoxLayout();
     H->addWidget(Cancel);
     H->addWidget(OKB);
     La->addLayout(H, 8, 0, 1, 2);
@@ -346,11 +346,11 @@ void qorgAB::UpdateList() {
             bool OKL = true;
             for (uint i = 0; i < Personv.size()-1; i++) {
                 if (Personv[i].Surname > Personv[i+1].Surname) {
-                    swap(Personv[i], Personv[i+1]);
+                    std::swap(Personv[i], Personv[i+1]);
                     OKL = false;
                 } else if (Personv[i].Surname == Personv[i+1].Surname) {
                     if (Personv[i].Name > Personv[i+1].Name) {
-                        swap(Personv[i], Personv[i+1]);
+                        std::swap(Personv[i], Personv[i+1]);
                         OKL = false;
                     }
                 }
@@ -369,7 +369,7 @@ void qorgAB::setList() {
     List->clear();
     for (uint i = 0; i < Personv.size(); i++) {
         if (Personv[i].Category == currentCategory || currentCategory.isEmpty()) {
-            QListWidgetItem *Itm = new QListWidgetItem(List);
+            QListWidgetItem* Itm = new QListWidgetItem(List);
             Itm->setText(Personv[i].Name+" "+Personv[i].Surname);
             Itm->setToolTip(Personv[i].Name+" "+Personv[i].Surname);
         }
