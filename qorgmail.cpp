@@ -133,6 +133,7 @@ private:
     void RenameMailbox();
     QByteArray readAll(QSslSocket*);
     QByteArray readIMAP(QSslSocket*);
+    QByteArray readIMAPBODY(QSslSocket*);
     QByteArray readSMTP(QSslSocket*);
     void closeIMAP(QSslSocket*);
     QList <QString> splitBS(QString);
@@ -234,7 +235,7 @@ QByteArray SSLCON::readAll(QSslSocket* S) {
 }
 QByteArray SSLCON::readIMAP(QSslSocket* S) {
     QByteArray Reply;
-    if (!Cancelled && (S->state() == QSslSocket::ConnectedState) && S->waitForReadyRead()) {
+    if (!Cancelled && (S->state() == QAbstractSocket::ConnectedState) && S->waitForReadyRead()) {
         Reply.append(S->readAll());
         while (!(Reply.contains("TAG OK") || Reply.contains("TAG NO") || Reply.contains("TAG BAD"))) {
             if (S->waitForReadyRead() && S->bytesAvailable() != 0) {
@@ -244,9 +245,33 @@ QByteArray SSLCON::readIMAP(QSslSocket* S) {
     }
     return Reply;
 }
+QByteArray SSLCON::readIMAPBODY(QSslSocket *S) {
+    QByteArray Reply;
+    if (!Cancelled && (S->state() == QAbstractSocket::ConnectedState) && S->waitForReadyRead()) {
+        Reply.append(S->readAll());
+        if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
+            return QByteArray("ERROR");
+        }
+        while (!(Reply.contains("{") || Reply.contains("}"))) {
+            if (S->waitForReadyRead() && S->bytesAvailable() != 0) {
+                Reply.append(S->readAll());
+            }
+        }
+        int charachters = Reply.mid(Reply.indexOf("{")+1,Reply.indexOf("}")-Reply.indexOf("{")-1).toInt();
+        Reply.remove(0,Reply.indexOf("}\r\n")+3);
+        while (Reply.size() < charachters || !Reply.contains("TAG OK")) {
+            if (S->waitForReadyRead() && S->bytesAvailable() != 0) {
+                Reply.append(S->readAll());
+            }
+        }
+        Reply.remove(Reply.lastIndexOf(")"), Reply.length()-Reply.lastIndexOf(")"));
+    }
+    return Reply;
+}
+
 QByteArray SSLCON::readSMTP(QSslSocket* S) {
     QByteArray Reply;
-    if (!Cancelled && (S->state() == QSslSocket::ConnectedState) && S->waitForReadyRead()) {
+    if (!Cancelled && (S->state() == QAbstractSocket::ConnectedState) && S->waitForReadyRead()) {
         Reply.append(S->readAll());
         while (S->waitForReadyRead(100)&&S->bytesAvailable() != 0) {
             Reply.append(S->readAll());
@@ -584,12 +609,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
-                            QString Tmp = readIMAP(&S);
-                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            QString Tmp = readIMAPBODY(&S);
                             Subjects.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
-                        Subjects.append(readIMAP(&S));
+                        Subjects.append(readIMAPBODY(&S));
                         if (Subjects.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -597,7 +621,7 @@ void SSLCON::DownloadEmails() {
                             }
                             emit EmailS(false, "ERROR: No response from server.");
                             return;
-                        } else if (Subjects.contains("TAG NO") || Subjects.contains("TAG BAD")) {
+                        } else if (Subjects == "ERROR") {
                             closeIMAP(&S);
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -681,12 +705,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
-                            QString Tmp = readIMAP(&S);
-                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            QString Tmp = readIMAPBODY(&S);
                             Froms.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
-                        Froms.append(readIMAP(&S));
+                        Froms.append(readIMAPBODY(&S));
                         if (Froms.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -694,7 +717,7 @@ void SSLCON::DownloadEmails() {
                             }
                             emit EmailS(false, "ERROR: No response from server.");
                             return;
-                        } else if (Froms.contains("TAG NO") || Froms.contains("TAG BAD")) {
+                        } else if (Froms == "ERROR") {
                             closeIMAP(&S);
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -769,12 +792,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Message-ID)]\r\n").toUtf8());
-                            QString Tmp = readIMAP(&S);
-                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            QString Tmp = readIMAPBODY(&S);
                             MessageID.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Message-ID)]\r\n").toUtf8());
-                        MessageID.append(readIMAP(&S));
+                        MessageID.append(readIMAPBODY(&S));
                         if (MessageID.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -782,7 +804,7 @@ void SSLCON::DownloadEmails() {
                             }
                             emit EmailS(false, "ERROR: No response from server.");
                             return;
-                        } else if (MessageID.contains("TAG NO") || MessageID.contains("TAG BAD")) {
+                        } else if (MessageID == "ERROR") {
                             closeIMAP(&S);
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -803,12 +825,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Reply-To)]\r\n").toUtf8());
-                            QString Tmp = readIMAP(&S);
-                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            QString Tmp = readIMAPBODY(&S);
                             ReplyTo.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Reply-To)]\r\n").toUtf8());
-                        ReplyTo.append(readIMAP(&S));
+                        ReplyTo.append(readIMAPBODY(&S));
                         if (ReplyTo.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -816,7 +837,7 @@ void SSLCON::DownloadEmails() {
                             }
                             emit EmailS(false, "ERROR: No response from server.");
                             return;
-                        } else if (ReplyTo.contains("TAG NO") || ReplyTo.contains("TAG BAD")) {
+                        } else if (ReplyTo == "ERROR") {
                             closeIMAP(&S);
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -837,12 +858,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (To)]\r\n").toUtf8());
-                            QString Tmp = readIMAP(&S);
-                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            QString Tmp = readIMAPBODY(&S);
                             FetchTo.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (To)]\r\n").toUtf8());
-                        FetchTo.append(readIMAP(&S));
+                        FetchTo.append(readIMAPBODY(&S));
                         if (FetchTo.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -879,12 +899,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (CC)]\r\n").toUtf8());
-                            QString Tmp = readIMAP(&S);
-                            Tmp.remove(Tmp.indexOf("TAG OK"), Tmp.length()-Tmp.indexOf("TAG OK"));
+                            QString Tmp = readIMAPBODY(&S);
                             FetchCC.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (CC)]\r\n").toUtf8());
-                        FetchCC.append(readIMAP(&S));
+                        FetchCC.append(readIMAPBODY(&S));
                         if (FetchCC.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -892,13 +911,13 @@ void SSLCON::DownloadEmails() {
                             }
                             emit EmailS(false, "ERROR: No response from server.");
                             return;
-                        } else if (FetchCC.contains("TAG NO") || FetchCC.contains("TAG BAD")) {
+                        } else if (FetchCC == "ERROR") {
                             closeIMAP(&S);
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
                                 Vec->erase(Vec->begin()+k-1);
                             }
-                            emit EmailS(false, "ERROR: Cannot fetch cc.");
+                            emit EmailS(false, "ERROR: Cannot fetch CC.");
                             return;
                         }
                         QList <QString> FCL = FetchCC.split(")\r\n*");
@@ -1035,9 +1054,7 @@ void SSLCON::DownloadEmails() {
                                     if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Size != 0) {
                                         for (uint m = 0; m < (*Vec)[Fn+k-1]->Structurev[l]->Structure_Size; m += 10000) {
                                             S.write(QString("TAG UID FETCH "+QString::number((*Vec)[Fn+k-1]->Email_UID)+" BODY["+(*Vec)[Fn+k-1]->Structurev[l]->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
-                                            QByteArray Tmp = readIMAP(&S);
-                                            Tmp.remove(0, Tmp.indexOf("}\r\n")+3);
-                                            Tmp.remove(Tmp.lastIndexOf(")"), Tmp.length()-Tmp.lastIndexOf(")"));
+                                            QByteArray Tmp = readIMAPBODY(&S);
                                             Text.append(Tmp);
                                         }
                                         if (Text.isEmpty() || Cancelled) {
@@ -1051,7 +1068,7 @@ void SSLCON::DownloadEmails() {
                                             }
                                             emit EmailS(false, "ERROR: No response from server.");
                                             return;
-                                        } else if (Text.contains("TAG NO") || Text.contains("TAG BAD")) {
+                                        } else if (Text == "ERROR") {
                                             closeIMAP(&S);
                                             for (uint m = En; m >= Fn; m--) {
                                                 for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
@@ -1076,10 +1093,6 @@ void SSLCON::DownloadEmails() {
                                             }
                                         } else {
                                             (*Vec)[Fn+k-1]->Email_Body[t] = Text;
-                                        }
-                                        if (t == 0) {
-                                            (*Vec)[Fn+k-1]->Email_Body[0].replace("<", "&lt;");
-                                            (*Vec)[Fn+k-1]->Email_Body[0].replace(">", "&gt;");
                                         }
                                     }
                                 } else {
@@ -1154,7 +1167,7 @@ void SSLCON::DownloadAttachment() {
     Reply.clear();
     for (uint m = 0; m < A->Structure_Size; m += 10000) {
         S.write(QString("TAG UID FETCH "+QString::number(E->Email_UID)+" BODY["+A->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
-        QByteArray Tmp = readIMAP(&S);
+        QByteArray Tmp = readIMAPBODY(&S);
         Tmp.remove(0, Tmp.indexOf("}\r\n")+3);
         Tmp.remove(Tmp.indexOf(")\r\nTAG OK"), Tmp.length()-Tmp.indexOf(")\r\nTAG OK"));
         Reply.append(Tmp);
