@@ -476,16 +476,16 @@ void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
         }
     } else if (I == QSystemTrayIcon::MiddleClick && this->isHidden() && Tray->icon().pixmap(20, 20).toImage() != QIcon(":/main/QOrganizerDownload.png").pixmap(20, 20).toImage()) {
         Tray->setIcon(QIcon(":/main/QOrganizerDownload.png"));
-        Updates[0] = Calendar->getUpdate();
-        Mail->getUpdate();
-        RSS->getUpdate();
         Tray->setToolTip("Mail and RSS is updating.");
-        Options->stop(0);
-        Options->start(0);
         TreeWidget->topLevelItem(1)->setDisabled(true);
         TreeWidget->topLevelItem(1)->setToolTip(0, "Mail is updating right now.");
         TreeWidget->topLevelItem(4)->setDisabled(true);
         TreeWidget->topLevelItem(4)->setToolTip(0, "RSS reader is updating right now.");
+        Updates[0] = Calendar->getUpdate();
+        Mail->getUpdate();
+        RSS->getUpdate();
+        Options->stop(0);
+        Options->start(0);
     }
 }
 void QOrganizer::closeEvent(QCloseEvent* E) {
@@ -537,14 +537,14 @@ void QOrganizer::VersionUpdate(QString I) {
 void QOrganizer::updateTime() {
     if (Updates[0].isEmpty()) {
         Tray->setIcon(QIcon(":/main/QOrganizerDownload.png"));
-        Updates[0]=Calendar->getUpdate();
-        Mail->getUpdate();
-        RSS->getUpdate();
         Tray->setToolTip("Mail and RSS is updating.");
         TreeWidget->topLevelItem(1)->setDisabled(true);
         TreeWidget->topLevelItem(1)->setToolTip(0, "Mail is updating right now.");
         TreeWidget->topLevelItem(4)->setDisabled(true);
         TreeWidget->topLevelItem(4)->setToolTip(0, "RSS reader is updating right now.");
+        Updates[0]=Calendar->getUpdate();
+        Mail->getUpdate();
+        RSS->getUpdate();
     }
 }
 void QOrganizer::Block() {
