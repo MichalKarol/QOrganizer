@@ -1055,31 +1055,32 @@ void SSLCON::DownloadEmails() {
                                         for (uint m = 0; m < (*Vec)[Fn+k-1]->Structurev[l]->Structure_Size; m += 10000) {
                                             S.write(QString("TAG UID FETCH "+QString::number((*Vec)[Fn+k-1]->Email_UID)+" BODY["+(*Vec)[Fn+k-1]->Structurev[l]->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
                                             QByteArray Tmp = readIMAPBODY(&S);
-                                            Text.append(Tmp);
-                                        }
-                                        if (Text.isEmpty() || Cancelled) {
-                                            for (uint m = En; m >= Fn; m--) {
-                                                for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
-                                                    delete (*Vec)[m-1]->Structurev[n-1];
-                                                    (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
+                                            if (Tmp.isEmpty() || Cancelled) {
+                                                for (uint m = En; m >= Fn; m--) {
+                                                    for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
+                                                        delete (*Vec)[m-1]->Structurev[n-1];
+                                                        (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
+                                                    }
+                                                    delete (*Vec)[m-1];
+                                                    Vec->erase(Vec->begin()+m-1);
                                                 }
-                                                delete (*Vec)[m-1];
-                                                Vec->erase(Vec->begin()+m-1);
-                                            }
-                                            emit EmailS(false, "ERROR: No response from server.");
-                                            return;
-                                        } else if (Text == "ERROR") {
-                                            closeIMAP(&S);
-                                            for (uint m = En; m >= Fn; m--) {
-                                                for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
-                                                    delete (*Vec)[m-1]->Structurev[n-1];
-                                                    (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
+                                                emit EmailS(false, "ERROR: No response from server.");
+                                                return;
+                                            } else if (Tmp == "ERROR") {
+                                                closeIMAP(&S);
+                                                for (uint m = En; m >= Fn; m--) {
+                                                    for (uint n = (*Vec)[m-1]->Structurev.size(); n > 0; n--) {
+                                                        delete (*Vec)[m-1]->Structurev[n-1];
+                                                        (*Vec)[m-1]->Structurev.erase((*Vec)[m-1]->Structurev.begin()+n-1);
+                                                    }
+                                                    delete (*Vec)[m-1];
+                                                    Vec->erase(Vec->begin()+m-1);
                                                 }
-                                                delete (*Vec)[m-1];
-                                                Vec->erase(Vec->begin()+m-1);
+                                                emit EmailS(false, "ERROR: Cannot fetch bodies.");
+                                                return;
+                                            } else {
+                                                Text.append(Tmp);
                                             }
-                                            emit EmailS(false, "ERROR: Cannot fetch bodies.");
-                                            return;
                                         }
                                         if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "BASE64") {
                                             Text = QByteArray::fromBase64(Text);
@@ -1168,17 +1169,16 @@ void SSLCON::DownloadAttachment() {
     for (uint m = 0; m < A->Structure_Size; m += 10000) {
         S.write(QString("TAG UID FETCH "+QString::number(E->Email_UID)+" BODY["+A->Structure_Number+"]<"+QString::number(m)+".10000>\r\n").toUtf8());
         QByteArray Tmp = readIMAPBODY(&S);
-        Tmp.remove(0, Tmp.indexOf("}\r\n")+3);
-        Tmp.remove(Tmp.indexOf(")\r\nTAG OK"), Tmp.length()-Tmp.indexOf(")\r\nTAG OK"));
-        Reply.append(Tmp);
-    }
-    if (Reply.isEmpty() || Cancelled) {
-        emit AttachmentS(false, "ERROR: No response from server.");
-        return;
-    } else if (Reply.contains("TAG NO") || Reply.contains("TAG BAD")) {
-        closeIMAP(&S);
-        emit AttachmentS(false, "ERROR: Cannot fetch attachment.");
-        return;
+        if (Tmp.isEmpty() || Cancelled) {
+            emit AttachmentS(false, "ERROR: No response from server.");
+            return;
+        } else if (Tmp == "ERROR") {
+            closeIMAP(&S);
+            emit AttachmentS(false, "ERROR: Cannot fetch attachment.");
+            return;
+        } else {
+            Reply.append(Tmp);
+        }
     }
     closeIMAP(&S);
     QByteArray Array;
@@ -3169,8 +3169,8 @@ void qorgMail::AttachmentS(bool I, QString R) {
                 if (!AlreadyDeleted.contains(CID)) {
                     for (uint i = 1; i < E->Structurev.size(); i++) {
                         if (E->Structurev[i]->Structure_CID == CID) {
-                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                            ToClear.append(QDir::tempPath()+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                            ToClear.append(QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
                             AlreadyDeleted.append(CID);
                             HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
                             break;
@@ -3189,6 +3189,7 @@ void qorgMail::AttachmentS(bool I, QString R) {
             for (int i = 0; i < ToClear.size(); i++) {
                 QFile::remove(ToClear[i]);
             }
+            QDir().rmdir(QDir::tempPath()+QDir::separator()+"qorganizer");
         }
         if (E->Email_Quene != 0) {
             E->Email_Quene--;
@@ -3329,6 +3330,7 @@ void qorgMail::chooseEmail(QModelIndex I) {
             MailHtml->show();
             QString HTML = E->Email_Body[1];
             if (HTML.contains("\"cid:")) {
+                QDir().mkdir(QDir::tempPath()+QDir::separator()+"qorganizer");
                 Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Email_Quene = 0;
                 uint position = 0;
                 QList <QString> AlreadyDownlading;
@@ -3341,7 +3343,7 @@ void qorgMail::chooseEmail(QModelIndex I) {
                         for (uint i = 1; i < E->Structurev.size(); i++) {
                             if (E->Structurev[i]->Structure_CID == CID) {
                                 AlreadyDownlading.append(CID);
-                                downloadAttachment(i, QDir::tempPath()+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                                downloadAttachment(i, QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
                                 break;
                             }
                         }
