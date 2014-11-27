@@ -608,12 +608,12 @@ void SSLCON::DownloadEmails() {
                     QString Subjects;
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
-                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
-                            QString Tmp = readIMAPBODY(&S);
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (SUBJECT)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
                             Subjects.append(Tmp);
                         }
-                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Subject)]\r\n").toUtf8());
-                        Subjects.append(readIMAPBODY(&S));
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (SUBJECT)]\r\n").toUtf8());
+                        Subjects.append(readIMAP(&S));
                         if (Subjects.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -630,10 +630,11 @@ void SSLCON::DownloadEmails() {
                             emit EmailS(false, "ERROR: Cannot fetch subjects.");
                             return;
                         }
-                        QList <QString> SubL = Subjects.split(")\r\n*");
+                        QList <QString> SubL = Subjects.split("FETCH (BODY[HEADER.FIELDS (SUBJECT)] {");
+                        SubL.removeFirst();
                         for (uint k = 0; k < En-Fn+1; k++) {
-                            if (SubL[k].contains("Subject:", Qt::CaseInsensitive)) {
-                                QString Sub = SubL[k].mid(SubL[k].indexOf("Subject: ")+9, SubL[k].indexOf("\r\n)", SubL[k].indexOf("Subject: ")+9)-SubL[k].indexOf("Subject:")-9);
+                            if (SubL[k].contains("SUBJECT:", Qt::CaseInsensitive)) {
+                                QString Sub = SubL[k].mid(SubL[k].indexOf("SUBJECT: ", 0, Qt::CaseInsensitive)+9, SubL[k].indexOf("\r\n)", SubL[k].indexOf("SUBJECT: ", 0, Qt::CaseInsensitive)+9)-SubL[k].indexOf("SUBJECT:", 0, Qt::CaseInsensitive)-9);
                                 Sub.remove("\r\n");
                                 Sub = NameFilter(Sub);
                                 if (Sub.simplified().isEmpty()) {
@@ -641,8 +642,10 @@ void SSLCON::DownloadEmails() {
                                 }
                                 Sub.replace("<", "&lt;");
                                 Sub.replace(">", "&gt;");
+                                qDebug()<<k<<Sub;
                                 QTextDocument D;
                                 D.setHtml(Sub.simplified());
+                                qDebug()<<k<<D.toPlainText();
                                 (*Vec)[Fn+k-1]->Email_Subject = D.toPlainText();
                             }
                         }
@@ -704,12 +707,12 @@ void SSLCON::DownloadEmails() {
                     QString Froms;
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
-                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
-                            QString Tmp = readIMAPBODY(&S);
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (FROM)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
                             Froms.append(Tmp);
                         }
-                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (From)]\r\n").toUtf8());
-                        Froms.append(readIMAPBODY(&S));
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (FROM)]\r\n").toUtf8());
+                        Froms.append(readIMAP(&S));
                         if (Froms.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -726,10 +729,11 @@ void SSLCON::DownloadEmails() {
                             emit EmailS(false, "ERROR: Cannot fetch froms.");
                             return;
                         }
-                        QList <QString> FromsL = Froms.split(")\r\n*");
+                        QList <QString> FromsL = Froms.split("FETCH (BODY[HEADER.FIELDS (FROM)] {");
+                        FromsL.removeFirst();
                         for (uint k = 0; k < En-Fn+1; k++) {
-                            if (FromsL[k].contains("From:", Qt::CaseInsensitive)) {
-                                QString From = FromsL[k].mid(FromsL[k].indexOf("From: ", Qt::CaseInsensitive)+6, FromsL[k].indexOf("\r\n)", FromsL[k].indexOf("From: ", Qt::CaseInsensitive)+6)-FromsL[k].indexOf("From: ", Qt::CaseInsensitive)-6);
+                            if (FromsL[k].contains("FROM:", Qt::CaseInsensitive)) {
+                                QString From = FromsL[k].mid(FromsL[k].indexOf("FROM: ", 0, Qt::CaseInsensitive)+6, FromsL[k].indexOf("\r\n)", FromsL[k].indexOf("FROM: ", 0, Qt::CaseInsensitive)+6)-FromsL[k].indexOf("FROM: ", 0, Qt::CaseInsensitive)-6);
                                 (*Vec)[Fn+k-1]->Email_From = From.mid(From.indexOf("<")+1, From.indexOf(">")-From.indexOf("<")-1).simplified();
                             }
                         }
@@ -791,12 +795,12 @@ void SSLCON::DownloadEmails() {
                     QString MessageID;
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
-                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Message-ID)]\r\n").toUtf8());
-                            QString Tmp = readIMAPBODY(&S);
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
                             MessageID.append(Tmp);
                         }
-                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Message-ID)]\r\n").toUtf8());
-                        MessageID.append(readIMAPBODY(&S));
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]\r\n").toUtf8());
+                        MessageID.append(readIMAP(&S));
                         if (MessageID.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -813,9 +817,10 @@ void SSLCON::DownloadEmails() {
                             emit EmailS(false, "ERROR: Cannot fetch message IDs.");
                             return;
                         }
-                        QList <QString> MIDL = MessageID.split(")\r\n*");
+                        QList <QString> MIDL = MessageID.split("FETCH (BODY[HEADER.FIELDS (MESSAGE-ID)] {");
+                        MIDL.removeFirst();
                         for (uint k = 0; k < En-Fn+1; k++) {
-                            if (MIDL[k].contains("Message-ID:", Qt::CaseInsensitive)) {
+                            if (MIDL[k].contains("MESSAGE-ID:", Qt::CaseInsensitive)) {
                                 (*Vec)[Fn+k-1]->Email_MessageID = MIDL[k].mid(MIDL[k].indexOf("<")+1, MIDL[k].indexOf(">", MIDL[k].indexOf("<")+1)-MIDL[k].indexOf("<")-1);
                             }
                         }
@@ -824,12 +829,12 @@ void SSLCON::DownloadEmails() {
                     QString ReplyTo;
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
-                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (Reply-To)]\r\n").toUtf8());
-                            QString Tmp = readIMAPBODY(&S);
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (REPLY-TO)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
                             ReplyTo.append(Tmp);
                         }
-                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (Reply-To)]\r\n").toUtf8());
-                        ReplyTo.append(readIMAPBODY(&S));
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (REPLY-TO)]\r\n").toUtf8());
+                        ReplyTo.append(readIMAP(&S));
                         if (ReplyTo.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -846,9 +851,10 @@ void SSLCON::DownloadEmails() {
                             emit EmailS(false, "ERROR: Cannot fetch reply-to.");
                             return;
                         }
-                        QList <QString> RPLL = ReplyTo.split(")\r\n*");
+                        QList <QString> RPLL = ReplyTo.split("FETCH (BODY[HEADER.FIELDS (REPLY-TO)] {");
+                        RPLL.removeFirst();
                         for (uint k = 0; k < En-Fn+1; k++) {
-                            if (RPLL[k].contains("Reply-to:", Qt::CaseInsensitive)) {
+                            if (RPLL[k].contains("REPLY-TO:", Qt::CaseInsensitive)) {
                                 (*Vec)[Fn+k-1]->Email_ReplyTo = RPLL[k].mid(RPLL[k].indexOf("<")+1, RPLL[k].indexOf(">", RPLL[k].indexOf("<")+1)-RPLL[k].indexOf("<")-1);
                             }
                         }
@@ -857,12 +863,12 @@ void SSLCON::DownloadEmails() {
                     QString FetchTo;
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
-                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (To)]\r\n").toUtf8());
-                            QString Tmp = readIMAPBODY(&S);
+                            S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (TO)]\r\n").toUtf8());
+                            QString Tmp = readIMAP(&S);
                             FetchTo.append(Tmp);
                         }
-                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (To)]\r\n").toUtf8());
-                        FetchTo.append(readIMAPBODY(&S));
+                        S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (TO)]\r\n").toUtf8());
+                        FetchTo.append(readIMAP(&S));
                         if (FetchTo.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -879,10 +885,11 @@ void SSLCON::DownloadEmails() {
                             emit EmailS(false, "ERROR: Cannot fetch to.");
                             return;
                         }
-                        QList <QString> FTL = FetchTo.split(")\r\n*");
+                        QList <QString> FTL = FetchTo.split("FETCH (BODY[HEADER.FIELDS (TO)] {");
+                        FTL.removeFirst();
                         for (uint k = 0; k < En-Fn+1; k++) {
-                            if (FTL[k].contains("To:", Qt::CaseInsensitive)) {
-                                FTL[k] = FTL[k].mid(FTL[k].indexOf("To: ", Qt::CaseInsensitive)+4, FTL[k].indexOf("\r\n)", FTL[k].indexOf("To: ", Qt::CaseInsensitive)+4)-FTL[k].indexOf("To: ", Qt::CaseInsensitive)-4);
+                            if (FTL[k].contains("TO:", Qt::CaseInsensitive)) {
+                                FTL[k] = FTL[k].mid(FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)+4, FTL[k].indexOf("\r\n)", FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)+4)-FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)-4);
                                 QList <QString> FTLL = FTL[k].split(",");
                                 for (int l = 0; l < FTLL.size(); l++) {
                                     QString Email =  FTLL[l].mid(FTLL[l].indexOf("<")+1, FTLL[l].indexOf(">")-FTLL[l].indexOf("<")-1).simplified();
@@ -899,11 +906,11 @@ void SSLCON::DownloadEmails() {
                     {
                         for (uint k = Fn; k + 100 < En; k +=100) {
                             S.write(QString("TAG FETCH "+QString::number(k)+":"+QString::number(k + 99)+" BODY.PEEK[HEADER.FIELDS (CC)]\r\n").toUtf8());
-                            QString Tmp = readIMAPBODY(&S);
+                            QString Tmp = readIMAP(&S);
                             FetchCC.append(Tmp);
                         }
                         S.write(QString("TAG FETCH "+QString::number(Fn+((En-Fn)/100)*100)+":"+Enu+" BODY.PEEK[HEADER.FIELDS (CC)]\r\n").toUtf8());
-                        FetchCC.append(readIMAPBODY(&S));
+                        FetchCC.append(readIMAP(&S));
                         if (FetchCC.isEmpty() || Cancelled) {
                             for (uint k = En; k >= Fn; k--) {
                                 delete (*Vec)[k-1];
@@ -920,10 +927,11 @@ void SSLCON::DownloadEmails() {
                             emit EmailS(false, "ERROR: Cannot fetch CC.");
                             return;
                         }
-                        QList <QString> FCL = FetchCC.split(")\r\n*");
+                        QList <QString> FCL = FetchCC.split("FETCH (BODY[HEADER.FIELDS (CC)] {");
+                        FCL.removeFirst();
                         for (uint k = 0; k < En-Fn+1; k++) {
                             if (FCL[k].contains("CC:", Qt::CaseInsensitive)) {
-                                FCL[k] = FCL[k].mid(FCL[k].indexOf("Cc: ", Qt::CaseInsensitive)+4, FCL[k].indexOf("\r\n)", FCL[k].indexOf("Cc: ", Qt::CaseInsensitive)+4)-FCL[k].indexOf("Cc: ", Qt::CaseInsensitive)-4);
+                                FCL[k] = FCL[k].mid(FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)+4, FCL[k].indexOf("\r\n)", FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)+4)-FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)-4);
                                 QList <QString> FTLL = FCL[k].split(",");
                                 for (int l = 0; l < FTLL.size(); l++) {
                                     QString Email =  FTLL[l].mid(FTLL[l].indexOf("<")+1, FTLL[l].indexOf(">")-FTLL[l].indexOf("<")-1).simplified();
@@ -1214,7 +1222,7 @@ void SSLCON::SendEmail() {
     QList <QString> Bodies;
     QList <QString> Attachments;
     for (int i = 0, j = 0; i < Data.size(); i++) {
-        if (Data[i].isEmpty()) {
+        if (Data[i] == QChar(0x10FFFF)) {
             j++;
         } else {
             switch (j) {
@@ -1321,8 +1329,7 @@ void SSLCON::SendEmail() {
                     return;
                 }
                 Reply = Reply.mid(Reply.indexOf("}")+1, Reply.indexOf(")\r\nTAG OK")-Reply.indexOf("}")-1);
-                Output.append("Content-Type: "+EM->Structurev[Attachments[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Attachments[i].toInt()]->Structure_Subtype.toLower())+"\n";
-                Output.append("Content-Transfer-Encoding: "+EM->Structurev[Attachments[i].toInt()]->Structure_Encoding+"\n");
+                Output.append("Content-Type: "+EM->Structurev[Attachments[i].toInt()]->Structure_Type.toLower()+"/"+EM->Structurev[Attachments[i].toInt()]->Structure_Subtype.toLower()+"\n");
                 if (!EM->Structurev[Attachments[i].toInt()]->Structure_Attrybutes.Name.isEmpty()) {
                     Output.append("Content-Disposition: attachment; filename=\""+EM->Structurev[Attachments[i].toInt()]->Structure_Attrybutes.Name+"\"\n");
                 }
@@ -2270,9 +2277,9 @@ private slots:
                 Att.append(Attachments->item(i)->data(Qt::UserRole).toString());
             }
             if (Html->page()->mainFrame()->toHtml() != "<html><head></head><body></body></html>") {
-                SSL->setData(QList <QString>() << Header << "" << RcptL << "" << Text->toPlainText() << Html->page()->mainFrame()->toHtml() << "" << Att);
+                SSL->setData(QList <QString>() << Header << QChar(0x10FFFF) << RcptL << QChar(0x10FFFF) << Text->toPlainText() << Html->page()->mainFrame()->toHtml() << QChar(0x10FFFF) << Att);
             } else {
-                SSL->setData(QList <QString>() << Header << "" << RcptL << "" << Text->toPlainText() << "" << Att);
+                SSL->setData(QList <QString>() << Header << QChar(0x10FFFF) << RcptL << QChar(0x10FFFF) << Text->toPlainText() << QChar(0x10FFFF) << Att);
             }
             SSL->setMethod(SSLCON::Send);
             SSL->start();
