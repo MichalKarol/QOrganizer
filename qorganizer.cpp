@@ -267,7 +267,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem* Input) {
             Options->setWidget(0);
             Stacked->setCurrentIndex(7);
         } else if (Input->text(0) == "Save") {
-            qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org");
+            qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
             QMessageBox::information(this, "Saved", "Saved.");
             Stacked->setCurrentIndex(0);
         }
@@ -371,7 +371,7 @@ void QOrganizer::MailNews(QString I) {
     TreeWidget->topLevelItem(1)->setDisabled(false);
     TreeWidget->topLevelItem(1)->setToolTip(0, "");
     if (!Updates[2].isEmpty()) {
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org");
+        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
         Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         Updates[0].clear();
@@ -437,7 +437,7 @@ void QOrganizer::RSSNews(QString I) {
     TreeWidget->topLevelItem(4)->setDisabled(false);
     TreeWidget->topLevelItem(4)->setToolTip(0, "");
     if (!Updates[1].isEmpty()) {
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org");
+        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
         Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         Updates[0].clear();
@@ -451,7 +451,7 @@ void QOrganizer::RSSNews(QString I) {
 
 void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
     if (I == QSystemTrayIcon::Context) {
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org");
+        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         closing = true;
         this->close();
     } else if (I == QSystemTrayIcon::DoubleClick) {
@@ -522,7 +522,7 @@ void QOrganizer::closeEvent(QCloseEvent* E) {
         connect(C, SIGNAL(finished()), &L2, SLOT(quit()));
         C->start();
         L2.exec();
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org");
+        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         E->accept();
     }
 }
