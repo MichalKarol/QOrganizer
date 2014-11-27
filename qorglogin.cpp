@@ -98,7 +98,7 @@ void qorgLogin::PasswordInputValidation(QString input) {
 }
 void qorgLogin::Authentication() {
     if (Validated[0]&&Validated[1]) {
-        QString path = QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(Line[0]->text().toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org";
+        QString path = QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(Line[0]->text().toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org";
         QFileInfo UserFile(path);
         if (UserFile.exists()) {
             if (UserFile.permission(QFile::ReadUser)) {
@@ -119,11 +119,11 @@ void qorgLogin::Authentication() {
 }
 void qorgLogin::Register() {
     if (Validated[0]&&Validated[1]) {
-        if (!QDir(QDir::homePath()+"/.qorganizer/").exists()) {
+        if (!QDir(QDir::homePath()+QDir::separator()+".qorganizer").exists()) {
             QDir Dir;
-            Dir.mkdir(QDir::homePath()+"/.qorganizer/");
+            Dir.mkdir(QDir::homePath()+QDir::separator()+".qorganizer");
         }
-        QString path = QDir::homePath()+"/.qorganizer/"+QString::fromUtf8(QCryptographicHash::hash(Line[0]->text().toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove(QDir::separator())+".org";
+        QString path = QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(Line[0]->text().toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org";
         if (QFile::exists(path)) {
             QMessageBox::critical(this, "Error", "User already exists");
         } else {

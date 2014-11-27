@@ -17,8 +17,8 @@
 
 bool qorgIO::ReadFile(QString* hashed, QString* hash, QOrganizer* main, QString path) {
     QFile file(path);
-    QTextStream stream(&file);
     file.open(QIODevice::ReadOnly | QIODevice::Text);
+    QTextStream stream(&file);
     QString text = stream.readAll();
     file.close();
     QString Header = text.mid(0, 15);
@@ -100,8 +100,8 @@ void qorgIO::SaveFile(QString* hashed, QString* hash, QOrganizer* main, QString 
     delete[] aOUT;
     delete aesKey;
     QFile file(path);
-    QTextStream stream(&file);
     file.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream stream(&file);
     stream << Out;
     file.close();
     Out.clear();
