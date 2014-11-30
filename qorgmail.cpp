@@ -642,10 +642,8 @@ void SSLCON::DownloadEmails() {
                                 }
                                 Sub.replace("<", "&lt;");
                                 Sub.replace(">", "&gt;");
-                                qDebug()<<k<<Sub;
                                 QTextDocument D;
                                 D.setHtml(Sub.simplified());
-                                qDebug()<<k<<D.toPlainText();
                                 (*Vec)[Fn+k-1]->Email_Subject = D.toPlainText();
                             }
                         }
