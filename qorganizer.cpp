@@ -53,7 +53,7 @@ protected:
             }
             S.close();
             work = false;
-            for (int i = 0; i < 24*60*60 && running; i++) {
+            for (int i = 0; i < 1*60 && running; i++) {
                 this->sleep(1);
             }
         }
@@ -128,7 +128,7 @@ QOrganizer::QOrganizer() {
     QTextBrowser* Label = new QTextBrowser(this);
     Label->setText("QOrganizer 1.03\nCreated by: Mkarol (mkarol@linux.pl)\n16.11.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK");
-    VU =new VersionUpdater(this);
+    VU = new VersionUpdater(this);
     connect(VU, SIGNAL(VersionUpdate(QString)), this, SLOT(VersionUpdate(QString)));
     VU->start();
     // Timers and tray
@@ -528,9 +528,9 @@ void QOrganizer::closeEvent(QCloseEvent* E) {
 }
 void QOrganizer::VersionUpdate(QString I) {
     if (this->isHidden()) {
-        QMessageBox::information(this, "Version", "New version available: "+I);
-    } else {
         Tray->showMessage("Version", "New version available: "+I);
+    } else {
+        QMessageBox::information(this, "Version", "New version available: "+I);
     }
 }
 
