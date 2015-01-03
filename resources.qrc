@@ -11,7 +11,7 @@
     </qresource>
     <qresource prefix="/main">
         <file alias="Add.png">Images/Add.png</file>
-        <file alias="AdressBook.png">Images/AdressBook.png</file>
+        <file alias="AddressBook.png">Images/AddressBook.png</file>
         <file alias="Calendar.png">Images/Calendar.png</file>
         <file alias="Delete.png">Images/Delete.png</file>
         <file alias="Edit.png">Images/Edit.png</file>
@@ -28,5 +28,8 @@
     </qresource>
     <qresource prefix="/passwd">
         <file alias="Light.png">Images/Light.png</file>
+    </qresource>
+    <qresource prefix="/ad">
+        <file alias="Default.png">Images/Default.png</file>
     </qresource>
 </RCC>

@@ -508,7 +508,7 @@ qorgCalendar::qorgCalendar(QWidget* parent, qorgAB* AB) :QWidget(parent) {
     Calendar->setSelectionMode(QAbstractItemView::NoSelection);
     Calendar->setMinimumWidth(400);
     Calendar->setFixedHeight(225);
-    connect(Calendar, SIGNAL(itemActivated(QTableWidgetItem*)), this, SLOT(dayChanged(QTableWidgetItem*)));
+    connect(Calendar, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(dayChanged(QTableWidgetItem*)));
 
     DayView = new QTreeWidget(this);
     DayView->setMaximumWidth(350);
@@ -948,7 +948,6 @@ void qorgCalendar::updateAll() {
         for (char k = 5; k > 0; k--) {
             QList  <uint>  N = checkEvN(QDate::currentDate().addDays(i), k);
             QList  <uint>  R = checkEvR(QDate::currentDate().addDays(i), k);
-            j+=(N.size()+R.size());
             for (int l = 0; l < N.size(); l++) {
                 if (!(DUID.contains(N[l]))) {
                     QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
@@ -967,6 +966,7 @@ void qorgCalendar::updateAll() {
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                     colorItem(Itm, k);
                     DUID.append(N[l]);
+                    j++;
                 }
             }
             for (int l = 0; l < R.size(); l++) {
@@ -996,10 +996,13 @@ void qorgCalendar::updateAll() {
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
                     DUID.append(R[l]|0xF0000000);
                     colorItem(Itm, k);
+                    j++;
                 }
             }
         }
-        if (QDate::currentDate().addDays(i).day() == 28&&QDate::currentDate().addDays(i).month() == 2&&!(QDate::isLeapYear(QDate::currentDate().year()))) {
+        if (QDate::currentDate().addDays(i).day() == 28 //28.02 problem solver
+                && QDate::currentDate().addDays(i).month() == 2
+                &&!(QDate::isLeapYear(QDate::currentDate().year()))) {
             if (category.isEmpty()||category == "Birthdays") {
                 QList  <QString>  B = checkBd(QDate(2012, 2, 29));
                 for (int k = 0; k < B.size(); k++) {
@@ -1234,7 +1237,7 @@ void qorgCalendar::setNotification(bool first) {
                 M.append(Immediate[i]+"\n");
             }
             M = M.mid(0, M.length()-1);
-            emit Notification(M);
+            emit Notification("Event notification", M);
         }
     } else {
         QList  <QString>  Notify;
@@ -1309,7 +1312,7 @@ void qorgCalendar::setNotification(bool first) {
                 M.append(Notify[i]+"\n");
             }
             M = M.mid(0, M.length()-1);
-            emit Notification(M);
+            emit Notification("Event notification", M);
         }
     }
     category = cur;
@@ -1319,7 +1322,7 @@ void qorgCalendar::setNotification(bool first) {
 }
 void qorgCalendar::checkMidnight() {
     int difference = Midnight->remainingTime()-QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00)));
-    if (difference > 500 || difference < -500) {
+    if (abs(difference)<500) {
         Midnight->stop();
         Midnight->setInterval(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))));
         Midnight->start();

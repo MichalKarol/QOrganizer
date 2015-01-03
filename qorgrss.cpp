@@ -362,7 +362,7 @@ void qorgRSS::setChannel(int I) {
                 }
                 Itm->setText(0, RSSv[currentC].Itemv[j]->Title);
                 Itm->setToolTip(0, RSSv[currentC].Itemv[j]->Title);
-                Itm->setText(1, RSSv[currentC].Itemv[j]->PubDate.toString("dd/MM/yyyy hh:mm"));
+                Itm->setText(1, RSSv[currentC].Itemv[j]->PubDate.toString("dd.MM.yyyy hh:mm"));
             }
             Titles->scrollToTop();
             setLayoutF();

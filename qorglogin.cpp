@@ -20,6 +20,7 @@ qorgLogin::qorgLogin(QOrganizer* p) :QDialog(p) {
     setWindowIcon(QIcon(":/main/QOrganizer.png"));
     setWindowTitle("Login dialog");
     setMinimumWidth(300);
+    //this->show();
     Label[0]=new QLabel("Username: ", this);
     Label[1]=new QLabel("Password: ", this);
     PassLabel = new QLabel("", this);
@@ -127,12 +128,17 @@ void qorgLogin::Register() {
         if (QFile::exists(path)) {
             QMessageBox::critical(this, "Error", "User already exists");
         } else {
-            hash = new QString(QCryptographicHash::hash(salting(Line[1]->text()).toUtf8(), QCryptographicHash::Sha3_512));
-            hashed = new QString(calculateXOR(Line[1]->text().toUtf8(), hash->toUtf8()).toBase64());
-            qorgIO::SaveFile(hashed, hash, pointer, path);
-            if (qorgIO::ReadFile(hashed, hash, pointer, path)) {
-                pointer->setUser(Line[0]->text(), hashed, hash);
-                this->accept();
+            QString Repeat = QInputDialog::getText(this,"Passsword","Repeat password",QLineEdit::Password);
+            if (Repeat == Line[1]->text()) {
+                hash = new QString(QCryptographicHash::hash(salting(Line[1]->text()).toUtf8(), QCryptographicHash::Sha3_512));
+                hashed = new QString(calculateXOR(Line[1]->text().toUtf8(), hash->toUtf8()).toBase64());
+                qorgIO::SaveFile(hashed, hash, pointer, path);
+                if (qorgIO::ReadFile(hashed, hash, pointer, path)) {
+                    pointer->setUser(Line[0]->text(), hashed, hash);
+                    this->accept();
+                }
+            } else {
+                QMessageBox::critical(this, "Error", "Passwords vary.");
             }
         }
         Line[1]->clear();

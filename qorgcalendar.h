@@ -87,7 +87,7 @@ private slots:
 
 signals:
     void updateTree();
-    void Notification(QString);
+    void Notification(QString,QString);
 };
 
 #endif  // QORGCALENDAR_H_

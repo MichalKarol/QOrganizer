@@ -34,7 +34,7 @@ public:
     qorgCalendar* Calendar;
     qorgMail* Mail;
     qorgNotes* Notes;
-    qorgAB* AdressBook;
+    qorgAB* AddressBook;
     qorgRSS* RSS;
     qorgPasswd* PasswordManager;
     qorgOptions* Options;
@@ -61,12 +61,11 @@ private slots:
     void doubleClick(QString);
 
     void updateCalendar();
-    void Notification(QString);
 
     void updateMail();
     void MailNews(QString);
 
-    void updateAdressBook();
+    void updateAddressBook();
 
     void updateRSS();
     void RSSNews(QString);
@@ -80,5 +79,7 @@ private slots:
 
     // Block
     void Unlock();
+public slots:
+    void Notification(QString,QString);
 };
 #endif  // QORGANIZER_H_

@@ -28,9 +28,11 @@ struct Person {
     QString Street;
     uint HouseNumber;
     uint Apartment;
-    QString Email;
-    QString Mobile;
-    QDate Birthday;
+    QString Email; //utwozy maske sprawdzającą poprawność
+    QString Mobile; //INT validation
+    QString Birthday; // dd/MM
+    QByteArray Photo; //if empty use default
+    QString ExtraInformation;
 };
 class qorgAB : public QWidget {
     Q_OBJECT
@@ -56,14 +58,20 @@ private:
     QString currentCategory;
     QGridLayout* La;
     QListWidget* List;
+    QPushButton* Photo;
     QLabel* L[9];
     QLineEdit* E[9];
+    QCheckBox* BDayCheckBox;
     QDateEdit* D;
+    QCalendarWidget* CalendarPopup;
+    QTextBrowser* ExtraInformationField;
     QPushButton* Add;
     QPushButton* OKB;
     QPushButton* Cancel;
     QCompleter* C;
 private slots:
+    void SelectPhoto();
+    void ActivateBirthdayField();
     void AddS();
     void row(QString);
     void Click(QModelIndex);
