@@ -15,7 +15,6 @@
 
 #include <qorganizer.h>
 
-
 class QOrganizer::VersionUpdater: public QThread {
     Q_OBJECT
 public:
@@ -46,14 +45,14 @@ protected:
                     Reply = Reply.mid(0, Reply.indexOf("\n"));
                     uint V = Reply.mid(0, 1).toInt();
                     uint SV = Reply.mid(2, 2).toInt();
-                    if (V != 1 || SV != 3) {
+                    if (V != 1 || SV != 4) {
                         emit VersionUpdate(Reply);
                     }
                 }
             }
             S.close();
             work = false;
-            for (int i = 0; i < 1*60 && running; i++) {
+            for (int i = 0; i < 24*60*60 && running; i++) {
                 this->sleep(1);
             }
         }
@@ -104,38 +103,48 @@ QOrganizer::QOrganizer() {
     connect(Options, SIGNAL(Update()), this, SLOT(updateTime()));
     connect(Options, SIGNAL(Block()), this, SLOT(Block()));
     connect(Options, SIGNAL(CNPassword(QString*, QString*, QString*, QString*)), this, SLOT(NewPassword(QString*, QString*, QString*, QString*)));
-    AdressBook = new qorgAB(this);
-    connect(AdressBook, SIGNAL(updateTree()), this, SLOT(updateAdressBook()));
-    Calendar = new qorgCalendar(this, AdressBook);
+
+    AddressBook = new qorgAB(this);
+    connect(AddressBook, SIGNAL(updateTree()), this, SLOT(updateAddressBook()));
+
+    Calendar = new qorgCalendar(this, AddressBook);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
-    connect(Calendar, SIGNAL(Notification(QString)), this, SLOT(Notification(QString)));
-    Mail = new qorgMail(this, AdressBook, Options);
+    connect(Calendar, SIGNAL(Notification(QString,QString)), this, SLOT(Notification(QString,QString)));
+
+    Mail = new qorgMail(this, AddressBook, Options);
     connect(Mail, SIGNAL(updateTree()), this, SLOT(updateMail()));
     connect(Mail, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(Mail, SIGNAL(sendUpdate(QString)), this, SLOT(MailNews(QString)));
+
     Notes = new qorgNotes(this);
+
     RSS = new qorgRSS(this, Options);
     connect(RSS, SIGNAL(updateTree()), this, SLOT(updateRSS()));
     connect(RSS, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(RSS, SIGNAL(sendUpdate(QString)), this, SLOT(RSSNews(QString)));
+
     PasswordManager = new qorgPasswd(this);
+
     QGridLayout* layout = new QGridLayout(this);
     TreeWidget = new QTreeWidget();
     connect(TreeWidget, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(launchFunction(QTreeWidgetItem*)));
     layout->addWidget(TreeWidget, 0, 0, Qt::AlignLeft);
     Stacked = new QStackedWidget();
+
     // Home widget
     QTextBrowser* Label = new QTextBrowser(this);
-    Label->setText("QOrganizer 1.03\nCreated by: Mkarol (mkarol@linux.pl)\n16.11.2014\nYou could help in developing this software by donating:"
+    Label->setText("QOrganizer 1.04\nCreated by: Mkarol (mkarol@linux.pl)\n1.12.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK");
     VU = new VersionUpdater(this);
     connect(VU, SIGNAL(VersionUpdate(QString)), this, SLOT(VersionUpdate(QString)));
     VU->start();
+
     // Timers and tray
     Tray = new QSystemTrayIcon(QIcon(":/main/QOrganizer.png"), this);
     Tray->show();
     closing = false;
     shown = false;
+
     // Block widget
     BlockL = new QLineEdit(this);
     BlockL->setEchoMode(QLineEdit::Password);
@@ -150,18 +159,19 @@ QOrganizer::QOrganizer() {
     Gr->addWidget(OKB, 2, 1);
     Gr->addItem(new QSpacerItem(1, 1), 3, 1);
     Gr->addItem(new QSpacerItem(1, 1), 0, 2, 4, 1);
+
     // Set layout
     Stacked->addWidget(Label);
     Stacked->addWidget(Calendar);
     Stacked->addWidget(Mail);
     Stacked->addWidget(Notes);
-    Stacked->addWidget(AdressBook);
+    Stacked->addWidget(AddressBook);
     Stacked->addWidget(RSS);
     Stacked->addWidget(PasswordManager);
     Stacked->addWidget(Options);
     Stacked->addWidget(Block);
     layout->addWidget(Stacked, 0, 1);
-    layout->setMargin(5);
+    //layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
     for (int i = TreeWidget->topLevelItemCount(); i > 0; i--) {
@@ -209,9 +219,9 @@ void QOrganizer::setTree() {
     NotesTI->setExpanded(true);
 
     QTreeWidgetItem* ADTI = new QTreeWidgetItem(TreeWidget);
-    ADTI->setText(0, "Adress Book");
-    ADTI->setIcon(0, QIcon(":/main/AdressBook.png"));
-    categories = AdressBook->getCategories();
+    ADTI->setText(0, "Address Book");
+    ADTI->setIcon(0, QIcon(":/main/AddressBook.png"));
+    categories = AddressBook->getCategories();
     for (int i = 0; i < categories.size(); i++) {
         QTreeWidgetItem* Itm = new QTreeWidgetItem(ADTI);
         Itm->setText(0, categories[i]);
@@ -246,57 +256,58 @@ void QOrganizer::setTree() {
 }
 
 void QOrganizer::launchFunction(QTreeWidgetItem* Input) {
-    if (Input->parent() == NULL) {
-        if (Input->text(0) == "Calendar") {
-            Calendar->setCategory("");
-            Stacked->setCurrentIndex(1);
-        } else if (Input->text(0) == "Mail") {
-            Mail->setMail(-1);
-            Stacked->setCurrentIndex(2);
-        } else if (Input->text(0) == "Notes") {
-            Stacked->setCurrentIndex(3);
-        } else if (Input->text(0) == "Adress Book") {
-            AdressBook->setCategory("");
-            Stacked->setCurrentIndex(4);
-        } else if (Input->text(0) == "Feeds Reader") {
-            RSS->setChannel(-1);
-            Stacked->setCurrentIndex(5);
-        } else if (Input->text(0) == "Password Manager") {
-            Stacked->setCurrentIndex(6);
-        } else if (Input->text(0) == "Options") {
-            Options->setWidget(0);
-            Stacked->setCurrentIndex(7);
-        } else if (Input->text(0) == "Save") {
-            qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
-            QMessageBox::information(this, "Saved", "Saved.");
-            Stacked->setCurrentIndex(0);
-        }
-    } else {
-        if (Input->parent()->text(0) == "Calendar") {
-            Calendar->setCategory(Input->text(0));
-            Stacked->setCurrentIndex(1);
-        } else if (Input->parent()->text(0) == "Mail") {
-            for (int i = 0; i < Input->parent()->childCount(); i++) {
-                if (Input->parent()->child(i) == Input) {
-                    Mail->setMail(i);
-                    break;
-                }
+    if (!Input->isDisabled()) {
+        if (Input->parent() == NULL) {
+            if (Input->text(0) == "Calendar") {
+                Calendar->setCategory("");
+                Stacked->setCurrentIndex(1);
+            } else if (Input->text(0) == "Mail") {
+                Mail->setMail(-1);
+                Stacked->setCurrentIndex(2);
+            } else if (Input->text(0) == "Notes") {
+                Stacked->setCurrentIndex(3);
+            } else if (Input->text(0) == "Address Book") {
+                AddressBook->setCategory("");
+                Stacked->setCurrentIndex(4);
+            } else if (Input->text(0) == "Feeds Reader") {
+                RSS->setChannel(-1);
+                Stacked->setCurrentIndex(5);
+            } else if (Input->text(0) == "Password Manager") {
+                Stacked->setCurrentIndex(6);
+            } else if (Input->text(0) == "Options") {
+                Options->setWidget(0);
+                Stacked->setCurrentIndex(7);
+            } else if (Input->text(0) == "Save") {
+                qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
+                Stacked->setCurrentIndex(0);
             }
-            Stacked->setCurrentIndex(2);
-        } else if (Input->parent()->text(0) == "Adress Book") {
-            AdressBook->setCategory(Input->text(0));
-            Stacked->setCurrentIndex(4);
-        } else if (Input->parent()->text(0) == "Feeds Reader") {
-            for (int i = 0; i < Input->parent()->childCount(); i++) {
-                if (Input->parent()->child(i) == Input) {
-                    RSS->setChannel(i);
-                    break;
+        } else {
+            if (Input->parent()->text(0) == "Calendar") {
+                Calendar->setCategory(Input->text(0));
+                Stacked->setCurrentIndex(1);
+            } else if (Input->parent()->text(0) == "Mail") {
+                for (int i = 0; i < Input->parent()->childCount(); i++) {
+                    if (Input->parent()->child(i) == Input) {
+                        Mail->setMail(i);
+                        break;
+                    }
                 }
+                Stacked->setCurrentIndex(2);
+            } else if (Input->parent()->text(0) == "Address Book") {
+                AddressBook->setCategory(Input->text(0));
+                Stacked->setCurrentIndex(4);
+            } else if (Input->parent()->text(0) == "Feeds Reader") {
+                for (int i = 0; i < Input->parent()->childCount(); i++) {
+                    if (Input->parent()->child(i) == Input) {
+                        RSS->setChannel(i);
+                        break;
+                    }
+                }
+                Stacked->setCurrentIndex(5);
+            } else if (Input->parent()->text(0) == "Options") {
+                Options->setWidget(1);
+                Stacked->setCurrentIndex(7);
             }
-            Stacked->setCurrentIndex(5);
-        } else if (Input->parent()->text(0) == "Options") {
-            Options->setWidget(1);
-            Stacked->setCurrentIndex(7);
         }
     }
 }
@@ -340,8 +351,8 @@ void QOrganizer::updateCalendar() {
         }
     }
 }
-void QOrganizer::Notification(QString M) {
-    Tray->showMessage("Event notification", M, QSystemTrayIcon::Information, 3000);
+void QOrganizer::Notification(QString T, QString M) {
+    Tray->showMessage(T, M, QSystemTrayIcon::Information, 3000);
 }
 
 void QOrganizer::updateMail() {
@@ -371,9 +382,10 @@ void QOrganizer::MailNews(QString I) {
     TreeWidget->topLevelItem(1)->setDisabled(false);
     TreeWidget->topLevelItem(1)->setToolTip(0, "");
     if (!Updates[2].isEmpty()) {
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
+        if (qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+            Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
+        }
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
-        Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         Updates[0].clear();
         Updates[1].clear();
         Updates[2].clear();
@@ -383,11 +395,11 @@ void QOrganizer::MailNews(QString I) {
     }
 }
 
-void QOrganizer::updateAdressBook() {
+void QOrganizer::updateAddressBook() {
     QTreeWidgetItem* Itm = TreeWidget->topLevelItem(3);
-    QString currentCategory = AdressBook->getCurrent();
+    QString currentCategory = AddressBook->getCurrent();
     bool selected = false;
-    QStringList categories = AdressBook->getCategories();
+    QStringList categories = AddressBook->getCategories();
     for (int i = Itm->childCount(); i > 0; i--) {
         delete Itm->child(i-1);
     }
@@ -437,9 +449,10 @@ void QOrganizer::RSSNews(QString I) {
     TreeWidget->topLevelItem(4)->setDisabled(false);
     TreeWidget->topLevelItem(4)->setToolTip(0, "");
     if (!Updates[1].isEmpty()) {
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
+        if (qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+            Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
+        }
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
-        Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         Updates[0].clear();
         Updates[1].clear();
         Updates[2].clear();
@@ -451,7 +464,6 @@ void QOrganizer::RSSNews(QString I) {
 
 void QOrganizer::TrayClick(QSystemTrayIcon::ActivationReason I) {
     if (I == QSystemTrayIcon::Context) {
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
         closing = true;
         this->close();
     } else if (I == QSystemTrayIcon::DoubleClick) {
@@ -522,8 +534,11 @@ void QOrganizer::closeEvent(QCloseEvent* E) {
         connect(C, SIGNAL(finished()), &L2, SLOT(quit()));
         C->start();
         L2.exec();
-        qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
-        E->accept();
+        if (qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+            E->accept();
+        } else {
+            E->ignore();
+        }
     }
 }
 void QOrganizer::VersionUpdate(QString I) {

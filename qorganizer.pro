@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network webkitwidgets
+QT       += core gui network webkitwidgets concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 

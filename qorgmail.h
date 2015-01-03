@@ -22,6 +22,7 @@
 #include <QWebView>
 #include <QWebFrame>
 #include <QNetworkReply>
+#include <QtConcurrent>
 #include <vector>
 
 
@@ -126,7 +127,7 @@ private:
     vector <Mail> Mailv;
     QGridLayout* Layout;
     void setMailbox(int);
-    qorgAB* AdressBook;
+    qorgAB* AddressBook;
     qorgOptions* Options;
 
     int currentMail;
@@ -172,20 +173,20 @@ private slots:
     void Click(QModelIndex);
     void DeleteMail(uint);
     void EditMail(uint);
-    void EditMailS(bool);
+    void EditMailS(bool, QString);
+    void EditMailSS(bool, QString);
 
     // Main
     // SSLCON signals slots
     void LoginS(bool, QString);
     void MailboxesS(bool, QString);
-    void RefreshS(bool);
+    void RefreshS(bool, QString);
+    void RefreshSS(bool, QString);
     void EmailS(bool, QString);
-    void UpdateMail(bool, QString);
-    void UpdateS();
+    void UpdateS(bool, QString);
 
     void AttachmentS(bool, QString);
     void AttachmentSUser(bool, QString);
-    void SendEmailS(bool, QString);
 
     void CopyES(bool, QString);
     void DeleteES(bool, QString);
