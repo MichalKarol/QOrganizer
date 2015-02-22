@@ -344,4 +344,3 @@ QByteArray decryptUsingAES(QByteArray IV, QByteArray data, QByteArray password) 
 
     return Output;
 }
-

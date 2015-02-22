@@ -541,5 +541,4 @@ QString qorgAB::exportToVCard() {
     }
     return output;
 }
-
 #include "qorgab.moc"

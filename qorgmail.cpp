@@ -124,7 +124,7 @@ private:
     void SecureLogin();
     void DownloadMBoxVector();
 
-    //Processing data in different threads
+    // Processing data in different threads
     void ProcessSubjects(QList <QString>,vector <Email*>*,uint);
     void ProcessDates(QList <QString>,vector <Email*>*,uint);
     void ProcessFroms(QList <QString>,vector <Email*>*,uint);
@@ -3961,5 +3961,4 @@ void qorgMail::MailboxesMenu(QPoint P) {
         }
     }
 }
-
 #include "qorgmail.moc"

@@ -77,7 +77,7 @@ private:
     QTimer* MidnightTester;
     QTimer* Midnight;
     QTimer* NTimer;
-    //TODO Import & export from vCalendar
+    // TODO Import & export from vCalendar
 private slots:
     void Add(QDate);
     void Edit(uint);

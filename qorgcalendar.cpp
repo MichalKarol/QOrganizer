@@ -1102,5 +1102,4 @@ void qorgCalendar::checkMidnight() {
         updateAll();
     }
 }
-
 #include "qorgcalendar.moc"

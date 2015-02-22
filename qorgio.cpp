@@ -191,7 +191,7 @@ QString qorgIO::From102(QString I) {
     O.append(L[5]+"\n\n"); // Notes
     O.append(L[6]+"\n\n"); // AddressBook
     O.append(L[7]+"\n\n"); // Pass manager
-    O.append(L[8]); //AES Check
+    O.append(L[8]); // AES Check
     return O;
 }
 QString qorgIO::From103(QString I) {
