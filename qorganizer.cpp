@@ -15,6 +15,7 @@
 
 #include <qorganizer.h>
 
+
 class QOrganizer::VersionUpdater: public QThread {
     Q_OBJECT
 public:
@@ -33,29 +34,33 @@ private:
     bool running;
 protected:
     void run() {
+        QNetworkAccessManager* QNAM = new QNetworkAccessManager();
+        QNetworkRequest QNR(QUrl("https://raw.githubusercontent.com//MichalKarol/QOrganizer/master/latestVersion.md"));
+
         while (running) {
             work = true;
-            QSslSocket S;
-            S.connectToHostEncrypted("raw.githubusercontent.com", 443);
-            if (S.waitForConnected()) {
-                S.write(QString("GET /MichalKarol/QOrganizer/master/latestVersion.md HTTP/1.1\r\nHost: raw.githubusercontent.com\r\nUser-Agent: QOrganizer\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n").toUtf8());
-                if (S.waitForReadyRead()) {
-                    QString Reply = S.readAll();
-                    Reply.remove(0, Reply.indexOf("\r\n\r\n")+4);
-                    Reply = Reply.mid(0, Reply.indexOf("\n"));
-                    uint V = Reply.mid(0, 1).toInt();
-                    uint SV = Reply.mid(2, 2).toInt();
-                    if (V != 1 || SV != 4) {
-                        emit VersionUpdate(Reply);
-                    }
+            QNetworkReply* QNRe = QNAM->get(QNR);
+            QNRe->ignoreSslErrors();
+            QEventLoop* Loop = new QEventLoop();
+            connect(QNRe,SIGNAL(finished()),Loop,SLOT(quit()));
+            connect(QNRe,SIGNAL(finished()),Loop,SLOT(deleteLater()));
+            Loop->exec();
+
+            QString Reply = QNRe->readAll();
+            if (!Reply.isEmpty()) {
+                uint V = Reply.mid(0, 1).toInt();
+                uint SV = Reply.mid(1, 2).toInt();
+                if (V != 1 || SV != 4) {
+                    emit VersionUpdate(Reply.mid(0,4));
                 }
             }
-            S.close();
+
             work = false;
             for (int i = 0; i < 24*60*60 && running; i++) {
                 this->sleep(1);
             }
         }
+        delete QNAM;
     }
 signals:
     void VersionUpdate(QString);
@@ -102,31 +107,39 @@ QOrganizer::QOrganizer() {
     Options = new qorgOptions(this);
     connect(Options, SIGNAL(Update()), this, SLOT(updateTime()));
     connect(Options, SIGNAL(Block()), this, SLOT(Block()));
-    connect(Options, SIGNAL(CNPassword(QString*, QString*, QString*, QString*)), this, SLOT(NewPassword(QString*, QString*, QString*, QString*)));
+    connect(Options, SIGNAL(CNPassword(QByteArray, QByteArray, QByteArray, QByteArray)),
+            this, SLOT(NewPassword(QByteArray, QByteArray, QByteArray, QByteArray)));
 
-    AddressBook = new qorgAB(this);
-    connect(AddressBook, SIGNAL(updateTree()), this, SLOT(updateAddressBook()));
-
-    Calendar = new qorgCalendar(this, AddressBook);
+    Calendar = new qorgCalendar(this);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
     connect(Calendar, SIGNAL(Notification(QString,QString)), this, SLOT(Notification(QString,QString)));
+    connect(Calendar, SIGNAL(TimeChangeBlock()), this, SLOT(Block()));
 
-    Mail = new qorgMail(this, AddressBook, Options);
+    Mail = new qorgMail(this);
     connect(Mail, SIGNAL(updateTree()), this, SLOT(updateMail()));
     connect(Mail, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(Mail, SIGNAL(sendUpdate(QString)), this, SLOT(MailNews(QString)));
 
     Notes = new qorgNotes(this);
 
-    RSS = new qorgRSS(this, Options);
+    AddressBook = new qorgAB(this);
+    connect(AddressBook, SIGNAL(updateTree()), this, SLOT(updateAddressBook()));
+
+    RSS = new qorgRSS(this);
     connect(RSS, SIGNAL(updateTree()), this, SLOT(updateRSS()));
     connect(RSS, SIGNAL(doubleClick(QString)), this, SLOT(doubleClick(QString)));
     connect(RSS, SIGNAL(sendUpdate(QString)), this, SLOT(RSSNews(QString)));
 
     PasswordManager = new qorgPasswd(this);
 
+    Calendar->setPointer(AddressBook);
+    Mail->setPointers(AddressBook, Options);
+    RSS->setPointer(Options);
+    Options->setPointers(Calendar, Notes, AddressBook);
+
     QGridLayout* layout = new QGridLayout(this);
     TreeWidget = new QTreeWidget();
+    TreeWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     connect(TreeWidget, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(launchFunction(QTreeWidgetItem*)));
     layout->addWidget(TreeWidget, 0, 0, Qt::AlignLeft);
     Stacked = new QStackedWidget();
@@ -171,7 +184,7 @@ QOrganizer::QOrganizer() {
     Stacked->addWidget(Options);
     Stacked->addWidget(Block);
     layout->addWidget(Stacked, 0, 1);
-    //layout->setMargin(5);
+    layout->setMargin(5);
 }
 QOrganizer::~QOrganizer() {
     for (int i = TreeWidget->topLevelItemCount(); i > 0; i--) {
@@ -180,13 +193,13 @@ QOrganizer::~QOrganizer() {
         }
         delete TreeWidget->topLevelItem(i-1);
     }
-    delete hash;
-    delete hashed;
+    hash.clear();
+    hashed.clear();
 }
-void QOrganizer::setUser(QString useri, QString* hashedi, QString* hashi) {
-    user = useri;
-    hashed = hashedi;
-    hash = hashi;
+void QOrganizer::setUser(QString user, QByteArray hash, QByteArray hashed) {
+    this->user = user;
+    this->hash = hash;
+    this->hashed = hashed;
     connect(Tray, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(TrayClick(QSystemTrayIcon::ActivationReason)));
     setTree();
 }
@@ -275,10 +288,10 @@ void QOrganizer::launchFunction(QTreeWidgetItem* Input) {
             } else if (Input->text(0) == "Password Manager") {
                 Stacked->setCurrentIndex(6);
             } else if (Input->text(0) == "Options") {
-                Options->setWidget(0);
+                Options->setWidget(-1);
                 Stacked->setCurrentIndex(7);
             } else if (Input->text(0) == "Save") {
-                qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
+                qorgIO::SaveFile(hash, hashed, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org");
                 Stacked->setCurrentIndex(0);
             }
         } else {
@@ -305,7 +318,7 @@ void QOrganizer::launchFunction(QTreeWidgetItem* Input) {
                 }
                 Stacked->setCurrentIndex(5);
             } else if (Input->parent()->text(0) == "Options") {
-                Options->setWidget(1);
+                Options->setWidget(0);
                 Stacked->setCurrentIndex(7);
             }
         }
@@ -327,6 +340,7 @@ void QOrganizer::doubleClick(QString Text) {
 
 void QOrganizer::updateCalendar() {
     QString currentCategory = TreeWidget->currentItem()->text(0);
+    TreeWidget->clearSelection();
     bool selected = false;
     QTreeWidgetItem* Itm = TreeWidget->topLevelItem(0);
     for (int i = Itm->childCount(); i > 0; i--) {
@@ -340,11 +354,13 @@ void QOrganizer::updateCalendar() {
             Itmc->setText(0, categories[i]);
             Itmc->setToolTip(0, categories[i]);
             if (categories[i] == currentCategory) {
-                Itm->child(i)->setSelected(true);
+                Itmc->setSelected(true);
+                TreeWidget->setCurrentItem(Itmc);
                 selected = true;
             }
         }
         if (!selected) {
+            TreeWidget->setCurrentItem(Itm);
             Itm->setSelected(true);
         } else {
             Itm->setSelected(false);
@@ -382,7 +398,7 @@ void QOrganizer::MailNews(QString I) {
     TreeWidget->topLevelItem(1)->setDisabled(false);
     TreeWidget->topLevelItem(1)->setToolTip(0, "");
     if (!Updates[2].isEmpty()) {
-        if (qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+        if (qorgIO::SaveFile(hash, hashed, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
             Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         }
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
@@ -449,7 +465,7 @@ void QOrganizer::RSSNews(QString I) {
     TreeWidget->topLevelItem(4)->setDisabled(false);
     TreeWidget->topLevelItem(4)->setToolTip(0, "");
     if (!Updates[1].isEmpty()) {
-        if (qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+        if (qorgIO::SaveFile(hash, hashed, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
             Tray->showMessage("Update.", Updates[0]+"\n"+Updates[1]+"\n"+Updates[2], QSystemTrayIcon::Information, 3000);
         }
         Tray->setIcon(QIcon(":/main/QOrganizer.png"));
@@ -504,12 +520,12 @@ void QOrganizer::closeEvent(QCloseEvent* E) {
     if (!closing) {
         if (!shown) {
             QString M;
-            if (Options->UInterval == 1) {
+            if (Options->UpdateInterval == 1) {
                 M="minute";
             } else {
                 M="minutes";
             }
-            QMessageBox::information(this, "Closing", "QOrganizer will be hidden to the tray and updating every "+QString::number(Options->UInterval)+" "+M+
+            QMessageBox::information(this, "Closing", "QOrganizer will be hidden to the tray and updating every "+QString::number(Options->UpdateInterval)+" "+M+
                                      ".\nClick tray icon with middle mouse button to start immediate update.\nClick tray icon with right mouse button to exit.");
             shown = true;
         }
@@ -534,7 +550,7 @@ void QOrganizer::closeEvent(QCloseEvent* E) {
         connect(C, SIGNAL(finished()), &L2, SLOT(quit()));
         C->start();
         L2.exec();
-        if (qorgIO::SaveFile(hashed, hash, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+        if (qorgIO::SaveFile(hash, hashed, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
             E->accept();
         } else {
             E->ignore();
@@ -568,10 +584,8 @@ void QOrganizer::Block() {
     Stacked->setCurrentIndex(8);
     Options->stop(1);
 }
-void QOrganizer::NewPassword(QString* CA, QString* CB, QString* NA, QString* NB) {
-    if ((*hash) == CA && (*hashed) == CB) {
-        delete hash;
-        delete hashed;
+void QOrganizer::NewPassword(QByteArray CA, QByteArray CB, QByteArray NA, QByteArray NB) {
+    if (calculateXOR(hashed, hash) == calculateXOR(CB, CA)) {
         hash = NA;
         hashed = NB;
         QMessageBox::information(this, "Password", "Password changed.");
@@ -581,9 +595,12 @@ void QOrganizer::NewPassword(QString* CA, QString* CB, QString* NA, QString* NB)
 }
 
 void QOrganizer::Unlock() {
-    QString CPhash = QString(QCryptographicHash::hash(salting(BlockL->text()).toUtf8(), QCryptographicHash::Sha3_512));
-    QString CPhashed = QString(calculateXOR(BlockL->text().toUtf8(), CPhash.toUtf8()).toBase64());
-    if (hash == CPhash&&hashed == CPhashed) {
+    QByteArray H = QCryptographicHash::hash(
+                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(BlockL->text().toUtf8()), BlockL->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                +BlockL->text().toUtf8()
+                +QCryptographicHash::hash(BlockL->text().toUtf8(),QCryptographicHash::Sha3_512)
+                                  ,QCryptographicHash::Sha3_256);
+    if (H == calculateXOR(hashed, hash)) {
         TreeWidget->setEnabled(true);
         BlockL->setStyleSheet("QLineEdit{background: white;}");
         Stacked->setCurrentIndex(0);

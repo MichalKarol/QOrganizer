@@ -17,9 +17,10 @@
 #define QORGTOOLS_H_
 #include <QtWidgets>
 #include <QSslCertificate>
+#include <openssl/aes.h>
+#include <openssl/rand.h>
 
-
-QByteArray calculateXOR(QByteArray A, QByteArray B);
+QByteArray calculateXOR(QByteArray data, QByteArray key);
 QString Bit7ToBit8(QString);
 QString Bit8ToBit7(QString);
 QString QPEncode(QByteArray);
@@ -39,8 +40,10 @@ QDateTime InputDT(QString);
 QDate InputD(QString);
 
 void colorItem(QTreeWidgetItem*, char);
-QString salting(QString);
 QString NameFilter(QString);
+QByteArray RandomQByteArray();
+QByteArray encryptUsingAES(QByteArray IV, QByteArray data, QByteArray password);
+QByteArray decryptUsingAES(QByteArray IV, QByteArray data, QByteArray password);
 
 class QItemPushButton :public QPushButton {
     Q_OBJECT

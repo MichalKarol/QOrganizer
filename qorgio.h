@@ -17,15 +17,13 @@
 #define QORGIO_H_
 #include <qorganizer.h>
 #include <QtWidgets>
-#include <openssl/aes.h>
-#include <openssl/rand.h>
 
 using std::vector;
 class QOrganizer;
 
 namespace qorgIO {
-   bool ReadFile(QString*, QString*, QOrganizer*, QString);
-   bool SaveFile(QString*, QString*, QOrganizer*, QString);
+   bool ReadFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QString path);
+   bool SaveFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QString path);
    QString From102(QString);
    QString From103(QString);
 

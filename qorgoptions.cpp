@@ -26,48 +26,92 @@ bool VectorSearch(vector <QSslCertificate>* A, QSslCertificate B) {
 }
 
 qorgOptions::qorgOptions(QWidget* parent) :QWidget(parent) {
-    UInterval = 30;
-    BInterval = 30;
-    UTimer = new QTimer(this);
-    connect(UTimer, SIGNAL(timeout()), this, SLOT(UTimeout()));
-    BTimer = new QTimer(this);
-    connect(BTimer, SIGNAL(timeout()), this, SLOT(BTimeout()));
-    currentW = 2;
-    A[0] = new QLabel("Current password", this);
-    A[1] = new QLabel("New password", this);
-    A[2] = new QLabel("Update interval", this);
-    A[3] = new QLabel("Block interval", this);
-    CPassword = new QLineEdit(this);
-    CPassword->setEchoMode(QLineEdit::Password);
-    connect(CPassword, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
-    NPassword = new QLineEdit(this);
-    NPassword->setEchoMode(QLineEdit::Password);
-    connect(NPassword, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
-    UInt = new QSpinBox(this);
-    BInt = new QSpinBox(this);
-    Passwd = new QPushButton("Change\npassword", this);
-    Passwd->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
-    connect(Passwd, SIGNAL(clicked()), this, SLOT(ChangePassword()));
-    Interval = new QPushButton("Change\nintervals", this);
-    Interval->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::MinimumExpanding);
-    connect(Interval, SIGNAL(clicked()), this, SLOT(ChangeInterval()));
-    Spacer = new QSpacerItem(250, 250);
-    W1 << A[0] << A[1] << A[2] << A[3] << CPassword << NPassword << UInt << BInt << Passwd << Interval;
+    UpdateInterval = 30;
+    BlockInterval = 30;
+    UpdateQTimer = new QTimer(this);
+    connect(UpdateQTimer, SIGNAL(timeout()), this, SLOT(UTimeout()));
+    BlockQTimer = new QTimer(this);
+    connect(BlockQTimer, SIGNAL(timeout()), this, SLOT(BTimeout()));
+    currentWidget = -2;
 
-    B[0] = new QLabel("Accepted SSL Certificates.", this);
-    B[1] = new QLabel("Blacklisted SSL Certificates.", this);
-    Accepted = new QListWidget(this);
-    connect(Accepted, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(DClicked(QModelIndex)));
-    Blacklisted = new QListWidget(this);
-    connect(Blacklisted, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(DClicked(QModelIndex)));
-    W2 << B[0] << B[1] << Accepted << Blacklisted;
+    WidgetsQWidget[0] = new QWidget(this);
+    CurrentPasswordQLabel = new QLabel("Current password", WidgetsQWidget[0]);
+    CurrentPasswordQLineEdit = new QLineEdit(WidgetsQWidget[0]);
+    CurrentPasswordQLineEdit->setEchoMode(QLineEdit::Password);
+    connect(CurrentPasswordQLineEdit, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
+    NewPasswordQLabel = new QLabel("New password", WidgetsQWidget[0]);
+    NewPasswordQLineEdit = new QLineEdit(WidgetsQWidget[0]);
+    NewPasswordQLineEdit->setEchoMode(QLineEdit::Password);
+    connect(NewPasswordQLineEdit, SIGNAL(textChanged(QString)), this, SLOT(Validator(QString)));
+    PasswordQPushButton = new QPushButton("Change password", WidgetsQWidget[0]);
+    connect(PasswordQPushButton, SIGNAL(clicked()), this, SLOT(ChangePassword()));
+    QGridLayout* W0QGridLayout = new QGridLayout(WidgetsQWidget[0]);
+    W0QGridLayout->addWidget(CurrentPasswordQLabel,0,0);
+    W0QGridLayout->addWidget(CurrentPasswordQLineEdit,1,0);
+    W0QGridLayout->addWidget(NewPasswordQLabel,2,0);
+    W0QGridLayout->addWidget(NewPasswordQLineEdit,3,0);
+    W0QGridLayout->addWidget(PasswordQPushButton,4,0);
+    WidgetsQWidget[0]->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
+    BoxesQGroupBox[0] = new QGroupBox("Changing password",this);
+    BoxesQGroupBox[0]->setLayout(W0QGridLayout);
+    BoxesQGroupBox[0]->hide();
 
-    Layout = new QGridLayout(this);
-}
-qorgOptions::~qorgOptions() {
-    if (currentW != 0) {
-    delete Spacer;
-    }
+    WidgetsQWidget[1] = new QWidget(this);
+    UpdateQLabel = new QLabel("Update interval", WidgetsQWidget[1]);
+    BlockQLabel = new QLabel("Block interval", WidgetsQWidget[1]);
+    UpdateIntervalQSpinBox = new QSpinBox(WidgetsQWidget[1]);
+    BlockIntervalQSpinBox = new QSpinBox(WidgetsQWidget[1]);
+    IntervalQPushButton = new QPushButton("Change intervals", WidgetsQWidget[1]);
+    connect(IntervalQPushButton, SIGNAL(clicked()), this, SLOT(ChangeInterval()));
+    QGridLayout* W1QGridLayout = new QGridLayout(WidgetsQWidget[1]);
+    W1QGridLayout->addWidget(UpdateQLabel,0,0);
+    W1QGridLayout->addWidget(BlockQLabel,0,1);
+    W1QGridLayout->addWidget(UpdateIntervalQSpinBox,1,0);
+    W1QGridLayout->addWidget(BlockIntervalQSpinBox,1,1);
+    W1QGridLayout->addWidget(IntervalQPushButton,2,0,1,2);
+    WidgetsQWidget[1]->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
+    BoxesQGroupBox[1] = new QGroupBox("Changing intervals",this);
+    BoxesQGroupBox[1]->setLayout(W1QGridLayout);
+    BoxesQGroupBox[1]->hide();
+
+    WidgetsQWidget[2] = new QWidget(this);
+    vCalendarQLabel = new QLabel("Export calendar to vCalendar",WidgetsQWidget[2]);
+    vCalendarQPushButton = new QPushButton("Export",WidgetsQWidget[2]);
+    connect(vCalendarQPushButton,SIGNAL(clicked()),this,SLOT(ExportToVSth()));
+    vNoteQLabel = new QLabel("Export notes to vNote",WidgetsQWidget[2]);
+    vNoteQPushButton = new QPushButton("Export",WidgetsQWidget[2]);
+    connect(vNoteQPushButton,SIGNAL(clicked()),this,SLOT(ExportToVSth()));
+    vCardQLabel = new QLabel("Export address book to vCard",WidgetsQWidget[2]);
+    vCardQPushButton = new QPushButton("Export",WidgetsQWidget[2]);
+    connect(vCardQPushButton,SIGNAL(clicked()),this,SLOT(ExportToVSth()));
+    QGridLayout* W2QGridLayout = new QGridLayout(WidgetsQWidget[2]);
+    W2QGridLayout->addWidget(vCalendarQLabel,0,0);
+    W2QGridLayout->addWidget(vCalendarQPushButton,0,1);
+    W2QGridLayout->addWidget(vNoteQLabel,1,0);
+    W2QGridLayout->addWidget(vNoteQPushButton,1,1);
+    W2QGridLayout->addWidget(vCardQLabel,2,0);
+    W2QGridLayout->addWidget(vCardQPushButton,2,1);
+    WidgetsQWidget[2]->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
+    BoxesQGroupBox[2] = new QGroupBox("Exporting",this);
+    BoxesQGroupBox[2]->setLayout(W2QGridLayout);
+    BoxesQGroupBox[2]->hide();
+
+
+    WidgetsQWidget[3] = new QWidget(this);
+    AcceptedQLabel = new QLabel("Accepted SSL Certificates.", WidgetsQWidget[3]);
+    AcceptedQListWidget = new QListWidget(WidgetsQWidget[3]);
+    connect(AcceptedQListWidget, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(CertificateClicked(QModelIndex)));
+    BlacklistedQLabel = new QLabel("Blacklisted SSL Certificates.", WidgetsQWidget[3]);
+    BlacklistedQListWidget = new QListWidget(WidgetsQWidget[3]);
+    connect(BlacklistedQListWidget, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(CertificateClicked(QModelIndex)));
+    QGridLayout* W3QGridLayout = new QGridLayout(WidgetsQWidget[3]);
+    W3QGridLayout->addWidget(AcceptedQLabel,0,0);
+    W3QGridLayout->addWidget(BlacklistedQLabel,0,1);
+    W3QGridLayout->addWidget(AcceptedQListWidget,1,0);
+    W3QGridLayout->addWidget(BlacklistedQListWidget,1,1);
+    WidgetsQWidget[3]->hide();
+
+    LayoutQGridLayout = new QGridLayout(this);
 }
 int qorgOptions::checkCertificate(QSslCertificate I) {
     if (VectorSearch(&SSLCertA, I)) {
@@ -77,42 +121,34 @@ int qorgOptions::checkCertificate(QSslCertificate I) {
     }
     return 0;
 }
-void qorgOptions::setWidget(uint W) {
-    if (W != currentW || (W == 1 && !SSLCertTmp.isEmpty())) {
-        if (W == 0) {
-            for (int i = 0; i < W1.size(); i++) {
-                W1[i]->show();
-            }
-            for (int i = 0; i < W2.size(); i++) {
-                W2[i]->hide();
-                Layout->removeWidget(W2[i]);
-            }
-            Layout->addWidget(A[0], 0, 0, 1, 2);
-            Layout->addWidget(CPassword, 1, 0, 1, 2);
-            Layout->addWidget(A[1], 2, 0, 1, 2);
-            Layout->addWidget(NPassword, 3, 0, 1, 2);
-            Layout->addWidget(Passwd, 0, 2, 4, 1);
-            Layout->addWidget(A[2], 4, 0);
-            Layout->addWidget(A[3], 4, 1);
-            Layout->addWidget(UInt, 5, 0);
-            Layout->addWidget(BInt, 5, 1);
-            Layout->addWidget(Interval, 4, 2, 2, 1);
-            Layout->addItem(Spacer, 6, 0, 5, 3);
-            currentW = 0;
+void qorgOptions::setPointers(qorgCalendar* C, qorgNotes* N, qorgAB* A) {
+    this->Calendar = C;
+    this->Notes = N;
+    this->AddressBook = A;
+}
+
+void qorgOptions::setWidget(int W) {
+    if (W != currentWidget || (W == 0 && !SSLCertTmp.isEmpty())) {
+        if (W == -1) {
+            LayoutQGridLayout->removeWidget(WidgetsQWidget[3]);
+            WidgetsQWidget[3]->hide();
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[0],0,0);
+            BoxesQGroupBox[0]->show();
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[1],1,0);
+            BoxesQGroupBox[1]->show();
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[2],2,0);
+            BoxesQGroupBox[2]->show();
+            currentWidget = -1;
         } else {
-            for (int i = 0; i < W2.size(); i++) {
-                W2[i]->show();
-            }
-            for (int i = 0; i < W1.size(); i++) {
-                W1[i]->hide();
-                Layout->removeWidget(W1[i]);
-            }
-            Layout->removeItem(Spacer);
-            Layout->addWidget(B[0], 0, 0);
-            Layout->addWidget(B[1], 0, 1);
-            Layout->addWidget(Accepted, 1, 0);
-            Layout->addWidget(Blacklisted, 1, 1);
-            currentW = 1;
+            LayoutQGridLayout->removeWidget(BoxesQGroupBox[0]);
+            BoxesQGroupBox[0]->hide();
+            LayoutQGridLayout->removeWidget(BoxesQGroupBox[1]);
+            BoxesQGroupBox[1]->hide();
+            LayoutQGridLayout->removeWidget(BoxesQGroupBox[2]);
+            BoxesQGroupBox[2]->hide();
+            LayoutQGridLayout->addWidget(WidgetsQWidget[3],0,0);
+            WidgetsQWidget[3]->show();
+            currentWidget = 0;
             for (int i = SSLCertTmp.size(); i > 0; i--) {
                 if (checkCertificate(SSLCertTmp[i-1]) == 0) {
                     if ((new CertAccept(SSLCertTmp[i-1]))->exec() == QDialog::Accepted) {
@@ -127,8 +163,8 @@ void qorgOptions::setWidget(uint W) {
 }
 QString qorgOptions::output() {
     QString Out;
-    Out.append(Output(UInterval)+" ");
-    Out.append(Output(BInterval)+" \n");
+    Out.append(Output(UpdateInterval)+" ");
+    Out.append(Output(BlockInterval)+" \n");
     for (uint i = 0; i < SSLCertA.size(); i++) {
         Out.append(Output(QString(SSLCertA[i].toPem()))+" \n");
     }
@@ -146,51 +182,51 @@ void qorgOptions::input(QString Input) {
             switch (B.size()-1) {
             case 1: {
                 SSLCertA.push_back(QSslCertificate::fromData(InputS(B[0]).toUtf8()).first());
-                Accepted->addItem(SSLCertA.back().serialNumber());
+                AcceptedQListWidget->addItem(SSLCertA.back().serialNumber());
             }break;
             case 2: {
-                UInterval = InputI(B[0]);
-                BInterval = InputI(B[1]);
+                UpdateInterval = InputI(B[0]);
+                BlockInterval = InputI(B[1]);
             }break;
             case 3: {
                 SSLCertB.push_back(QSslCertificate::fromData(InputS(B[0]).toUtf8()).first());
-                Blacklisted->addItem(SSLCertB.back().serialNumber());
+                BlacklistedQListWidget->addItem(SSLCertB.back().serialNumber());
             }break;
             }
         }
     }
-    UInt->setValue(UInterval);
-    BInt->setValue(BInterval);
+    UpdateIntervalQSpinBox->setValue(UpdateInterval);
+    BlockIntervalQSpinBox->setValue(BlockInterval);
 }
 void qorgOptions::acceptSSLCert(QSslCertificate C) {
     if (!VectorSearch(&SSLCertA, C)) {
         SSLCertA.push_back(C);
-        Accepted->addItem(C.serialNumber());
+        AcceptedQListWidget->addItem(C.serialNumber());
     }
 }
 void qorgOptions::blacklistSSLCert(QSslCertificate C) {
     if (!VectorSearch(&SSLCertB, C)) {
         SSLCertB.push_back(C);
-        Blacklisted->addItem(C.serialNumber());
+        BlacklistedQListWidget->addItem(C.serialNumber());
     }
 }
-void qorgOptions::addForVeryfication(QSslCertificate C) {
+void qorgOptions::addForVerification(QSslCertificate C) {
     SSLCertTmp.append(C);
 }
 void qorgOptions::start(bool I) {
     if (!I) {
-        UTimer->setInterval(UInterval*60*1000);
-        UTimer->start();
+        UpdateQTimer->setInterval(UpdateInterval*60*1000);
+        UpdateQTimer->start();
     } else {
-        BTimer->setInterval(BInterval*60*1000);
-        BTimer->start();
+        BlockQTimer->setInterval(BlockInterval*60*1000);
+        BlockQTimer->start();
     }
 }
 void qorgOptions::stop(bool I) {
     if (!I) {
-        UTimer->stop();
+        UpdateQTimer->stop();
     } else {
-        BTimer->stop();
+        BlockQTimer->stop();
     }
 }
 void qorgOptions::UTimeout() {
@@ -200,9 +236,10 @@ void qorgOptions::BTimeout() {
     emit Block();
 }
 void qorgOptions::ChangeInterval() {
-    if (UInt->value() != 0&&BInt->value() != 0) {
-        UInterval = UInt->value();
-        BInterval = BInt->value();
+    if (UpdateIntervalQSpinBox->value() != 0
+            && BlockIntervalQSpinBox->value() != 0) {
+        UpdateInterval = UpdateIntervalQSpinBox->value();
+        BlockInterval = BlockIntervalQSpinBox->value();
         stop(0);
         stop(1);
         start(0);
@@ -211,22 +248,69 @@ void qorgOptions::ChangeInterval() {
     }
 }
 void qorgOptions::ChangePassword() {
-    if (CPassword->styleSheet() == "QLineEdit{background: white;}" && !CPassword->text().isEmpty() &&
-            NPassword->styleSheet() == "QLineEdit{background: white;}" && !NPassword->text().isEmpty()) {
-        QString* CA = new QString(QCryptographicHash::hash(salting(CPassword->text()).toUtf8(), QCryptographicHash::Sha3_512));
-        QString* CB = new QString(calculateXOR(CPassword->text().toUtf8(), CA->toUtf8()).toBase64());
-        QString* NA = new QString(QCryptographicHash::hash(salting(NPassword->text()).toUtf8(), QCryptographicHash::Sha3_512));
-        QString* NB = new QString(calculateXOR(NPassword->text().toUtf8(), NA->toUtf8()).toBase64());
-        CPassword->clear();
-        NPassword->clear();
-        CPassword->setStyleSheet("QLineEdit{background: white;}");
-        NPassword->setStyleSheet("QLineEdit{background: white;}");
+    if (CurrentPasswordQLineEdit->styleSheet() == "QLineEdit{background: white;}"
+            && !CurrentPasswordQLineEdit->text().isEmpty()
+            && NewPasswordQLineEdit->styleSheet() == "QLineEdit{background: white;}"
+            && !NewPasswordQLineEdit->text().isEmpty()) {
+        QByteArray CA = RandomQByteArray();
+        QByteArray CB = calculateXOR(QCryptographicHash::hash(
+                                      QCryptographicHash::hash(QUuid::createUuidV5(QUuid(CurrentPasswordQLineEdit->text().toUtf8()),CurrentPasswordQLineEdit->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
+                                      +CurrentPasswordQLineEdit->text().toUtf8()
+                                      +QCryptographicHash::hash(CurrentPasswordQLineEdit->text().toUtf8(), QCryptographicHash::Sha3_512)
+                ,QCryptographicHash::Sha3_256),CA);
+        QByteArray NA = RandomQByteArray();
+        QByteArray NB = calculateXOR(QCryptographicHash::hash(
+                                      QCryptographicHash::hash(QUuid::createUuidV5(QUuid(NewPasswordQLineEdit->text().toUtf8()),NewPasswordQLineEdit->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
+                                      +NewPasswordQLineEdit->text().toUtf8()
+                                      +QCryptographicHash::hash(NewPasswordQLineEdit->text().toUtf8(), QCryptographicHash::Sha3_512)
+                ,QCryptographicHash::Sha3_256),NA);
+        CurrentPasswordQLineEdit->clear();
+        NewPasswordQLineEdit->clear();
+        CurrentPasswordQLineEdit->setStyleSheet("QLineEdit{background: white;}");
+        NewPasswordQLineEdit->setStyleSheet("QLineEdit{background: white;}");
         emit CNPassword(CA, CB, NA, NB);
     }
 }
+void qorgOptions::ExportToVSth() {
+    QPushButton* ButtonQPushButton = qobject_cast<QPushButton*>(QObject::sender());
+
+    QString Out;
+    QString Extension;
+    QString Suffix;
+    if(ButtonQPushButton == vCalendarQPushButton) {
+        // Output = Calendar->
+        Extension = "vCalendar (*.vcs)";
+        Suffix = ".vcs";
+    } else if (ButtonQPushButton == vNoteQPushButton) {
+        Out = Notes->exportToVNote();
+        Extension = "vNote (*.vnt)";
+        Suffix = ".vnt";
+    } else {
+        Out = AddressBook->exportToVCard();
+        Extension = "VCard (*.vcf)";
+        Suffix = ".vcf";
+    }
+    QString path = QFileDialog::getSaveFileName(this,"Export to ...",QDir::homePath(),Extension);
+    if (!path.isEmpty()) {
+        if (!path.endsWith(Suffix)) {
+            path = path + Suffix;
+        }
+        QFile file(path);
+        if (file.open(QIODevice::WriteOnly)) {
+            QTextStream stream(&file);
+            stream << Out;
+            file.close();
+            Out.clear();
+        } else {
+            QMessageBox::critical(this, "Error", "Cannot save file due to"+file.errorString());
+        }
+    }
+}
+
 void qorgOptions::Validator(QString Input) {
     QLineEdit* L = qobject_cast<QLineEdit*>(QObject::sender());
-    if (Input.length() < 8 || Input.isEmpty()) {
+    if (Input.length() < 8
+            || Input.isEmpty()) {
         L->setStyleSheet("QLineEdit{background: #FF8888;}");
     } else {
         bool whitespaces = false;
@@ -243,20 +327,20 @@ void qorgOptions::Validator(QString Input) {
         }
     }
 }
-void qorgOptions::DClicked(QModelIndex I) {
-    if (QObject::sender() == Accepted) {
+void qorgOptions::CertificateClicked(QModelIndex I) {
+    if (QObject::sender() == AcceptedQListWidget) {
         if ((new CertAccept(SSLCertA[I.row()]))->exec() == QDialog::Rejected) {
             SSLCertB.push_back(SSLCertA[I.row()]);
-            Blacklisted->addItem(SSLCertB.back().serialNumber());
+            BlacklistedQListWidget->addItem(SSLCertB.back().serialNumber());
             SSLCertA.erase(SSLCertA.begin()+I.row());
-            delete Accepted->item(I.row());
+            delete AcceptedQListWidget->item(I.row());
         }
     } else {
         if ((new CertAccept(SSLCertB[I.row()]))->exec() == QDialog::Accepted) {
             SSLCertA.push_back(SSLCertB[I.row()]);
-            Accepted->addItem(SSLCertA.back().serialNumber());
+            AcceptedQListWidget->addItem(SSLCertA.back().serialNumber());
             SSLCertB.erase(SSLCertB.begin()+I.row());
-            delete Blacklisted->item(I.row());
+            delete BlacklistedQListWidget->item(I.row());
         }
     }
 }

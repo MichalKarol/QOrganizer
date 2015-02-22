@@ -25,7 +25,6 @@
 #include <QtConcurrent>
 #include <vector>
 
-
 using std::vector;
 class Structure {
 public:
@@ -111,8 +110,9 @@ public:
 class qorgMail: public QWidget {
     Q_OBJECT
 public:
-    explicit qorgMail(QWidget*, qorgAB* AB, qorgOptions* Options);
+    explicit qorgMail(QWidget*);
     ~qorgMail();
+    void setPointers(qorgAB*, qorgOptions*);
     QString output();
     void input(QString);
     void setMail(int);

@@ -43,3 +43,8 @@ CONFIG += qt
 
 RESOURCES += \
     resources.qrc
+
+DISTFILES += \
+    LICENCE.md \
+    latestVersion.md \
+    README.md

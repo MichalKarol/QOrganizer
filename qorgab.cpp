@@ -33,16 +33,10 @@ public:
         Photo->setFixedSize(130,130);
         L[0]=new QLabel(P->Name+" "+P->Surname, this);
         L[1]=new QLabel(P->Category, this);
-        QString Numbers;
-        if (P->HouseNumber != 0) {
-            if (P->Apartment != 0) {
-                Numbers = QString::number(P->HouseNumber)+"/"+QString::number(P->Apartment);
-            } else {
-                Numbers = QString::number(P->HouseNumber);
-            }
-        }
         L[2]=new QLabel(P->Town, this);
-        L[3]=new QLabel(P->Street+" "+Numbers, this);
+        L[3]=new QLabel(P->Street
+                        + (P->HouseNumber != 0 ? " "+QString::number(P->HouseNumber) : "")
+                        + (P->Apartment != 0 ? "/"+QString::number(P->Apartment) : ""), this);
         L[4]=new QLabel(P->Mobile, this);
         L[5]=new QLabel(P->Email, this);
         L[6]=new QLabel(this);
@@ -143,7 +137,6 @@ qorgAB::qorgAB(QWidget* parent) :QWidget(parent) {
 
     QHBoxLayout* HLayout = new QHBoxLayout(this);
     HLayout->addWidget(List);
-    //GLayout->setMargin(0);
     La = new QGridLayout();
     QGridLayout* GLa = new QGridLayout();
     GLa->addWidget(Photo, 0, 0, 3,3);
@@ -243,6 +236,12 @@ QList  <QString>  qorgAB::getBirthdays(QDate D) {
             }
         }
     }
+    if (!QDate::isLeapYear(D.year())
+            && D .month() == 2
+            && D.day() == 28) {
+        return getBirthdays(QDate(D.year(),2,29));
+    }
+
     return BList;
 }
 QList  <QString>  qorgAB::getEmails() {
@@ -261,13 +260,11 @@ void qorgAB::SelectPhoto() {
         if (Image.load(ImagePath)) {
             Image = Image.scaled(100,100,Qt::KeepAspectRatio);
             Photo->setIcon(QIcon(QPixmap::fromImage(Image)));
-            //Photo->setIconSize(QSize(128,128));
         } else {
             QMessageBox::critical(this,"Error","File is not an supported image.");
         }
     } else {
         Photo->setIcon(QIcon(":/ad/Default.png"));
-        //Photo->setIconSize(QSize(128,128));
     }
 }
 void qorgAB::ActivateBirthdayField() {
@@ -304,9 +301,11 @@ void qorgAB::AddS() {
         if (BDayCheckBox->isChecked()) {
             temp.Birthday = D->date().toString(Qt::ISODate);
         }
-        if (Photo->icon().pixmap(128,128).toImage() == QIcon(":/ad/Default.png").pixmap(128,128).toImage()) {
-            QImage tempImage = Photo->icon().pixmap(128,128).toImage();
-            temp.Photo = QByteArray(reinterpret_cast<const char*>(tempImage.bits()),tempImage.byteCount());
+        if (Photo->icon().pixmap(100,100).toImage() != QIcon(":/ad/Default.png").pixmap(100,100).toImage()) {
+            QPixmap tempPixmap = Photo->icon().pixmap(100,100);
+            QBuffer buffer(&Personv[lastIID].Photo);
+            buffer.open(QIODevice::WriteOnly);
+            tempPixmap.save(&buffer,"JPG");
         }
         temp.ExtraInformation = ExtraInformationField->toPlainText();
         for (uint i = 0; i < 9; i++) {
@@ -336,10 +335,12 @@ void qorgAB::Click(QModelIndex I) {
                 connect(W, SIGNAL(EditOUT(uint)), this, SLOT(Edit(uint)));
                 connect(W, SIGNAL(DeleteOUT(uint)), this, SLOT(Delete(uint)));
                 List->setItemWidget(Itm, W);
+                Itm->setToolTip(Personv[i].Name+" "+Personv[i].Surname+(!Personv[i].ExtraInformation.isEmpty() ? "\n\n"+Personv[i].ExtraInformation : ""));
                 break;
             }
         }
         Itm->setText("");
+
     } else {
         Itm->setSizeHint(QSize(Itm->sizeHint().width(), 15));
         ListItem* W = qobject_cast <ListItem*>(List->itemWidget(Itm));
@@ -378,7 +379,6 @@ void qorgAB::Edit(uint IID) {
         QPixmap tmpPixmap;
         tmpPixmap.loadFromData(I->Photo);
         Photo->setIcon(QIcon(tmpPixmap));
-        //Photo->setIconSize(QSize(128,128));
     }
     ExtraInformationField->setText(I->ExtraInformation);
     Add->hide();
@@ -422,8 +422,8 @@ void qorgAB::OK() {
         } else {
             Personv[lastIID].Birthday.clear();
         }
-        if (Photo->icon().pixmap(128,128).toImage() != QIcon(":/ad/Default.png").pixmap(128,128).toImage()) {
-            QPixmap tempPixmap = Photo->icon().pixmap(128,128);
+        if (Photo->icon().pixmap(100,100).toImage() != QIcon(":/ad/Default.png").pixmap(100,100).toImage()) {
+            QPixmap tempPixmap = Photo->icon().pixmap(100,100);
             QBuffer buffer(&Personv[lastIID].Photo);
             buffer.open(QIODevice::WriteOnly);
             tempPixmap.save(&buffer,"JPG");
@@ -445,7 +445,6 @@ void qorgAB::Can() {
     Cancel->hide();
     OKB->hide();
     Photo->setIcon(QIcon(":/ad/Default.png"));
-    //Photo->setIconSize(QSize(128,128));
     La->addWidget(Add, 12, 0, 1, 2);
     Add->show();
 }
@@ -483,6 +482,64 @@ void qorgAB::setList() {
             Itm->setToolTip(Personv[i].Name+" "+Personv[i].Surname);
         }
     }
+}
+
+QString qorgAB::exportToVCard() {
+    QString output;
+    for (uint i = 0; i < Personv.size(); i++) {
+        QString vcard;
+        vcard.append("BEGIN:VCARD\nVERSION:2.1\n");
+        vcard.append("N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
+                     + QPEncode(Personv[i].Surname.toUtf8())
+                     + ";"
+                     + QPEncode(Personv[i].Name.toUtf8())
+                     + "\n");
+        vcard.append("FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
+                     + QPEncode(QString(Personv[i].Name + " " + Personv[i].Surname).toUtf8())
+                     + "\n");
+        if (!Personv[i].Mobile.isEmpty()) {
+            vcard.append("TEL;CELL:"
+                         + Personv[i].Mobile
+                         + "\n");
+        }
+        if (!Personv[i].Email.isEmpty()) {
+            vcard.append("EMAIL:"
+                         + Personv[i].Email
+                         + "\n");
+        }
+        if (!Personv[i].Town.isEmpty()) {
+            vcard.append("ADR;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:;;"
+                         + QPEncode(Personv[i].Street.toUtf8())
+                         + (Personv[i].HouseNumber != 0 ? " "+QString::number(Personv[i].HouseNumber) : "")
+                         + (Personv[i].Apartment != 0 ? "/"+QString::number(Personv[i].Apartment) : "")
+                         + ";"
+                         + QPEncode(Personv[i].Town.toUtf8())
+                         + ";;;\n");
+        }
+        if (!Personv[i].ExtraInformation.isEmpty()) {
+            vcard.append("NOTE;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
+                         + QPEncode(Personv[i].ExtraInformation.toUtf8())
+                         +"\n");
+        }
+        if (!Personv[i].Birthday.isEmpty()) {
+            vcard.append("BDAY:"
+                         + QDate::fromString(Personv[i].Birthday,Qt::ISODate).toString("yyyy-MM-dd")
+                         +"\n");
+        }
+        if (!Personv[i].Category.isEmpty()) {
+            vcard.append("CATEGORIES;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
+                         + QPEncode(Personv[i].Category.toUtf8())
+                         +"\n");
+        }
+        if (!Personv[i].Photo.isEmpty()) {
+            vcard.append("PHOTO;ENCODING=BASE64;TYPE=JPG:"
+                         + Personv[i].Photo.toBase64()
+                         + "\n\n");
+        }
+        vcard.append("END:VCARD\n");
+        output.append(vcard);
+    }
+    return output;
 }
 
 #include "qorgab.moc"
