@@ -23,6 +23,7 @@
 #include <vector>
 
 using std::vector;
+
 class RSSItem {
 public:
     RSSItem();
@@ -44,8 +45,9 @@ public:
 class qorgRSS : public QWidget {
     Q_OBJECT
 public:
-    explicit qorgRSS(QWidget*, qorgOptions*);
+    explicit qorgRSS(QWidget*);
     ~qorgRSS();
+    void setPointer(qorgOptions*);
     QString output();
     void input(QString);
     void setChannel(int);
@@ -55,7 +57,6 @@ public:
     }
     uint threadNumber();
     void getUpdate();
-    bool SSLSocketError(QList<QSslError>);
 private:
     qorgOptions* Options;
     int currentC;
@@ -76,7 +77,7 @@ private:
     void setLayoutF();
 private slots:
     void AddS();
-    void DownloadedS(QString);
+    void DownloadedS(QNetworkReply*);
     void DeleteS(uint);
     void row(QString);
     void chooseChannel(QModelIndex);
@@ -85,6 +86,7 @@ private slots:
     void UpdateS();
     void linkClicked(QUrl);
     void HTTPSS(QNetworkReply*, QList <QSslError>);
+    void SSLSocketError(QNetworkReply*, QList<QSslError>);
     void sortRSS();
 signals:
     void updateTree();

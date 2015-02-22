@@ -243,3 +243,17 @@ void qorgNotes::ChangeX() {
         Text->setStyleSheet("QTextEdit{background: white;}");
     }
 }
+
+QString qorgNotes::exportToVNote() {
+    QString output;
+    for (uint i = 0; i < Notes.size(); i++) {
+        QString vnote;
+        vnote.append("BEGIN:VNOTE\nVERSION:1.1\n");
+        vnote.append("BODY;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
+                     +QPEncode(Notes[i].Text.toUtf8())
+                     +"\n");
+        vnote.append("CLASS:PUBLIC\nEND:VNOTE\n");
+        output.append(vnote);
+    }
+    return output;
+}

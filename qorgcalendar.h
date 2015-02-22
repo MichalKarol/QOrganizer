@@ -21,46 +21,51 @@
 #include <vector>
 
 using std::vector;
-struct CalNor {
-    QString name;
-    QString category;
-    uchar priority;
-    QDateTime datet;
-    QDateTime edatet;
-};
-struct CalRec {
-    QString name;
-    QString category;
-    uchar priority;
-    uchar type;
-    QDateTime datet;
-    QDateTime edatet;
-    QDate edate;
+class Event {
+public:
+    Event();
+    enum Type {
+        NoOccurance,
+        Daily,
+        Weekly,
+        Monthly,
+        Yearly
+    };
+    QString Name;
+    QString Category;
+    uchar Priority;
+    QDateTime Datet;
+    QDateTime Edatet;
+    Type OccuranceType;
+    QDate Edate;
+    bool occursOnDate(QDate);
+    QDateTime starts(QDate);
+    QDateTime starts(QDateTime);
+    QDateTime ends(QDate);
+    QDateTime ends(QDateTime);
+
 };
 
 class qorgCalendar: public QWidget {
     Q_OBJECT
 public:
-    qorgCalendar(QWidget*, qorgAB*);
+    qorgCalendar(QWidget*);
+    void setPointer(qorgAB*);
     QString output();
     void input(QString);
     QStringList getCategories();
     void setCategory(QString);
     QString getUpdate();
-    vector <CalNor> Normal;
-    vector <CalRec> Recurrent;
     QString category;
+    vector <Event> Eventv;
 private:
     qorgAB* AB;
     void setCalendar();
     void updateAll();
     void sort();
-    QList <uint> checkEvN(QDate, char);
-    QList <uint> checkEvR(QDate, char);
-    QList <QString> checkBd(QDate);
+    QList <Event> checkBd(QDate);
     QDate currentDate;
     QGridLayout* Layout;
-
     QComboBox* Month;
     QPushButton* Yminus;
     QComboBox* Year;
@@ -68,11 +73,11 @@ private:
     QTableWidget* Calendar;
     QTreeWidget* DayView;
     QTreeWidget* Incoming;
-    QList <uint> NotifiedN;
-    QList <uint> NotifiedR;
+
     QTimer* MidnightTester;
     QTimer* Midnight;
     QTimer* NTimer;
+    //TODO Import & export from vCalendar
 private slots:
     void Add(QDate);
     void Edit(uint);
@@ -88,6 +93,7 @@ private slots:
 signals:
     void updateTree();
     void Notification(QString,QString);
+    void TimeChangeBlock();
 };
 
 #endif  // QORGCALENDAR_H_

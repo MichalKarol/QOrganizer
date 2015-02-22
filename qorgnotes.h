@@ -20,7 +20,8 @@
 #include <vector>
 
 using std::vector;
-struct Note {
+class Note {
+public:
     QString Topic;
     unsigned char Priority;
     QString Text;
@@ -32,8 +33,9 @@ public:
     explicit qorgNotes(QWidget*);
     QString output();
     void input(QString);
-    vector  <Note>  Notes;
+    QString exportToVNote();
 private:
+    vector <Note> Notes;
     void updateList();
     QGridLayout* Layout;
     QLabel* TLabel;
@@ -44,6 +46,7 @@ private:
     QPushButton* Cancel;
     QTreeWidget* List;
     QPushButton* AddB;
+    //TODO Import from vNote
     int edited;
 private slots:
     void Add();

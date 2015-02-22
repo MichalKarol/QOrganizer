@@ -15,13 +15,13 @@
 
 #include <qorgtools.h>
 
-QByteArray calculateXOR(QByteArray A, QByteArray B) {
+QByteArray calculateXOR(QByteArray data, QByteArray key) {
     QByteArray xored;
-    for (int i = 0, j = 0; i < A.length(); i++, j++) {
-        if (j == B.length()) {
+    for (int i = 0, j = 0; i < data.length(); i++, j++) {
+        if (j == key.length()) {
             j = 0;
         }
-        xored.append(A.at(i)^B.at(j));
+        xored.append(data.at(i)^key.at(j));
     }
     return xored;
 }
@@ -248,55 +248,7 @@ void colorItem(QTreeWidgetItem* Itm, char P) {
     }break;
     }
 }
-QString salting(QString A) {
-    QString output;
-    int salt = 0;
-    for (int i = 0; i < A.length(); i++) {
-        salt+=static_cast<int>(A[i].toLatin1());
-    }
-    switch (salt%5) {
-    case 0:
-    {
-        output="OC2mwEEOYlPoj7lwyJpr";
-    }break;
-    case 1:
-    {
-        output="PNzXx09G93Ll3cgmfGXu";
-    }break;
-    case 2:
-    {
-        output="QBJfDzsanikedIfvpdp0";
-    }break;
-    case 3:
-    {
-        output="4yUSTcpLDFIm8SVT2vx9";
-    }break;
-    case 4:
-    {
-        output="oU9CBiL1dKHpaAWRFDAC";
-    }break;
-    }
-    output.append(A);
-    switch (salt%4) {
-    case 0:
-    {
-        output+="3WLtmogKQqdYChOGArYT";
-    }break;
-    case 1:
-    {
-        output+="3WLtmogKQqdYChOGArYT";
-    }break;
-    case 2:
-    {
-        output+="OCvxh3gJviSdQbQ81frA";
-    }break;
-    case 3:
-    {
-        output+="zU4AlSJIIks3MhyzUJv5";
-    }break;
-    }
-    return output;
-}
+
 QString NameFilter(QString Input) {
     Input.replace("?= =?", "?==?");
     while (Input.contains("=?")) {
@@ -331,3 +283,65 @@ QString NameFilter(QString Input) {
     }
     return Input;
 }
+QByteArray RandomQByteArray() {
+    QByteArray QBA;
+    qsrand(QDateTime::currentMSecsSinceEpoch());
+    for (int s = 0; s < 1024 ; s++) {
+             QBA.append(QChar(char(qrand() % 255)));
+    }
+    QBA = QCryptographicHash::hash(
+                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(QBA),QBA).toByteArray(),QCryptographicHash::Sha3_512)
+                +QBA
+                +QCryptographicHash::hash(QBA,QCryptographicHash::Sha3_512)
+                                  ,QCryptographicHash::Sha3_256);
+    return QBA;
+}
+QByteArray encryptUsingAES(QByteArray IV, QByteArray data, QByteArray password) {
+    size_t DataSize = ((data.size() + AES_BLOCK_SIZE) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
+    uchar* Out = new uchar[DataSize];
+            memset(Out, '\0', DataSize);
+    AES_KEY* aesKey = new AES_KEY;
+    AES_set_encrypt_key(reinterpret_cast<uchar*>(password.data()), 256, aesKey);
+    if (IV.isEmpty()){
+        AES_ecb_encrypt(reinterpret_cast<uchar*>(data.data()), Out, aesKey, AES_ENCRYPT);
+    } else {
+        AES_cbc_encrypt(reinterpret_cast<uchar*>(data.data()), Out, DataSize, aesKey,
+                        reinterpret_cast<uchar*>(IV.data()), AES_ENCRYPT);
+    }
+
+    IV.clear();
+    data.clear();
+    password.clear();
+    delete aesKey;
+
+    QByteArray Output = QByteArray(reinterpret_cast<const char*>(Out), DataSize);
+    memset(Out, '\0', DataSize);
+    delete[] Out;
+
+    return Output;
+}
+QByteArray decryptUsingAES(QByteArray IV, QByteArray data, QByteArray password) {
+    size_t DataSize = ((data.size() + AES_BLOCK_SIZE) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
+    uchar* Out = new uchar[DataSize];
+            memset(Out, '\0', DataSize);
+    AES_KEY* aesKey = new AES_KEY;
+    AES_set_decrypt_key(reinterpret_cast<uchar*>(password.data()), 256, aesKey);
+    if (IV.isEmpty()){
+        AES_ecb_encrypt(reinterpret_cast<uchar*>(data.data()), Out, aesKey, AES_DECRYPT);
+    } else {
+        AES_cbc_encrypt(reinterpret_cast<uchar*>(data.data()), Out, DataSize, aesKey,
+                        reinterpret_cast<uchar*>(IV.data()), AES_DECRYPT);
+    }
+
+    IV.clear();
+    data.clear();
+    password.clear();
+    delete aesKey;
+
+    QByteArray Output = QByteArray(reinterpret_cast<const char*>(Out), DataSize);
+    memset(Out, '\0', DataSize);
+    delete[] Out;
+
+    return Output;
+}
+

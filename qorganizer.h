@@ -18,12 +18,12 @@
 #include <qorgio.h>
 #include <qorglogin.h>
 #include <qorgcalendar.h>
-#include <qorgoptions.h>
 #include <qorgmail.h>
 #include <qorgnotes.h>
 #include <qorgab.h>
 #include <qorgrss.h>
 #include <qorgpasswd.h>
+#include <qorgoptions.h>
 #include <QtWidgets>
 
 class QOrganizer : public QWidget {
@@ -31,6 +31,7 @@ class QOrganizer : public QWidget {
 public:
     QOrganizer();
     ~QOrganizer();
+
     qorgCalendar* Calendar;
     qorgMail* Mail;
     qorgNotes* Notes;
@@ -38,7 +39,9 @@ public:
     qorgRSS* RSS;
     qorgPasswd* PasswordManager;
     qorgOptions* Options;
-    void setUser(QString, QString*, QString*);
+
+    void setUser(QString user, QByteArray hash, QByteArray hashed);
+
 private:
     class VersionUpdater;
     VersionUpdater* VU;
@@ -54,8 +57,8 @@ private:
     QPushButton* OKB;
 protected:
     QString user;
-    QString* hash;
-    QString* hashed;
+    QByteArray hash;
+    QByteArray hashed;
 private slots:
     void launchFunction(QTreeWidgetItem*);
     void doubleClick(QString);
@@ -75,7 +78,7 @@ private slots:
 
     void updateTime();
     void Block();
-    void NewPassword(QString*, QString*, QString*, QString*);
+    void NewPassword(QByteArray, QByteArray, QByteArray, QByteArray);
 
     // Block
     void Unlock();

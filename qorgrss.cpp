@@ -34,179 +34,48 @@ RSSChannel::RSSChannel() {
     Itemv.clear();
 }
 
-class Download :public QThread {
+class Download :public QNetworkAccessManager {
     Q_OBJECT
 public:
     explicit Download(qorgRSS*, RSSChannel*);
     ~Download();
-    RSSChannel* Ch;
+    RSSChannel* ChannelRSSChannel;
+    void get();
 private:
-    QString URL;
-    void Downloading();
-    QByteArray SubDownload(QString);
-protected:
-    void run();
+    uint counter;
+private slots:
+    void CheckResponse(QNetworkReply*);
 signals:
-    void Downloaded(QString);
+    void Downloaded(QNetworkReply*);
 };
-Download::Download(qorgRSS* parent, RSSChannel* C) :QThread(parent) {
+Download::Download(qorgRSS* parent, RSSChannel* C) :QNetworkAccessManager(parent) {
+    counter = 0;
     QMutexLocker L(&RSSaccessToCounter);
     RSSthreadCounter++;
-    URL = C->Link;
-    Ch = C;
-    connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
+    this->ChannelRSSChannel = C;
+    connect(this,SIGNAL(finished(QNetworkReply*)),this,SLOT(CheckResponse(QNetworkReply*)));
+    connect(this,SIGNAL(Downloaded(QNetworkReply*)),this,SLOT(deleteLater()));
 }
 Download::~Download() {
     QMutexLocker L(&RSSaccessToCounter);
     RSSthreadCounter--;
 }
-
-void Download::run() {
-    bool SSLFeed = false;
-    if (URL.contains("https://"))    {
-        URL.remove("https://");
-        SSLFeed = true;
-    } else {
-        URL.remove("http://");
-    }
-    QString Output;
-    QString server = URL.mid(0, URL.indexOf("/"));
-    QSslSocket S;
-    if (SSLFeed) {
-        S.connectToHostEncrypted(server, 443);
-        if (!S.waitForEncrypted()) {
-            if (!S.sslErrors().isEmpty()) {
-                qorgRSS* P = qobject_cast<qorgRSS*>(this->parent());
-                if (P->SSLSocketError(S.sslErrors())) {
-                    S.ignoreSslErrors(S.sslErrors());
-                    S.connectToHostEncrypted(server, 443);
-                } else {
-                    emit Downloaded(Output);
-                    return;
-                }
-            }
-        }
-    } else {
-        S.connectToHost(server, 80);
-    }
-    QString Req = URL.mid(URL.indexOf("/"), URL.length()-URL.indexOf("/"));
-    if (Req == server) {
-        Req="/";
-    }
-    if (S.waitForConnected()) {
-        S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n").toUtf8());
-    } else {
-        if (SSLFeed) {
-            S.connectToHostEncrypted(server, 443);
-        } else {
-            S.connectToHost(server, 80);
-        }
-        if (S.waitForConnected()) {
-            S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n").toUtf8());
-        }
-    }
-    if (S.waitForReadyRead()) {
-        QByteArray Reply = S.readAll();
-        while (S.state() == QTcpSocket::ConnectedState) {
-            if (S.waitForReadyRead() && S.bytesAvailable() != 0) {
-                QByteArray A = S.readAll();
-                Reply.append(A);
-            } else {
-                break;
-            }
-        }
-        if (Reply.contains("HTTP/1.1 301")) {
-            QString NUrl = Reply.mid(Reply.indexOf("The document has moved ")+32, Reply.indexOf("\">here")-Reply.indexOf("The document has moved ")-32);
-            Reply = SubDownload(NUrl);
-        } else if (Reply.contains("HTTP/1.1 302")) {
-            QString NUrl = Reply.mid(Reply.indexOf("Location: ")+10, Reply.indexOf("\r\n", Reply.indexOf("Location: "))-Reply.indexOf("Location: ")-10);
-            Reply = SubDownload(NUrl);
-        }
-        if (Reply.contains("Transfer-Encoding: chunked\r\n")) {
-            Reply = Reply.mid(Reply.indexOf("\r\n\r\n")+4, Reply.length()-Reply.indexOf("\r\n\r\n")-4);
-            QByteArray Temp;
-            uint pos = 0;
-            while (true) {
-                uint Number = Reply.mid(pos, Reply.indexOf("\r\n", pos)-pos).toUInt(0, 16);
-                if (Number == 0) {
-                    break;
-                }
-                Temp.append(Reply.mid(Reply.indexOf("\r\n", pos)+2, Number));
-                pos = Reply.indexOf("\r\n", pos)+Number+4;
-            }
-            Reply = Temp;
-        }
-        if (Reply.contains("encoding=\"")) {
-            QString encoding = Reply.mid(Reply.indexOf("encoding=\"")+10, Reply.indexOf("\"", Reply.indexOf("encoding=\"")+10)-Reply.indexOf("encoding=\"")-10);
-            if (encoding.toUpper() != "UTF-8") {
-                if (QTextCodec::availableCodecs().contains(encoding.toUtf8())) {
-                    QTextCodec* C = QTextCodec::codecForName(encoding.toUtf8());
-                    Output = C->toUnicode(Reply);
-                }
-            } else {
-                Output = QString(Reply);
-            }
-        } else {
-            Output = QString(Reply);
-        }
-    }
-    S.close();
-    emit Downloaded(Output);
+void Download::get() {
+    QNetworkRequest Request(QUrl::fromUserInput(ChannelRSSChannel->Link));
+    QNetworkAccessManager::get(Request);
 }
-QByteArray Download::SubDownload(QString I) {
-    bool SSLFeed = false;
-    if (I.contains("https://"))    {
-        I.remove("https://");
-        SSLFeed = true;
-    } else {
-        I.remove("http://");
-    }
-    QString server = I.mid(0, I.indexOf("/"));
-    QSslSocket S;
-    if (SSLFeed) {
-        S.connectToHostEncrypted(server, 443);
-        if (!S.waitForEncrypted()) {
-            if (!S.sslErrors().isEmpty()) {
-                qorgRSS* P = qobject_cast<qorgRSS*>(this->parent());
-                if (P->SSLSocketError(S.sslErrors())) {
-                    S.ignoreSslErrors(S.sslErrors());
-                    S.connectToHostEncrypted(server, 443);
-                } else {
-                    return QByteArray();
-                }
-            }
+void Download::CheckResponse(QNetworkReply* QNR) {
+    QVariant possibleRedirectUrl = QNR->attribute(QNetworkRequest::RedirectionTargetAttribute);
+        if(!possibleRedirectUrl.toUrl().isEmpty()
+                && counter < 10) {
+            counter++;
+            ChannelRSSChannel->Link = possibleRedirectUrl.toString();
+            this->get();
+            QNR->deleteLater();
         }
-    } else {
-        S.connectToHost(server, 80);
-    }
-    QByteArray Reply;
-    if (S.waitForConnected()) {
-        QString Req = I.mid(I.indexOf("/"), I.length()-I.indexOf("/"));
-        if (Req == server) {
-            Req="/";
+        else {
+            emit Downloaded(QNR);
         }
-        S.write(QString("GET "+Req+" HTTP/1.1\r\nHost: "+server+"\r\nUser-Agent: QOrganizer\r\nConnection:close\r\n\r\n").toUtf8());
-        if (S.waitForReadyRead()) {
-            Reply = S.readAll();
-            while (S.state() == QTcpSocket::ConnectedState) {
-                if (S.waitForReadyRead() && S.bytesAvailable() != 0) {
-                    QByteArray A = S.readAll();
-                    Reply.append(A);
-                } else {
-                    break;
-                }
-            }
-            if (Reply.contains("HTTP/1.1 301")) {
-                QString NUrl = Reply.mid(Reply.indexOf("The document has moved ")+32, Reply.indexOf("\">here")-Reply.indexOf("The document has moved ")-32);
-                Reply = SubDownload(NUrl);
-            } else if (Reply.contains("HTTP/1.1 302")) {
-                QString NUrl = Reply.mid(Reply.indexOf("Location: ")+10, Reply.indexOf("\r\n", Reply.indexOf("Location: "))-Reply.indexOf("Location: ")-10);
-                Reply = SubDownload(NUrl);
-            }
-        }
-    }
-    S.close();
-    return Reply;
 }
 
 QString stringBetween(QString Tag, QString Text) {
@@ -243,8 +112,7 @@ QString stringBetween(QString Tag, QString Text) {
     return Output;
 }
 
-qorgRSS::qorgRSS(QWidget* parent, qorgOptions* Options) :QWidget(parent) {
-    this->Options = Options;
+qorgRSS::qorgRSS(QWidget* parent) :QWidget(parent) {
     currentC = -1;
     Layout = new QGridLayout(this);
     Layout->setMargin(0);
@@ -301,6 +169,10 @@ qorgRSS::~qorgRSS() {
         }
     }
 }
+void qorgRSS::setPointer(qorgOptions* Options) {
+   this->Options = Options;
+}
+
 QString qorgRSS::output() {
     QString out;
     for (uint i = 0; i < RSSv.size(); i++) {
@@ -362,7 +234,7 @@ void qorgRSS::setChannel(int I) {
                 }
                 Itm->setText(0, RSSv[currentC].Itemv[j]->Title);
                 Itm->setToolTip(0, RSSv[currentC].Itemv[j]->Title);
-                Itm->setText(1, RSSv[currentC].Itemv[j]->PubDate.toString("dd.MM.yyyy hh:mm"));
+                Itm->setText(1, RSSv[currentC].Itemv[j]->PubDate.toString("HH:mm dd.MM.yyyy"));
             }
             Titles->scrollToTop();
             setLayoutF();
@@ -380,9 +252,9 @@ void qorgRSS::getUpdate() {
     if (RSSv.size() != 0) {
         for (uint i = 0; i < RSSv.size(); i++) {
             Download* D = new Download(this, &RSSv[i]);
-            connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
-            connect(D, SIGNAL(Downloaded(QString)), this, SLOT(UpdateS()));
-            D->start();
+            connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(DownloadedS(QNetworkReply*)));
+            connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(UpdateS()));
+            D->get();
             UpdateQuene++;
         }
     } else {
@@ -449,19 +321,23 @@ void qorgRSS::AddS() {
         URL->clear();
         QEventLoop* eventLoop = new QEventLoop(this);
         Download* D = new Download(this, Channel);
-        connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
-        connect(D, SIGNAL(finished()), eventLoop, SLOT(quit()));
-        D->start();
+        connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(DownloadedS(QNetworkReply*)));
+        connect(D, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), this, SLOT(SSLSocketError(QNetworkReply*,QList<QSslError>)));
+        connect(D, SIGNAL(Downloaded(QNetworkReply*)), eventLoop, SLOT(quit()));
+        D->get();
         eventLoop->exec();
         URL->clear();
     }
 }
-void qorgRSS::DownloadedS(QString Rep) {
+void qorgRSS::DownloadedS(QNetworkReply* QNR) {
+    QString Rep = QString(QNR->readAll());
     vector  <RSSItem*>  Itm;
     Download* D = qobject_cast<Download*>(QObject::sender());
-    RSSChannel* Channel = D->Ch;
-    if (Rep.contains("<rss ") && Rep.contains("</rss>")) {
-        if (Rep.contains("<channel>") && Rep.contains("</channel>")) {
+    RSSChannel* Channel = D->ChannelRSSChannel;
+    if (Rep.contains("<rss ")
+            && Rep.contains("</rss>")) {
+        if (Rep.contains("<channel>")
+                && Rep.contains("</channel>")) {
             QList <QString> Parts = Rep.split("<item>");
             Channel->Title = stringBetween("title", Parts[0]);
             for (int i = 1; i < Parts.size()-1; i++) {
@@ -506,7 +382,8 @@ void qorgRSS::DownloadedS(QString Rep) {
                 Itm.push_back(item);
             }
         }
-    } else if (Rep.contains("<feed xmlns=\"http://www.w3.org/2005/Atom\"")&&Rep.contains("</feed>")) {
+    } else if (Rep.contains("<feed xmlns=\"http://www.w3.org/2005/Atom\"")
+               && Rep.contains("</feed>")) {
         Channel->Title = stringBetween("title", Rep);
         Rep = Rep.remove(0, Rep.indexOf("<entry>"));
         while (Rep.contains("</entry>")) {
@@ -609,8 +486,8 @@ void qorgRSS::chooseItem(QModelIndex I) {
 }
 void qorgRSS::RefreshS() {
     Download* D = new Download(this, &RSSv[currentC]);
-    connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
-    D->start();
+    connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(DownloadedS(QNetworkReply*)));
+    D->get();
 }
 void qorgRSS::UpdateS() {
     if (UpdateQuene == 1) {
@@ -622,11 +499,7 @@ void qorgRSS::UpdateS() {
                 }
             }
         }
-        if (unread == 1) {
-            emit sendUpdate("RSS: 1 unreaded message.");
-        } else {
-            emit sendUpdate("RSS: "+QString::number(unread)+" unreaded messages.");
-        }
+        emit sendUpdate("RSS: "+QString::number(unread)+" unreaded "+(unread == 1 ? "message.": "messages."));
         UpdateQuene--;
     } else {
         UpdateQuene--;
@@ -647,17 +520,16 @@ void qorgRSS::HTTPSS(QNetworkReply* QNR, QList<QSslError> I) {
     } else if (response == 1) {
         QNR->ignoreSslErrors(I);
     }
-    connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
+    connect(QNR, SIGNAL(Downloaded()), QNR, SLOT(deleteLater()));
 }
-bool qorgRSS::SSLSocketError(QList<QSslError> I) {
+void qorgRSS::SSLSocketError(QNetworkReply* QNR, QList<QSslError> I) {
     int response = Options->checkCertificate(I.first().certificate());
     if (response == 0) {
-        Options->addForVeryfication(I.first().certificate());
-        return false;
+        Options->addForVerification(I.first().certificate());
+        return;
     } else if (response == 1) {
-        return true;
+        QNR->ignoreSslErrors(I);
     }
-    return false;
 }
 void qorgRSS::sortRSS() {
     if (RSSv.size() > 1) {

@@ -277,8 +277,8 @@ void qorgPasswd::AddB() {
         ProgramL->clear();
         LoginL->clear();
         PasswordL->clear();
-        UpdateTree();
         PasswordL->setEchoMode(QLineEdit::Password);
+        UpdateTree();
     }
 }
 void qorgPasswd::row(QString Input) {
@@ -381,6 +381,7 @@ void qorgPasswd::Can() {
     ProgramL->clear();
     LoginL->clear();
     PasswordL->clear();
+    PasswordL->setEchoMode(QLineEdit::Password);
     Add->show();
     La->addWidget(Add, 3, 0, 1, 2);
     OKB->hide();

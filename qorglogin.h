@@ -40,8 +40,8 @@ private slots:
     void Authentication();
     void Register();
 protected:
-    QString* hashed;
-    QString* hash;
+    QByteArray hash;
+    QByteArray hashed;
 };
 
 #endif  // QORGLOGIN_H_

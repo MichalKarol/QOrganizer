@@ -28,10 +28,10 @@ struct Person {
     QString Street;
     uint HouseNumber;
     uint Apartment;
-    QString Email; //utwozy maske sprawdzającą poprawność
-    QString Mobile; //INT validation
-    QString Birthday; // dd/MM
-    QByteArray Photo; //if empty use default
+    QString Email;
+    QString Mobile;
+    QString Birthday;
+    QByteArray Photo;
     QString ExtraInformation;
 };
 class qorgAB : public QWidget {
@@ -50,6 +50,7 @@ public:
     QStringList getCategories();
     QString output();
     void input(QString);
+    QString exportToVCard();
     QList  <QString>  getBirthdays(QDate);
     QList  <QString>  getEmails();
 private:
@@ -69,6 +70,7 @@ private:
     QPushButton* OKB;
     QPushButton* Cancel;
     QCompleter* C;
+    //TODO Import from vCard
 private slots:
     void SelectPhoto();
     void ActivateBirthdayField();

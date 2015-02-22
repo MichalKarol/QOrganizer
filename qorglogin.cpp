@@ -20,12 +20,9 @@ qorgLogin::qorgLogin(QOrganizer* p) :QDialog(p) {
     setWindowIcon(QIcon(":/main/QOrganizer.png"));
     setWindowTitle("Login dialog");
     setMinimumWidth(300);
-    //this->show();
     Label[0]=new QLabel("Username: ", this);
     Label[1]=new QLabel("Password: ", this);
     PassLabel = new QLabel("", this);
-    Label[0]->setFont(QFont("", 12));
-    Label[1]->setFont(QFont("", 12));
     Line[0]=new QLineEdit(this);
     connect(Line[0], SIGNAL(textChanged(QString)), this, SLOT(UserInputValidation(QString)));
     Line[1]=new QLineEdit(this);
@@ -100,16 +97,33 @@ void qorgLogin::PasswordInputValidation(QString input) {
 void qorgLogin::Authentication() {
     if (Validated[0]&&Validated[1]) {
         QString path = QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(Line[0]->text().toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org";
-        QFileInfo UserFile(path);
-        if (UserFile.exists()) {
-            if (UserFile.permission(QFile::ReadUser)) {
-                hash = new QString(QCryptographicHash::hash(salting(Line[1]->text()).toUtf8(), QCryptographicHash::Sha3_512));
-                hashed = new QString(calculateXOR(Line[1]->text().toUtf8(), hash->toUtf8()).toBase64());
-                if (qorgIO::ReadFile(hashed, hash, pointer, path)) {
-                    pointer->setUser(Line[0]->text(), hashed, hash);
-                    this->accept();
+        QFile fileQFile(path);
+        if (fileQFile.exists()) {
+                if (fileQFile.open(QIODevice::ReadOnly)) {
+                    hash = RandomQByteArray();
+                    hashed = calculateXOR(QCryptographicHash::hash(
+                                              QCryptographicHash::hash(QUuid::createUuidV5(QUuid(Line[1]->text().toUtf8()),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                                              +Line[1]->text().toUtf8()
+                                              +QCryptographicHash::hash(Line[1]->text().toUtf8(),QCryptographicHash::Sha3_512)
+                                                                ,QCryptographicHash::Sha3_256),hash);
+                    QByteArray Header = fileQFile.read(15);
+                    if (Header == "QOrganizer 1.02"
+                            || Header == "QOrganizer 1.03") {
+                        QByteArray hash1 = RandomQByteArray();
+                        QByteArray hashed1 = calculateXOR(Line[1]->text().toUtf8()+QByteArray(32-Line[1]->text().length(),'\0'), hash1);
+                        if (qorgIO::ReadFile(hash1, hashed1, pointer, path)) {
+                            pointer->setUser(Line[0]->text(), hash, hashed);
+                            this->accept();
+                        }
+                    } else {
+                        if (qorgIO::ReadFile(hash, hashed, pointer, path)) {
+                            pointer->setUser(Line[0]->text(), hash, hashed);
+                            this->accept();
+                        }
+                    }
+                    Line[1]->clear();
+                    fileQFile.close();
                 }
-            }
         } else {
             QMessageBox::critical(this, "Error", "Wrong usename or password.");
         }
@@ -130,10 +144,15 @@ void qorgLogin::Register() {
         } else {
             QString Repeat = QInputDialog::getText(this,"Passsword","Repeat password",QLineEdit::Password);
             if (Repeat == Line[1]->text()) {
-                hash = new QString(QCryptographicHash::hash(salting(Line[1]->text()).toUtf8(), QCryptographicHash::Sha3_512));
-                hashed = new QString(calculateXOR(Line[1]->text().toUtf8(), hash->toUtf8()).toBase64());
-                qorgIO::SaveFile(hashed, hash, pointer, path);
-                if (qorgIO::ReadFile(hashed, hash, pointer, path)) {
+                hash = RandomQByteArray();
+                hashed = calculateXOR(QCryptographicHash::hash(
+                                          QCryptographicHash::hash(QUuid::createUuidV5(QUuid(Line[1]->text().toUtf8()),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                                          +Line[1]->text().toUtf8()
+                                          +QCryptographicHash::hash(Line[1]->text().toUtf8(),QCryptographicHash::Sha3_512)
+                                                            ,QCryptographicHash::Sha3_256),hash);
+                Line[1]->clear();
+                qorgIO::SaveFile(hash, hashed, pointer, path);
+                if (qorgIO::ReadFile(hash, hashed, pointer, path)) {
                     pointer->setUser(Line[0]->text(), hashed, hash);
                     this->accept();
                 }

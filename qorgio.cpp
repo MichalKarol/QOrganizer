@@ -15,42 +15,56 @@
 
 #include <qorgio.h>
 
-bool qorgIO::ReadFile(QString* hashed, QString* hash, QOrganizer* main, QString path) {
-    QFile file(path);
-    if (file.open(QIODevice::ReadOnly)) {
-        QTextStream stream(&file);
+bool qorgIO::ReadFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QString path) {
+    QFile fileQFile(path);
+    if (fileQFile.open(QIODevice::ReadOnly)) {
+        QTextStream stream(&fileQFile);
         QString text = stream.readAll();
-        file.close();
+        fileQFile.close();
+
         QString Header = text.mid(0, 15);
-        QString IV = text.mid(15, text.indexOf("\n")-15);
-        QString Data = text.mid(text.indexOf("\n")+1, text.length()-text.indexOf("\n")-1);
+        QString IV;
+        QString Data;
+        if (Header == "QOrganizer 1.02"
+                || Header == "QOrganizer 1.03") {
+             IV = text.mid(15, text.indexOf("\n") - 15);
+            Data = text.mid(text.indexOf("\n") + 1, text.length()-text.indexOf("\n") - 1);
+        } else {
+            IV = text.mid(16, text.indexOf("\n",17) - 16);
+            Data = text.mid(text.indexOf("\n" ,17) + 1, text.length()-text.indexOf("\n",17) - 1);
+        }
+
         QByteArray IVBA = QByteArray::fromBase64(IV.toUtf8());
         IV.clear();
+
         QByteArray DataBA = QByteArray::fromBase64(Data.toUtf8());
         Data.clear();
-        QString Passwd = QString(calculateXOR(QByteArray::fromBase64(hashed->toUtf8()), hash->toUtf8()));
-        if (Passwd.length() <  32) {
-            Passwd.append(QString(32-Passwd.length(), '\0'));
+
+        QByteArray Password = calculateXOR(hashed, hash);
+
+        if (Header == "QOrganizer 1.02"
+                || Header == "QOrganizer 1.03") {
+            if (Password.length() <  32) {
+                Password.append(QString(32 - Password.length(), '\0'));
+            }
+        } else {
+            QByteArray P1 = Password;
+            IVBA = decryptUsingAES(QByteArray(), IVBA, Password).mid(0,16);
+            Password = calculateXOR(P1, IVBA);
         }
-        AES_KEY* aesKey = new AES_KEY;
-        AES_set_decrypt_key((unsigned char*)Passwd.toUtf8().data(), 256, aesKey);
-        int sizeofinput = DataBA.size();
-        unsigned char* Output;
-        Output = new unsigned char[sizeofinput];
-        memset(Output, '\0', sizeof(sizeofinput));
-        AES_cbc_encrypt((unsigned char*)DataBA.data(), Output, sizeofinput, aesKey, (unsigned char*)IVBA.data(), AES_DECRYPT);
-        Passwd.clear();
-        IVBA.clear();
-        DataBA.clear();
+
+        QByteArray Output = decryptUsingAES(IVBA, DataBA, Password);
+
         QString Decrypted = Header;
-        Decrypted.append((const char*)Output);
-        memset(Output, 0, sizeof(sizeofinput));
-        delete[] Output;
-        delete aesKey;
+        Decrypted.append(Output);
+        Output.clear();
+
         if (!Decrypted.contains("QOrganizer") || !Decrypted.contains(QString(AES_BLOCK_SIZE, '.'))) {
+            Decrypted.clear();
             QMessageBox::critical(main, "Error", "Invalid file of password!");
             return false;
         }
+
         if (Decrypted.contains("QOrganizer 1.02")) {
             Decrypted = From103(From102(Decrypted));
         }
@@ -66,18 +80,19 @@ bool qorgIO::ReadFile(QString* hashed, QString* hash, QOrganizer* main, QString 
         main->RSS->input(L[6]);
         main->PasswordManager->input(L[7]);
         Decrypted.clear();
+
         return true;
     } else {
         if(main->isHidden()) {
-            QMessageBox::critical(main, "Error", "Cannot open file due to"+file.errorString());
+            QMessageBox::critical(main, "Error", "Cannot open file due to"+fileQFile.errorString());
         } else {
-            main->Notification("Error","Cannot open file due to: "+file.errorString());
+            main->Notification("Error","Cannot open file due to: "+fileQFile.errorString());
         }
         return false;
     }
 }
-bool qorgIO::SaveFile(QString* hashed, QString* hash, QOrganizer* main, QString path) {
-    QString Out="QOrganizer 1.04";
+bool qorgIO::SaveFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QString path) {
+    QString Out="QOrganizer 1.04\n";
     QString data="\n\n";
     data.append(main->Options->output());
     data.append(main->Calendar->output());
@@ -90,26 +105,30 @@ bool qorgIO::SaveFile(QString* hashed, QString* hash, QOrganizer* main, QString 
     if (data.length() % AES_BLOCK_SIZE != 0) {
         data.append(QByteArray(AES_BLOCK_SIZE - (data.length() % AES_BLOCK_SIZE), ' '));
     }
-    QString Passwd = QString(calculateXOR(QByteArray::fromBase64(hashed->toUtf8()), hash->toUtf8()));
-    if (Passwd.length() <  32) {
-        Passwd.append(QString(32-Passwd.length(), '\0'));
-    }
-    AES_KEY* aesKey = new AES_KEY;
-    AES_set_encrypt_key((unsigned char*)Passwd.toUtf8().data(), 256, aesKey);
-    const size_t encslength = data.length();
-    unsigned char IV[AES_BLOCK_SIZE+1]={0};
+
+    QByteArray Password = calculateXOR(hashed, hash);
+
+    uchar IV[AES_BLOCK_SIZE];
     RAND_bytes(IV, AES_BLOCK_SIZE);
-    Out.append(QByteArray((const char*)IV, AES_BLOCK_SIZE+1).toBase64());
-    unsigned char* aOUT;
-    aOUT = new unsigned char[encslength];
-    memset(aOUT, 0, sizeof(encslength));
-    AES_cbc_encrypt((unsigned char*)data.toUtf8().data(), aOUT, data.length(), aesKey, IV, AES_ENCRYPT);
-    Out+="\n";
-    Out.append(QByteArray((const char*)aOUT, encslength).toBase64());
-    Passwd.clear();
-    memset(aOUT, 0, sizeof(encslength));
-    delete[] aOUT;
-    delete aesKey;
+
+    QByteArray IVBA(reinterpret_cast<const char*>(IV),AES_BLOCK_SIZE);
+
+    memset(&IV, '\0', AES_BLOCK_SIZE);
+
+    QByteArray IVPassword = calculateXOR(Password, IVBA);
+
+    QByteArray IVCopy = IVBA;
+    IVBA = encryptUsingAES(QByteArray(), IVBA, Password);
+    Out.append(IVBA.toBase64());
+
+    QByteArray Data = QByteArray(data.toUtf8());
+
+    QByteArray Encrypted = encryptUsingAES(IVCopy, Data, IVPassword);
+
+    Out.append("\n");
+    Out.append(Encrypted.toBase64());
+    Encrypted.clear();
+
     QFile file(path);
     if (file.open(QIODevice::WriteOnly)) {
         QTextStream stream(&file);
@@ -130,8 +149,8 @@ QString qorgIO::From102(QString I) {
     QString O;
     QStringList L = I.split("\n\n");
     O.append(L[0]+"\n\n");
-    O.append(L[1]+"\n\n");
-    O.append(L[2]+"\n\n");
+    O.append(L[1]+"\n\n"); // Options
+    O.append(L[2]+"\n\n"); // Calendar
     if (!L[3].isEmpty()) {
         QStringList A = L[3].split("\n");
         for (int i = 0; i < A.size(); i++) {
@@ -168,11 +187,11 @@ QString qorgIO::From102(QString I) {
         }
     }
     O.append(L[3]+"\n");
-    O.append(L[4]+"\n\n");
-    O.append(L[5]+"\n\n");
-    O.append(L[6]+"\n\n");
-    O.append(L[7]+"\n\n");
-    O.append(L[8]);
+    O.append(L[4]+"\n\n"); // Mail
+    O.append(L[5]+"\n\n"); // Notes
+    O.append(L[6]+"\n\n"); // AddressBook
+    O.append(L[7]+"\n\n"); // Pass manager
+    O.append(L[8]); //AES Check
     return O;
 }
 QString qorgIO::From103(QString I) {
@@ -180,7 +199,35 @@ QString qorgIO::From103(QString I) {
     QStringList L = I.split("\n\n");
     O.append(L[0]+"\n\n");
     O.append(L[1]+"\n\n"); // Options
-    O.append(L[2]+"\n\n"); // Calendar
+    if (!L[2].isEmpty()) {
+        QStringList A = L[2].split("\n");
+        for (int i = 0; i < A.size(); i++) {
+            QStringList B = A[i].split(" ");
+            if (B.size()-1 == 7) {
+                QString tmp = B[3];
+                B.removeAt(3);
+                B[6] = B[5];
+                B[5] = tmp; // Set order
+                B.append("");
+
+            }
+            A[i].clear();
+            for (int j = 0; j < B.size()-1; j++) {
+                A[i].append(B[j]);
+                if (j+1 != B.size()-1) {
+                    A[i].append(" ");
+                } else {
+                    A[i].append(" \n");
+                }
+            }
+            B = A[i].split(" ");
+        }
+        L[2].clear();
+        for (int i = 0; i < A.size(); i++) {
+            L[2].append(A[i]);
+        }
+    }
+    O.append(L[2]+"\n"); // Calendar
     O.append(L[3]+"\n\n"); // Mail
     O.append(L[4]+"\n\n"); // Notes
     if (!L[5].isEmpty()) {
@@ -208,8 +255,8 @@ QString qorgIO::From103(QString I) {
         }
     }
     O.append(L[5]+"\n"); // Address Book
-    O.append(L[6]+"\n\n"); //RSS
-    O.append(L[7]+"\n\n"); //Pass manager
-    O.append(L[8]); //AES_CHECK
+    O.append(L[6]+"\n\n"); // RSS
+    O.append(L[7]+"\n\n"); // Pass manager
+    O.append(L[8]); // AES Check
     return O;
 }

@@ -13,10 +13,13 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef QORGOPTIONS_H_
-#define QORGOPTIONS_H_
+#ifndef QORGOPTIONSH
+#define QORGOPTIONSH
 
 #include <qorgtools.h>
+#include <qorgcalendar.h>
+#include <qorgnotes.h>
+#include <qorgab.h>
 #include <QSslCertificate>
 #include <QtWidgets>
 #include <vector>
@@ -25,55 +28,82 @@ using std::vector;
 class qorgOptions : public QWidget {
     Q_OBJECT
 public:
-    explicit qorgOptions(QWidget* parent);
-    ~qorgOptions();
-    int checkCertificate(QSslCertificate);
-    void setWidget(uint);
+    explicit qorgOptions(QWidget*);
+
+    uint UpdateInterval;
+    uint BlockInterval;
+    QMutex CertificateQMutex;
+
+    void setPointers(qorgCalendar*, qorgNotes*, qorgAB*);
+    void setWidget(int);
+
     QString output();
     void input(QString);
+
+    int checkCertificate(QSslCertificate);
     void acceptSSLCert(QSslCertificate);
     void blacklistSSLCert(QSslCertificate);
-    void addForVeryfication(QSslCertificate);
-    uint UInterval;
-    uint BInterval;
-    QMutex CertMutex;
+    void addForVerification(QSslCertificate);
 private:
     vector <QSslCertificate> SSLCertA;
     vector <QSslCertificate> SSLCertB;
     QList <QSslCertificate> SSLCertTmp;
-    QTimer* UTimer;
-    QTimer* BTimer;
-    uint currentW;
-    QGridLayout* Layout;
 
-    QLabel* A[4];
-    QLineEdit* CPassword;
-    QLineEdit* NPassword;
-    QSpinBox* UInt;
-    QSpinBox* BInt;
-    QPushButton* Passwd;
-    QPushButton* Interval;
-    QSpacerItem* Spacer;
-    QList <QWidget*> W1;
+    qorgCalendar* Calendar;
+    qorgNotes* Notes;
+    qorgAB* AddressBook;
 
-    QLabel* B[2];
-    QListWidget* Accepted;
-    QListWidget* Blacklisted;
-    QList <QWidget*> W2;
+
+    QTimer* UpdateQTimer;
+    QTimer* BlockQTimer;
+    int currentWidget;
+    QGridLayout* LayoutQGridLayout;
+    QWidget* WidgetsQWidget[4];
+    QGroupBox* BoxesQGroupBox[3];
+
+    //Password changing widget
+    QLabel* CurrentPasswordQLabel;
+    QLabel* NewPasswordQLabel;
+    QLineEdit* CurrentPasswordQLineEdit;
+    QLineEdit* NewPasswordQLineEdit;
+    QPushButton* PasswordQPushButton;
+
+    //Interval changing widget
+    QLabel* UpdateQLabel;
+    QLabel* BlockQLabel;
+    QSpinBox* UpdateIntervalQSpinBox;
+    QSpinBox* BlockIntervalQSpinBox;
+    QPushButton* IntervalQPushButton;
+
+    //Export widget
+    QLabel* vCalendarQLabel;
+    QLabel* vNoteQLabel;
+    QLabel* vCardQLabel;
+    QPushButton* vCalendarQPushButton;
+    QPushButton* vNoteQPushButton;
+    QPushButton* vCardQPushButton;
+
+    //SSL manager widget
+    QLabel* AcceptedQLabel;
+    QLabel* BlacklistedQLabel;
+    QListWidget* AcceptedQListWidget;
+    QListWidget* BlacklistedQListWidget;
+
 public slots:
     void start(bool);
     void stop(bool);
 private slots:
     void UTimeout();
     void BTimeout();
-    void ChangeInterval();
     void ChangePassword();
+    void ChangeInterval();
+    void ExportToVSth();
     void Validator(QString);
-    void DClicked(QModelIndex);
+    void CertificateClicked(QModelIndex);
 signals:
-    void CNPassword(QString*, QString*, QString*, QString*);
+    void CNPassword(QByteArray, QByteArray, QByteArray, QByteArray);
     void Update();
     void Block();
 };
 
-#endif  // QORGOPTIONS_H_
+#endif  // QORGOPTIONSH

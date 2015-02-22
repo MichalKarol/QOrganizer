@@ -16,27 +16,231 @@
 #include <qorgcalendar.h>
 #include <algorithm>
 
+Event::Event() {
+    this->Name.clear();
+    this->Category.clear();
+    this->Priority = 0;
+    this->OccuranceType = Event::NoOccurance;
+    this->Datet = QDateTime::fromMSecsSinceEpoch(0);
+    this->Edatet = QDateTime::fromMSecsSinceEpoch(0);
+    this->Edate = QDateTime::fromMSecsSinceEpoch(0).date();
+}
+bool Event::occursOnDate(QDate D) {
+    if (starts(D).date() <= D
+            && ends(D).date() >= D) {
+        return true;
+    } else {
+        return false;
+    }
+}
+QDateTime Event::starts(QDate D) {
+    if (OccuranceType != NoOccurance) {
+        if (D >= Datet.date() && D <= Edate) {
+            switch (OccuranceType) {
+            case NoOccurance: {
+            };break;
+            case Daily: {
+                if (D >= Datet.date()) {
+                    return QDateTime(D,Datet.time());
+                } else if (D != Datet.date()) {
+                    return QDateTime(D.addDays(-1),Datet.time());
+                }
+            };break;
+            case Weekly: {
+                for (int i = 0; i > -7; i--) {
+                    if (D.addDays(i).dayOfWeek() == Datet.date().dayOfWeek()) {
+                        if (QDateTime(D.addDays(i-7),Datet.time()).addSecs(Datet.secsTo(Edatet)).date() >= D
+                                && D < D.addDays(i)) {
+                            return QDateTime(D.addDays(i-7),Datet.time());
+                        } else {
+                            return QDateTime(D.addDays(i),Datet.time());
+                        }
+                    }
+                }
+            };break;
+            case Monthly: {
+                return QDateTime(QDate(D.year(),D.month(),Datet.date().day()),Datet.time());
+            };break;
+            case Yearly: {
+                return QDateTime(QDate(D.year(),Datet.date().month(),Datet.date().day()),Datet.time());
+            };break;
+            }
+        }
+    } else {
+        if (D >= Datet.date() && D <= Edatet.date()) {
+            return Datet;
+        }
+    }
+    if (!QDate::isLeapYear(D.year())
+            && D .month() == 2
+            && D.day() == 28
+            && OccuranceType == Yearly
+            && Datet.date().day() == 29
+            && Datet.date().month() == 2) {
+        return QDateTime(QDate(D.year(),2,28),Datet.time());
+    }
+    return QDateTime();
+}
+QDateTime Event::starts(QDateTime D) {
+    if (D >= Datet) {
+        if (OccuranceType != NoOccurance && D.date() <= Edate) {
+            switch (OccuranceType) {
+            case NoOccurance: {
+            };break;
+            case Daily: {
+                if (QDateTime(D.addDays(-1).date(),Datet.time()) >= Datet) {
+                    if (QDateTime(D.addDays(-1).date(),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                            && D < QDateTime(D.date(),Datet.time())) {
+                        return QDateTime(D.addDays(-1).date(),Datet.time());
+                    } else {
+                        return QDateTime(D.date(),Datet.time());
+                    }
+                } else {
+                    return QDateTime(D.date(),Datet.time());
+                }
+            };break;
+            case Weekly: {
+                for (int i = 0; i > -7; i--) {
+                    if (D.addDays(i).date().dayOfWeek() == Datet.date().dayOfWeek()) {
+                        if (QDateTime(D.addDays(i-7).date(),Datet.time()) >= Datet) {
+                            if (QDateTime(D.addDays(i-7).date(),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                                    && D < QDateTime(D.addDays(i).date(),Datet.time())) {
+                                return QDateTime(D.addDays(i-7).date(),Datet.time());
+                            } else {
+                                return QDateTime(D.addDays(i).date(),Datet.time());
+                            }
+                        } else {
+                            return QDateTime(D.addDays(i).date(),Datet.time());
+                        }
+                    }
+                }
+            };break;
+            case Monthly: {
+                QDate Date = QDate(D.date().year(),D.date().month(),Datet.date().day());
+                if (QDateTime(Date.addMonths(-1),Datet.time()) >= Datet) {
+                    if (QDateTime(Date.addMonths(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                            && D < QDateTime(Date,Datet.time())) {
+                        return QDateTime(Date.addMonths(-1),Datet.time());
+                    } else {
+                        return QDateTime(Date,Datet.time());
+                    }
+                } else {
+                    return QDateTime(Date,Datet.time());
+                }
+            };break;
+            case Yearly: {
+                QDate Date = QDate(D.date().year(),Datet.date().month(),Datet.date().day());
+                if (QDateTime(Date.addYears(-1),Datet.time()) >= Datet) {
+                    if (QDateTime(Date.addYears(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                            && D < QDateTime(Date,Datet.time())) {
+                        return QDateTime(Date.addYears(-1),Datet.time());
+                    } else {
+                        return QDateTime(Date,Datet.time());
+                    }
+                } else {
+                    return QDateTime(Date,Datet.time());
+                }
+            };break;
+            }
+        } else {
+            if (D <= Edatet) {
+                return Datet;
+            }
+        }
+    }
+    if (!QDate::isLeapYear(D.date().year())
+            && D.date().month() == 2
+            && D.date().day() == 28
+            && OccuranceType == Yearly
+            && Datet.date().day() == 29
+            && Datet.date().month() == 2) {
+        return QDateTime(QDate(D.date().year(),2,28),Datet.time());
+    }
+    return QDateTime();
+}
+QDateTime Event::ends(QDate D) {
+    return starts(D).addSecs(Datet.secsTo(Edatet));
+}
+QDateTime Event::ends(QDateTime D) {
+    QDateTime E = starts(D).addSecs(Datet.secsTo(Edatet));
+    if (OccuranceType != NoOccurance) {
+        switch (OccuranceType) {
+        case NoOccurance: {
+        };break;
+        case Daily: {
+            if (E.addDays(1).date() <= Edate) {
+                return QDateTime();
+            } else {
+                return QDateTime(D.date(),Datet.time());
+            }
+        };break;
+        case Weekly: {
+            for (int i = 0; i > -7; i--) {
+                if (D.addDays(i).date().dayOfWeek() == Datet.date().dayOfWeek()) {
+                    if (QDateTime(D.addDays(i-7).date(),Datet.time()) >= Datet) {
+                        if (QDateTime(D.addDays(i-7).date(),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                                && D < QDateTime(D.addDays(i).date(),Datet.time())) {
+                            return QDateTime(D.addDays(i-7).date(),Datet.time());
+                        } else {
+                            return QDateTime(D.addDays(i).date(),Datet.time());
+                        }
+                    } else {
+                        return QDateTime(D.addDays(i).date(),Datet.time());
+                    }
+                }
+            }
+        };break;
+        case Monthly: {
+            QDate Date = QDate(D.date().year(),D.date().month(),Datet.date().day());
+            if (QDateTime(Date.addMonths(-1),Datet.time()) >= Datet) {
+                if (QDateTime(Date.addMonths(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                        && D < QDateTime(Date,Datet.time())) {
+                    return QDateTime(Date.addMonths(-1),Datet.time());
+                } else {
+                    return QDateTime(Date,Datet.time());
+                }
+            } else {
+                return QDateTime(Date,Datet.time());
+            }
+        };break;
+        case Yearly: {
+            QDate Date = QDate(D.date().year(),Datet.date().month(),Datet.date().day());
+            if (QDateTime(Date.addYears(-1),Datet.time()) >= Datet) {
+                if (QDateTime(Date.addYears(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
+                        && D < QDateTime(Date,Datet.time())) {
+                    return QDateTime(Date.addYears(-1),Datet.time());
+                } else {
+                    return QDateTime(Date,Datet.time());
+                }
+            } else {
+                return QDateTime(Date,Datet.time());
+            }
+        };break;
+        }
+        if (E.date() > Edate) {
+            return QDateTime(Edate,QTime(23,59));
+        } else {
+            return E;
+        }
+    } else {
+        return E;
+    }
+}
+
+
 class QTableCalendarWidget: public QWidget {
     Q_OBJECT
 public:
     QTableCalendarWidget(QString ToolTip, bool Ev, bool BDay, QWidget* parent) :QWidget(parent) {
-        Date = QDate::fromString(ToolTip, "d/MM/yyyy");
+        Date = QDate::fromString(ToolTip, "dd.MM.yyyy");
         Event = new QLabel(this);
         Birth = new QLabel(this);
         Label = new QLabel(QString::number(Date.day()), this);
         Label->setAlignment(Qt::AlignHCenter);
         QPixmap w = QPixmap(12, 12);
         w.fill(Qt::transparent);
-        if (Ev) {
-            Event->setPixmap(QIcon(":/cal/Event.png").pixmap(12));
-        } else {
-            Event->setPixmap(w);
-        }
-        if (BDay) {
-            Birth->setPixmap(QIcon(":/cal/Birthday.png").pixmap(12));
-        } else {
-            Birth->setPixmap(w);
-        }
+        Event->setPixmap((Ev ? QIcon(":/cal/Event.png").pixmap(12) : w));
+        Birth->setPixmap((BDay ? QIcon(":/cal/Birthday.png").pixmap(12) : w));
         Add = new QPushButton(QIcon(QIcon(w).pixmap(12, 12)), "", this);
         Add->setStyleSheet("QPushButton {border: 0px solid white;}");
         Add->setEnabled(false);
@@ -65,10 +269,10 @@ private slots:
 signals:
     void addOUT(QDate);
 };
-class QCalDialogAdd: public QDialog {
+class QCalDialog: public QDialog {
     Q_OBJECT
 public:
-    QCalDialogAdd(QDate Date, qorgCalendar* Cal) :QDialog(Cal) {
+    QCalDialog(QDate Date, qorgCalendar* Cal) :QDialog(Cal) {
         Calendar = Cal;
         Labels[0]=new QLabel("Name: ", this);
         Labels[1]=new QLabel("Category: ", this);
@@ -103,11 +307,15 @@ public:
         Occurance = new QComboBox(this);
         Occurance->addItems(QStringList() << "No occurance" << "Daily" << "Weekly" << "Monthy" << "Yearly");
         connect(Occurance, SIGNAL(currentIndexChanged(int)), this, SLOT(lock(int)));
-        Starts1 = new QDateEdit(Date, this);
-        Starts2 = new QTimeEdit(QTime(12, 00), this);
-        connect(Starts2, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
-        Finish1 = new QDateEdit(Date, this);
-        Finish2 = new QTimeEdit(QTime(13, 00), this);
+        CWidgetS = new QCalendarWidget(this);
+        CWidgetF = new QCalendarWidget(this);
+        Start = new QDateTimeEdit(QDateTime(Date,QTime(12, 00)),this);
+        Start->setCalendarPopup(true);
+        Start->setCalendarWidget(CWidgetS);
+        connect(Start, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
+        Finish = new QDateTimeEdit(QDateTime(Date,QTime(13, 00)),this);
+        Finish->setCalendarPopup(true);
+        Finish->setCalendarWidget(CWidgetF);
         OccuraneEndDate = new QDateEdit(Date, this);
         OccuraneEndDate->setDisabled(true);
         ActionButtons[0]=new QPushButton(this);
@@ -121,147 +329,21 @@ public:
         for (int i = 0; i < 7; i++) {
             Lay->addWidget(Labels[i], i, 0);
         }
-        Lay->addWidget(Name, 0, 1, 1, 2);
-        Lay->addWidget(Category, 1, 1, 1, 2);
-        Lay->addWidget(Priority, 2, 1, 1, 2);
-        Lay->addWidget(Occurance, 3, 1, 1, 2);
-        Lay->addWidget(Starts1, 4, 1);
-        Lay->addWidget(Starts2, 4, 2);
-        Lay->addWidget(Finish1, 5, 1);
-        Lay->addWidget(Finish2, 5, 2);
-        Lay->addWidget(OccuraneEndDate, 6, 1, 1, 2);
-        Lay->addWidget(ActionButtons[1], 7, 1, 1, 2);
+        Lay->addWidget(Name, 0, 1);
+        Lay->addWidget(Category, 1, 1);
+        Lay->addWidget(Priority, 2, 1);
+        Lay->addWidget(Occurance, 3, 1);
+        Lay->addWidget(Start, 4, 1);
+        Lay->addWidget(Finish, 5, 1);
+        Lay->addWidget(OccuraneEndDate, 6, 1);
         Lay->addWidget(ActionButtons[0], 7, 0);
-        if (Calendar->category == "Birthdays") {
-            Category->setDisabled(true);
-            Finish1->setDisabled(true);
-            Finish2->setDisabled(true);
-            Occurance->setCurrentIndex(4);
-            Occurance->setDisabled(true);
-        }
+        Lay->addWidget(ActionButtons[1], 7, 1);
         setWindowTitle("Add event");
     }
-private:
-    QLabel* Labels[7];
-    QLineEdit* Name;
-    QLineEdit* Category;
-    QSlider* Priority;
-    QComboBox* Occurance;
-    QDateEdit* Starts1;
-    QTimeEdit* Starts2;
-    QDateEdit* Finish1;
-    QTimeEdit* Finish2;
-    QDateEdit* OccuraneEndDate;
-    QPushButton* ActionButtons[2];
-    qorgCalendar* Calendar;
-private slots:
-    void lock(int i) {
-        if (i == 0) {
-            Labels[6]->setDisabled(true);
-            OccuraneEndDate->setDisabled(true);
-            Finish1->setDisabled(false);
-        } else {
-            Labels[6]->setDisabled(false);
-            OccuraneEndDate->setDisabled(false);
-            if (i < 3) {
-                OccuraneEndDate->setDate(Starts1->date().addDays(1));
-            } else {
-                OccuraneEndDate->setDate(QDate(2099, Starts1->date().month(), Starts1->date().day()));
-            }
-            Finish1->setDisabled(true);
-        }
-    }
-    void add() {
-        if (Occurance->currentIndex() == 0) {
-            CalNor str;
-            if (Name->text().isEmpty()) {
-                if (Name->styleSheet() != "QLineEdit{background: #FF8888;}") {
-                    Name->setStyleSheet("QLineEdit{background: #FF8888;}");
-                    connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
-                }
-                return;
-            }
-            str.name = Name->text();
-            str.category = Category->text();
-            str.priority = Priority->value();
-            str.datet = QDateTime(Starts1->date(), Starts2->time());
-            str.edatet = QDateTime(Finish1->date(), Finish2->time());
-            if (str.datet >= str.edatet) {
-                if (Finish1->styleSheet() != "QDateEdit{background: #FF8888;}") {
-                    Starts1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                    Finish1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                    Finish2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                    connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
-                }
-                return;
-            }
-            Calendar->Normal.push_back(str);
-        } else {
-            CalRec str;
-            if (Name->text().isEmpty()||QDateTime(Starts1->date(), Starts2->time()) >= QDateTime(Starts1->date(), Finish2->time())||OccuraneEndDate->date() < Starts1->date()) {
-                if (Name->text().isEmpty()) {
-                    if (Name->styleSheet() != "QLineEdit{background: #FF8888;}") {
-                        Name->setStyleSheet("QLineEdit{background: #FF8888;}");
-                        connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
-                    }
-                }
-                if (QDateTime(Starts1->date(), Starts2->time()) >= QDateTime(Starts1->date(), Finish2->time())) {
-                    Starts1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                    Finish2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                } else {
-                    Starts1->setStyleSheet("QDateEdit{background: white;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: white;}");
-                    Finish2->setStyleSheet("QTimeEdit{background: white;}");
-                }
-                if (OccuraneEndDate->date() < Starts1->date()) {
-                    Starts1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                    OccuraneEndDate->setStyleSheet("QDateEdit{background: #FF8888;}");
-                } else {
-                    OccuraneEndDate->setStyleSheet("QDateEdit{background: white;}");
-                }
-                return;
-            }
-            str.name = Name->text();
-            str.category = Category->text();
-            str.priority = Priority->value();
-            str.type = Occurance->currentIndex();
-            str.datet = QDateTime(Starts1->date(), Starts2->time());
-            str.edatet = QDateTime(Finish1->date(), Finish2->time());
-            str.edate = OccuraneEndDate->date();
-            Calendar->Recurrent.push_back(str);
-        }
-        this->done(1);
-    }
-    void changed(QString Input) {
-        if (!Input.isEmpty()) {
-            Name->setStyleSheet("QLineEdit{background: white;}");
-        }
-    }
-    void cancelled() {
-        this->done(0);
-    }
-    void time(QTime T) {
-        if (T.hour() == 23) {
-            if (Occurance->currentIndex() == 0) {
-                Finish1->setDate(Starts1->date().addDays(1));
-                Finish2->setTime(T.addSecs(3600));
-            } else {
-                Finish2->setTime(QTime(23, 59));
-            }
-        } else {
-            Finish2->setTime(T.addSecs(3600));
-        }
-    }
-};
-class QCalDialogEdit: public QDialog {
-    Q_OBJECT
-public:
-    QCalDialogEdit(uint IID, qorgCalendar* Cal) :QDialog(Cal) {
+    QCalDialog(uint IID, qorgCalendar* Cal) :QDialog(Cal) {
         Calendar = Cal;
         ItemID = IID;
+        Event Tmp = Calendar->Eventv[IID];
         Labels[0]=new QLabel("Name: ", this);
         Labels[1]=new QLabel("Category: ", this);
         Labels[2]=new QLabel("Priority: ", this);
@@ -270,8 +352,8 @@ public:
         Labels[5]=new QLabel("Finish: ", this);
         Labels[6]=new QLabel("Date of occurane ending: ", this);
         Labels[6]->setDisabled(true);
-        Name = new QLineEdit(this);
-        Category = new QLineEdit(this);
+        Name = new QLineEdit(Tmp.Name,this);
+        Category = new QLineEdit(Tmp.Category,this);
         QCompleter* completer = new QCompleter(Calendar->getCategories(), Category);
         Category->setCompleter(completer);
         Priority = new QSlider(Qt::Horizontal, this);
@@ -291,15 +373,27 @@ public:
                                 "margin: -2px 0;"
                                 "border-radius: 3px;"
                                 "}");
+        Priority->setSliderPosition(Tmp.Priority);
         Occurance = new QComboBox(this);
         Occurance->addItems(QStringList() << "No occurance" << "Daily" << "Weekly" << "Monthy" << "Yearly");
         connect(Occurance, SIGNAL(currentIndexChanged(int)), this, SLOT(lock(int)));
-        Starts1 = new QDateEdit(this);
-        Starts2 = new QTimeEdit(this);
-        Finish1 = new QDateEdit(this);
-        Finish2 = new QTimeEdit(this);
+        CWidgetS = new QCalendarWidget(this);
+        CWidgetF = new QCalendarWidget(this);
+        Start = new QDateTimeEdit(Tmp.Datet,this);
+        Start->setCalendarPopup(true);
+        Start->setCalendarWidget(CWidgetS);
+        connect(Start, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
+        Finish = new QDateTimeEdit(Tmp.Edatet,this);
+        Finish->setCalendarPopup(true);
+        Finish->setCalendarWidget(CWidgetF);
         OccuraneEndDate = new QDateEdit(this);
         OccuraneEndDate->setDisabled(true);
+        if (Tmp.OccuranceType == Event::NoOccurance) {
+            OccuraneEndDate->setDate(QDate::currentDate());
+        } else {
+            Occurance->setCurrentIndex(Tmp.OccuranceType);
+            OccuraneEndDate->setDate(Tmp.Edate);
+        }
         ActionButtons[0]=new QPushButton(this);
         ActionButtons[0]->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
         connect(ActionButtons[0], SIGNAL(clicked()), this, SLOT(cancelled()));
@@ -307,49 +401,19 @@ public:
         ActionButtons[1]->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
         ActionButtons[1]->setDefault(true);
         connect(ActionButtons[1], SIGNAL(clicked()), this, SLOT(edit()));
-        if (!(IID&0xF0000000)) {
-            Name->setText(Calendar->Normal[ItemID].name);
-            Category->setText(Calendar->Normal[ItemID].category);
-            Priority->setSliderPosition(Calendar->Normal[ItemID].priority);
-            Starts1->setDate(Calendar->Normal[ItemID].datet.date());
-            Starts2->setTime(Calendar->Normal[ItemID].datet.time());
-            Finish1->setDate(Calendar->Normal[ItemID].edatet.date());
-            Finish2->setTime(Calendar->Normal[ItemID].edatet.time());
-            OccuraneEndDate->setDate(QDate::currentDate());
-        } else {
-            Name->setText(Calendar->Recurrent[ItemID%0xF0000000].name);
-            Category->setText(Calendar->Recurrent[ItemID%0xF0000000].category);
-            Priority->setSliderPosition(Calendar->Recurrent[ItemID%0xF0000000].priority);
-            Occurance->setCurrentIndex(Calendar->Recurrent[ItemID%0xF0000000].type);
-            Starts1->setDate(Calendar->Recurrent[ItemID%0xF0000000].datet.date());
-            Starts2->setTime(Calendar->Recurrent[ItemID%0xF0000000].datet.time());
-            Finish1->setDate(Calendar->Recurrent[ItemID%0xF0000000].edatet.date());
-            Finish2->setTime(Calendar->Recurrent[ItemID%0xF0000000].edatet.time());
-            OccuraneEndDate->setDate(Calendar->Recurrent[ItemID%0xF0000000].edate);
-        }
-        connect(Starts2, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
         QGridLayout* Lay = new QGridLayout(this);
         for (int i = 0; i < 7; i++) {
             Lay->addWidget(Labels[i], i, 0);
         }
-        Lay->addWidget(Name, 0, 1, 1, 2);
-        Lay->addWidget(Category, 1, 1, 1, 2);
-        Lay->addWidget(Priority, 2, 1, 1, 2);
-        Lay->addWidget(Occurance, 3, 1, 1, 2);
-        Lay->addWidget(Starts1, 4, 1);
-        Lay->addWidget(Starts2, 4, 2);
-        Lay->addWidget(Finish1, 5, 1);
-        Lay->addWidget(Finish2, 5, 2);
-        Lay->addWidget(OccuraneEndDate, 6, 1, 1, 2);
-        Lay->addWidget(ActionButtons[1], 7, 1, 1, 2);
+        Lay->addWidget(Name, 0, 1);
+        Lay->addWidget(Category, 1, 1);
+        Lay->addWidget(Priority, 2, 1);
+        Lay->addWidget(Occurance, 3, 1);
+        Lay->addWidget(Start, 4, 1);
+        Lay->addWidget(Finish, 5, 1);
+        Lay->addWidget(OccuraneEndDate, 6, 1);
         Lay->addWidget(ActionButtons[0], 7, 0);
-        if (Calendar->category == "Birthdays"||((!ItemID&0xF0000000)&&Calendar->Normal[ItemID].category == "Birthdays")||(ItemID&0xF0000000&&Calendar->Recurrent[ItemID%0xF0000000].category == "Birthdays")) {
-            Category->setDisabled(true);
-            Finish1->setDisabled(true);
-            Finish2->setDisabled(true);
-            Occurance->setCurrentIndex(4);
-            Occurance->setDisabled(true);
-        }
+        Lay->addWidget(ActionButtons[1], 7, 1);
         setWindowTitle("Edit event");
     }
 private:
@@ -358,10 +422,10 @@ private:
     QLineEdit* Category;
     QSlider* Priority;
     QComboBox* Occurance;
-    QDateEdit* Starts1;
-    QTimeEdit* Starts2;
-    QDateEdit* Finish1;
-    QTimeEdit* Finish2;
+    QCalendarWidget* CWidgetS;
+    QCalendarWidget* CWidgetF;
+    QDateTimeEdit* Start;
+    QDateTimeEdit* Finish;
     QDateEdit* OccuraneEndDate;
     QPushButton* ActionButtons[2];
     qorgCalendar* Calendar;
@@ -369,94 +433,106 @@ private:
 private slots:
     void lock(int i) {
         if (i == 0) {
-            Labels[6]->setDisabled(true);
             OccuraneEndDate->setDisabled(true);
-            Finish1->setDisabled(false);
         } else {
             Labels[6]->setDisabled(false);
             OccuraneEndDate->setDisabled(false);
             if (i < 3) {
-                OccuraneEndDate->setDate(Starts1->date().addDays(1));
+                OccuraneEndDate->setDate(Start->date().addDays(1));
             } else {
-                OccuraneEndDate->setDate(QDate(2099, Starts1->date().month(), Starts1->date().day()));
+                OccuraneEndDate->setDate(QDate(2099, Start->date().month(), Start->date().day()));
             }
-            Finish1->setDisabled(true);
         }
     }
+    void add() {
+        if (Name->text().isEmpty()) {
+            if (Name->styleSheet() != "QLineEdit{background: #FF8888;}") {
+                Name->setStyleSheet("QLineEdit{background: #FF8888;}");
+                connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
+            }
+            return;
+        }
+        if (Start->dateTime() >= Finish->dateTime()) {
+            if (Finish->styleSheet() != "QDateTimeEdit{background: #FF8888;}") {
+                Start->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                connect(Start,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            }
+            return;
+        }
+        Event::Type OccurancecI = static_cast<Event::Type>(Occurance->currentIndex());
+        switch (OccurancecI) {
+        case Event::NoOccurance: {
+        };break;
+        case Event::Daily: {
+            if(Start->dateTime().secsTo(Finish->dateTime()) > 24*60*60) {
+                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            }
+        };break;
+        case Event::Weekly: {
+            if(Start->dateTime().secsTo(Finish->dateTime()) > 7*24*60*60) {
+                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            }
+        };break;
+        case Event::Monthly: {
+            if(Start->dateTime().secsTo(Finish->dateTime()) > 30*24*60*60) {
+                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            }
+        };break;
+        case Event::Yearly: {
+            if(Start->dateTime().secsTo(Finish->dateTime()) > 365*24*60*60) {
+                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            }
+        };break;
+        }
+        Event event;
+        event.Name = Name->text();
+        event.Category = Category->text();
+        event.Priority = Priority->value();
+        event.Datet = Start->dateTime();
+        event.Edatet = Finish->dateTime();
+        event.OccuranceType = OccurancecI;
+        event.Edate = OccuraneEndDate->date();
+        Calendar->Eventv.push_back(event);
+        this->accept();
+    }
     void edit() {
-        if (Occurance->currentIndex() == 0) {
-            CalNor str;
-            if (Name->text().isEmpty()) {
-                if (Name->styleSheet() != "QLineEdit{background: #FF8888;}") {
-                    Name->setStyleSheet("QLineEdit{background: #FF8888;}");
-                    connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
-                }
-            } else {
-                str.name = Name->text();
-                str.category = Category->text();
-                str.priority = Priority->value();
-                str.datet = QDateTime(Starts1->date(), Starts2->time());
-                str.edatet = QDateTime(Finish1->date(), Finish2->time());
-                if (str.datet >= str.edatet) {
-                    if (Finish1->styleSheet() != "QDateEdit{background: #FF8888;}") {
-                        Starts1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                        Finish1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                        Starts2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                        Finish2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                        connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
-                    }
-                } else {
-                    Calendar->Normal.push_back(str);
-                }
+        if (Name->text().isEmpty()) {
+            if (Name->styleSheet() != "QLineEdit{background: #FF8888;}") {
+                Name->setStyleSheet("QLineEdit{background: #FF8888;}");
+                connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
             }
-        } else {
-            CalRec str;
-            if (Name->text().isEmpty()||QDateTime(Starts1->date(), Starts2->time()) >= QDateTime(Starts1->date(), Finish2->time())||OccuraneEndDate->date() < Starts1->date()) {
-                if (Name->text().isEmpty()) {
-                    if (Name->styleSheet() != "QLineEdit{background: #FF8888;}") {
-                        connect(Name, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)));
-                    }
-                    Name->setStyleSheet("QLineEdit{background: #FF8888;}");
-                }
-                if (QDateTime(Starts1->date(), Starts2->time()) >= QDateTime(Starts1->date(), Finish2->time())) {
-                    Starts1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                    Finish2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                } else {
-                    Starts1->setStyleSheet("QDateEdit{background: white;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: white;}");
-                    Finish2->setStyleSheet("QTimeEdit{background: white;}");
-                }
-                if (OccuraneEndDate->date() < Starts1->date()) {
-                    Starts1->setStyleSheet("QDateEdit{background: #FF8888;}");
-                    Starts2->setStyleSheet("QTimeEdit{background: #FF8888;}");
-                    OccuraneEndDate->setStyleSheet("QDateEdit{background: #FF8888;}");
-                } else {
-                    OccuraneEndDate->setStyleSheet("QDateEdit{background: white;}");
-                }
-                return;
+            return;
+        }
+        if (Start->dateTime() >= Finish->dateTime()) {
+            if (Finish->styleSheet() != "QDateTimeEdit{background: #FF8888;}") {
+                Start->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
+                connect(Start,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
             }
-            str.name = Name->text();
-            str.category = Category->text();
-            str.priority = Priority->value();
-            str.type = Occurance->currentIndex();
-            str.datet = QDateTime(Starts1->date(), Starts2->time());
-            str.edatet = QDateTime(Finish1->date(), Finish2->time());
-            str.edate = OccuraneEndDate->date();
-            Calendar->Recurrent.push_back(str);
+            return;
         }
-        if (!(ItemID&0xF0000000)) {
-            Calendar->Normal.erase(Calendar->Normal.begin()+ItemID);
-        } else {
-            Calendar->Recurrent.erase(Calendar->Recurrent.begin()+ItemID%0xF0000000);
-        }
+        Event event;
+        event.Name = Name->text();
+        event.Category = Category->text();
+        event.Priority = Priority->value();
+        event.Datet = Start->dateTime();
+        event.Edatet = Finish->dateTime();
+        event.OccuranceType = static_cast<Event::Type>(Occurance->currentIndex());
+        event.Edate = OccuraneEndDate->date();
+        Calendar->Eventv.push_back(event);
+        Calendar->Eventv.erase(Calendar->Eventv.begin()+ItemID);
         this->accept();
     }
     void changed(QString Input) {
         if (!Input.isEmpty()) {
             Name->setStyleSheet("QLineEdit{background: white;}");
-        } else {
-            Name->setStyleSheet("QLineEdit{background: #FF8888;}");
         }
     }
     void cancelled() {
@@ -464,20 +540,23 @@ private slots:
     }
     void time(QTime T) {
         if (T.hour() == 23) {
-            if (Occurance->currentIndex() == 0) {
-                Finish1->setDate(Starts1->date().addDays(1));
-                Finish2->setTime(T.addSecs(3600));
-            } else {
-                Finish2->setTime(QTime(23, 59));
-            }
+            Finish->setDate(Start->date().addDays(1));
+            Finish->setTime(T.addSecs(3600));
         } else {
-            Finish2->setTime(T.addSecs(3600));
+            Finish->setTime(T.addSecs(3600));
+        }
+    }
+    void row() {
+        if (!(Start->dateTime() <= Finish->dateTime())) {
+            Start->setStyleSheet("QDateTimeEdit{background: white;}");
+            Finish->setStyleSheet("QDateTimeEdit{background: white;}");
+            disconnect(Start,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            disconnect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
         }
     }
 };
 
-qorgCalendar::qorgCalendar(QWidget* parent, qorgAB* AB) :QWidget(parent) {
-    this->AB = AB;
+qorgCalendar::qorgCalendar(QWidget* parent) :QWidget(parent) {
     category="";
     currentDate = QDate::currentDate();
     Layout = new QGridLayout(this);
@@ -543,33 +622,32 @@ qorgCalendar::qorgCalendar(QWidget* parent, qorgAB* AB) :QWidget(parent) {
     Layout->addWidget(Incoming, 1, 0, 1, 1);
     Layout->addWidget(DayView, 0, 1, 2, 1);
     Layout->setMargin(0);
-    setCalendar();
     NTimer = new QTimer(this);
     connect(NTimer, SIGNAL(timeout()), this, SLOT(setNotification()));
     Midnight = new QTimer(this);
-    MidnightChange();
     MidnightTester = new QTimer(this);
     MidnightTester->setInterval(60000);
     MidnightTester->start();
     connect(MidnightTester, SIGNAL(timeout()), this, SLOT(checkMidnight()));
 }
+void qorgCalendar::setPointer(qorgAB* AB) {
+    this->AB = AB;
+    MidnightChange();
+}
 QString qorgCalendar::output() {
     QString out;
-    for (uint i = 0; i < Normal.size(); i++) {
-        out.append(Output(Normal[i].name)+" ");
-        out.append(Output(Normal[i].category)+" ");
-        out.append(Output(Normal[i].priority)+" ");
-        out.append(Output(Normal[i].datet)+" ");
-        out.append(Output(Normal[i].edatet)+" \n");
-    }
-    for (uint i = 0; i < Recurrent.size(); i++) {
-        out.append(Output(Recurrent[i].name)+" ");
-        out.append(Output(Recurrent[i].category)+" ");
-        out.append(Output(Recurrent[i].priority)+" ");
-        out.append(Output(Recurrent[i].type)+" ");
-        out.append(Output(Recurrent[i].datet)+" ");
-        out.append(Output(Recurrent[i].edatet)+" ");
-        out.append(Output(Recurrent[i].edate)+" \n");
+    for(uint i = 0; i < Eventv.size(); i++) {
+        out.append(Output(Eventv[i].Name)+" ");
+        out.append(Output(Eventv[i].Category)+" ");
+        out.append(Output(Eventv[i].Priority)+" ");
+        out.append(Output(Eventv[i].Datet)+" ");
+        out.append(Output(Eventv[i].Edatet)+" ");
+        if (Eventv[i].OccuranceType == Event::NoOccurance) {
+            out.append("\n");
+        } else {
+            out.append(Output(static_cast<uchar>(Eventv[i].OccuranceType))+" ");
+            out.append(Output(Eventv[i].Edate)+" \n");
+        }
     }
     out.append("\n\n");
     return out;
@@ -579,27 +657,21 @@ void qorgCalendar::input(QString Input) {
         QStringList A = Input.split("\n");
         for (int i = 0; i < A.size(); i++) {
             QStringList B = A[i].split(" ");
-            switch (B.size()-1) {
-            case 5: {
-                CalNor Nor;
-                Nor.name = InputS(B[0]);
-                Nor.category = InputS(B[1]);
-                Nor.priority = InputC(B[2]);
-                Nor.datet = InputDT(B[3]);
-                Nor.edatet = InputDT(B[4]);
-                Normal.push_back(Nor);
-            } break;
-            case 7: {
-                CalRec Rec;
-                Rec.name = InputS(B[0]);
-                Rec.category = InputS(B[1]);
-                Rec.priority = InputC(B[2]);
-                Rec.type = InputC(B[3]);
-                Rec.datet = InputDT(B[4]);
-                Rec.edatet = InputDT(B[5]);
-                Rec.edate = InputD(B[6]);
-                Recurrent.push_back(Rec);
-            } break;
+            if (B.size() > 1) {
+                Event event;
+                event.Name = InputS(B[0]);
+                event.Category = InputS(B[1]);
+                event.Priority = InputC(B[2]);
+                event.Datet = InputDT(B[3]);
+                event.Edatet = InputDT(B[4]);
+                if (event.Datet > event.Edatet) {
+                    event.Edatet = QDateTime(event.Datet.date(),event.Edatet.time());
+                }
+                if (B.size()-1 == 7) {
+                    event.OccuranceType = static_cast<Event::Type>(InputC(B[5]));
+                    event.Edate = InputD(B[6]);
+                }
+                Eventv.push_back(event);
             }
         }
     }
@@ -610,14 +682,9 @@ void qorgCalendar::input(QString Input) {
 QStringList qorgCalendar::getCategories() {
     QStringList list;
     list.append("Birthdays");
-    for (uint i = 0; i < Normal.size(); i++) {
-        if (Normal[i].category != ""&&!(list.contains(Normal[i].category))) {
-            list.append(Normal[i].category);
-        }
-    }
-    for (uint i = 0; i < Recurrent.size(); i++) {
-        if (Recurrent[i].category != ""&&!(list.contains(Recurrent[i].category))) {
-            list.append(Recurrent[i].category);
+    for (uint i = 0; i < Eventv.size(); i++) {
+        if (Eventv[i].Category != "" && !(list.contains(Eventv[i].Category))) {
+            list.append(Eventv[i].Category);
         }
     }
     list.sort();
@@ -635,67 +702,31 @@ void qorgCalendar::setCategory(QString cat) {
     updateAll();
 }
 QString qorgCalendar::getUpdate() {
-    if (Normal.size()+Recurrent.size()+checkBd(QDate::currentDate()).size() != 0) {
+    int birthdays = checkBd(QDate::currentDate()).size();
+    if (Eventv.size()+birthdays != 0) {
         uint hour = 0;
         uint today = 0;
         uint tomorrow = 0;
-        for (char i = 5; i > 0; i--) {
-            QList <uint> N = checkEvN(QDate::currentDate(), i);
-            QList <uint> R = checkEvR(QDate::currentDate(), i);
-            for (int j = 0; j < N.size(); j++) {
-                if (QDateTime::currentDateTime().secsTo(Normal[N[j]].datet) < 3600&&QDateTime::currentDateTime().secsTo(Normal[N[j]].datet) >= 0) {
+        for(uint i = 0; i < Eventv.size(); i++) {
+            if (Eventv[i].occursOnDate(QDate::currentDate())) {
+                if (Eventv[i].starts(QDate::currentDate()).time() < QTime::currentTime().addSecs(3600)
+                        && Eventv[i].starts(QDate::currentDate()).time() >= QTime::currentTime()) {
                     hour++;
                 }
+                today++;
             }
-            for (int j = 0; j < R.size(); j++) {
-                if (QDateTime::currentDateTime().secsTo(QDateTime(QDate::currentDate(), Recurrent[R[j]].datet.time())) < 3600&&
-                        QDateTime::currentDateTime().secsTo(QDateTime(QDate::currentDate(), Recurrent[R[j]].datet.time())) >= 0) {
-                    hour++;
-                }
+            if (Eventv[i].occursOnDate(QDate::currentDate().addDays(1))) {
+                tomorrow++;
             }
-            today+=N.size();
-            today+=R.size();
-            QList <uint> Nt = checkEvN(QDate::currentDate().addDays(1), i);
-            for (int j = 0; j < Nt.size(); j++) {
-                if (N.contains(Nt[j])) {
-                    Nt.removeAt(j);
-                    j--;
-                }
-            }
-            QList <uint> Rt = checkEvR(QDate::currentDate().addDays(1), i);
-            for (int j = 0; j < Rt.size(); j++) {
-                if (R.contains(Rt[j])) {
-                    Rt.removeAt(j);
-                    j--;
-                }
-            }
-            tomorrow+=Nt.size();
-            tomorrow+=Rt.size();
         }
         QString M1;
         QString M2;
         QString M3;
         QString M4;
-        if (hour == 1) {
-            M1="1 event during hour.\n";
-        } else {
-            M1 = QString::number(hour)+" events during hour.\n";
-        }
-        if (today == 1) {
-            M2="1 event today.\n";
-        } else {
-            M2 = QString::number(today)+" events today.\n";
-        }
-        if (tomorrow == 1) {
-            M3="1 event tommorow.\n";
-        } else {
-            M3 = QString::number(tomorrow)+" events tommorow.\n";
-        }
-        if (checkBd(QDate::currentDate()).size() == 1) {
-            M4="1 person has birthday today.";
-        } else {
-            M4 = QString::number(checkBd(QDate::currentDate()).size())+" people have birthday today.";
-        }
+        M1 = QString::number(hour)+" event"+(hour == 1? "" : "s")+" during hour.\n";
+        M2 = QString::number(today)+" event"+(today == 1? "" : "s")+" today.\n";
+        M3 = QString::number(tomorrow)+" event"+(tomorrow == 1? "" : "s")+" tomorrow.\n";
+        M4 = QString::number(birthdays)+(birthdays == 1? " person has" : " people have")+" birthday today.";
         return "Calendar: "+M1+QString(16, ' ')+M2+QString(16, ' ')+M3+QString(16, ' ')+M4;
     } else {
         return "Calendar: No event.";
@@ -704,152 +735,121 @@ QString qorgCalendar::getUpdate() {
 void qorgCalendar::setCalendar() {
     Calendar->clearContents();
     DayView->clear();
+
     QDateTime Tmp = QDateTime(currentDate, QTime(0, 0));
     QTreeWidgetItem* Hours[24];
     for (int i = 0; i < 24; i++) {
         Hours[i]=new QTreeWidgetItem(DayView);
         Hours[i]->setText(0, Tmp.toString("HH"));
         Hours[i]->setIcon(0, QIcon(":/cal/Clock"));
-        if (category.isEmpty()||category == "Birthdays") {
-            QList  <QString>  B = checkBd(currentDate);
-            if (i == 8) {
-                for (int j = 0; j < B.size(); j++) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
-                    Itm->setToolTip(0, B[j]);
-                    Itm->setText(0, B[j]);
-                    Itm->setText(1, "08:00");
-                    Itm->setText(2, "");
-                    Itm->setText(3, "");
-                    Itm->setText(4, "");
-                    colorItem(Itm, 0);
-                }
-            } else if (i > 8&&i < 12) {
-                for (int j = 0; j < B.size(); j++) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
-                    Itm->setToolTip(0, B[j]);
-                    Itm->setText(0, B[j]);
-                    Itm->setText(1, "");
-                    Itm->setText(2, "");
-                    Itm->setText(3, "");
-                    Itm->setText(4, "");
-                    colorItem(Itm, 0);
-                }
-            } else if (i == 12) {
-                for (int j = 0; j < B.size(); j++) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
-                    Itm->setToolTip(0, B[j]);
-                    Itm->setText(0, B[j]);
-                    Itm->setText(1, "");
-                    Itm->setText(2, "12:00");
-                    Itm->setText(3, "");
-                    Itm->setText(4, "");
-                    colorItem(Itm, 0);
+
+        QList <uint> IIDs;
+        QList <Event> Events;
+        if (category.isEmpty()
+                || category == "Birthdays") {
+            Events.append(checkBd(currentDate));
+        }
+        uint BDSize = Events.size();
+        for (char j = 5; j > 0; j--) {
+            for(uint k = 0; k < Eventv.size(); k++) {
+                if ((Eventv[k].Category == category
+                     || category.isEmpty())
+                        && Eventv[k].Priority == j
+                        && Eventv[k].occursOnDate(currentDate)) {
+                    Events.append(Eventv[k]);
+                    IIDs.append(k);
                 }
             }
         }
-        for (char j = 5; j > 0; j--) {
-            QList  <uint>  N = checkEvN(currentDate, j);
-            QList  <uint>  R = checkEvR(currentDate, j);
-            for (int k = 0; k < N.size(); k++) {
-                if (Tmp >= QDateTime(Normal[N[k]].datet.date(), QTime(Normal[N[k]].datet.time().hour(), 0))&&Tmp <= QDateTime(Normal[N[k]].edatet.date(), QTime(Normal[N[k]].edatet.time().hour(), 0))) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
-                    Itm->setToolTip(0, Normal[N[k]].name);
-                    Itm->setText(0, Normal[N[k]].name);
-                    Itm->setText(1, "");
-                    Itm->setText(2, "");
-                    Itm->setText(3, "");
-                    Itm->setText(4, "");
-                    if (Tmp.date() == Normal[N[k]].datet.date()&&Tmp.time().hour() == Normal[N[k]].datet.time().hour()) {
-                        Itm->setText(1, Normal[N[k]].datet.time().toString("HH:mm"));
-                    }
-                    if (Tmp.date() == Normal[N[k]].edatet.date()&&Tmp.time().hour() == Normal[N[k]].edatet.time().hour()) {
-                        Itm->setText(2, Normal[N[k]].edatet.time().toString("HH:mm"));
-                    }
-                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, N[k]);
+        for (int j = 0; j < Events.size(); j++) {
+            if (Events[j].starts(Tmp) <= Tmp
+                    && Events[j].ends(Tmp) >= Tmp) {
+                QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
+                Itm->setToolTip(0, Events[j].Name);
+                Itm->setText(0, Events[j].Name);
+                Itm->setText(1, "");
+                Itm->setText(2, "");
+                Itm->setText(3, "");
+                Itm->setText(4, "");
+                if (Tmp.date() == Events[j].starts(Tmp).date()
+                        && Tmp.time().hour() ==  Events[j].starts(Tmp).time().hour()) {
+                    Itm->setText(1, Events[j].starts(Tmp).time().toString("HH:mm"));
+                }
+                if (Tmp.date() == Events[j].ends(Tmp).date()
+                        && Tmp.time().hour() == Events[j].ends(Tmp).time().hour()) {
+                    Itm->setText(2, Events[j].ends(Tmp).time().toString("HH:mm"));
+                }
+                if (Events[j].Priority != 0) {
+                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, IIDs[j-BDSize]);
                     DayView->setItemWidget(Itm, 3, Edit);
                     connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, N[k]);
+                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, IIDs[j-BDSize]);
                     DayView->setItemWidget(Itm, 4, Delete);
                     connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
-                    colorItem(Itm, j);
                 }
-            }
-            for (int k = 0; k < R.size(); k++) {
-                if (Tmp >= QDateTime(currentDate, QTime(Recurrent[R[k]].datet.time().hour(), 0))&&Tmp <= QDateTime(currentDate, QTime(Recurrent[R[k]].edatet.time().hour(), 0))) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Hours[i]);
-                    Itm->setToolTip(0, Recurrent[R[k]].name);
-                    Itm->setText(0, Recurrent[R[k]].name);
-                    Itm->setText(1, "");
-                    Itm->setText(2, "");
-                    Itm->setText(3, "");
-                    Itm->setText(4, "");
-                    if (Tmp.time().hour() == QDateTime(currentDate, Recurrent[R[k]].datet.time()).time().hour()) {
-                        Itm->setText(1, Recurrent[R[k]].datet.time().toString("HH:mm"));
-                    }
-                    if (Tmp.time().hour() == QDateTime(currentDate, Recurrent[R[k]].edatet.time()).time().hour()) {
-                        Itm->setText(2, Recurrent[R[k]].edatet.time().toString("HH:mm"));
-                    }
-                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, R[k]|0xF0000000);
-                    DayView->setItemWidget(Itm, 3, Edit);
-                    connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, R[k]|0xF0000000);
-                    DayView->setItemWidget(Itm, 4, Delete);
-                    connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
-                    colorItem(Itm, j);
-                }
+                colorItem(Itm, Events[j].Priority);
             }
         }
         Tmp.setTime(QTime(Tmp.time().hour()+1, 0));
     }
+
     DayView->expandAll();
     QDate temp = QDate(currentDate.year(), currentDate.month(), 1);
     QDate temp1 = QDate(currentDate.year(), currentDate.month(), currentDate.daysInMonth());
+
     QList  <QTableWidgetItem*>  Items;
+
     int ItmSel = 0;
+
+    // Days before month
     for (int i = temp.dayOfWeek(); i > 1; i--) {
         QTableWidgetItem* Itm = new QTableWidgetItem();
         Itm->setFlags(Itm->flags() ^ Qt::ItemIsEditable);
         Itm->setText(QString::number(temp.addDays(1-i).day()));
         Itm->setTextAlignment(Qt::AlignCenter);
         Itm->setTextColor(Qt::gray);
-        Itm->setToolTip(temp.addDays(1-i).toString("d/MM/yyyy"));
+        Itm->setToolTip(temp.addDays(1-i).toString("dd.MM.yyyy"));
         Items.append(Itm);
     }
+    // Month days
     for (int i = 0; i < temp.daysInMonth(); i++) {
         QTableWidgetItem* Itm = new QTableWidgetItem();
         Itm->setFlags(Itm->flags() ^ Qt::ItemIsEditable);
         if (temp.addDays(i) == currentDate) {
             ItmSel = Items.size();
         }
-        Itm->setToolTip(temp.addDays(i).toString("d/MM/yyyy"));
+        Itm->setToolTip(temp.addDays(i).toString("dd.MM.yyyy"));
         Items.append(Itm);
         if (temp.addDays(i) == QDate::currentDate()) {
             Itm->setBackground(QColor("#EE7777"));
         }
     }
+    // Days after month
     for (int i = 1; Items.size() < 42; i++) {
         QTableWidgetItem* Itm = new QTableWidgetItem();
         Itm->setFlags(Itm->flags() ^ Qt::ItemIsEditable);
         Itm->setText(QString::number(temp1.addDays(i).day()));
         Itm->setTextAlignment(Qt::AlignCenter);
-        Itm->setToolTip(temp1.addDays(i).toString("d/MM/yyyy"));
+        Itm->setToolTip(temp1.addDays(i).toString("dd.MM.yyyy"));
         Itm->setTextColor(Qt::gray);
         Items.append(Itm);
     }
+
+    // Setting flags and cakes ... and calendar
     for (int i = 0; i < 42; i++) {
         Calendar->setItem((i-(i%7))/7, i%7, Items[i]);
-        QDate Date = QDate::fromString(Items[i]->toolTip(), "d/MM/yyyy");
+        QDate Date = QDate::fromString(Items[i]->toolTip(), "dd.MM.yyyy");
         if (Date.month() == currentDate.month()) {
             bool Ev = false;
             bool Bd = false;
-            if (category.isEmpty()||category == "Birthdays") {
-                Bd=(checkBd(Date).size() != 0);
+            if (category.isEmpty()
+                    || category == "Birthdays") {
+                Bd = (checkBd(Date).size() != 0);
             }
-            for (char j = 5; j > 0; j--) {
-                if (checkEvN(Date, j).size() != 0) {
-                    Ev = true;
-                    break;
-                } else if (checkEvR(Date, j).size() != 0) {
+            for (uint j = 0; j < Eventv.size(); j++) {
+                if ((Eventv[j].Category == category
+                     || category.isEmpty())
+                        && Eventv[j].occursOnDate(Date)) {
                     Ev = true;
                     break;
                 }
@@ -862,6 +862,8 @@ void qorgCalendar::setCalendar() {
             }
         }
     }
+
+    // Setting week labels
     QStringList labels;
     for (int i = 0; i < 6; i++) {
         int w=(temp.addDays(7*i).dayOfYear()-temp.addDays(7*i).dayOfWeek()+10)/7;
@@ -878,206 +880,77 @@ void qorgCalendar::setCalendar() {
     }
     Calendar->setVerticalHeaderLabels(labels);
 }
-QList <uint> qorgCalendar::checkEvN(QDate Input, char P) {
-    QList  <uint>  Output;
-    for (uint i = 0; i < Normal.size(); i++) {
-        if (Input >= Normal[i].datet.date()&&Input <= Normal[i].edatet.date()) {
-            if ((category == Normal[i].category||category.isEmpty())&&Normal[i].priority == P) {
-                Output.append(i);
-            }
-        }
+QList <Event> qorgCalendar::checkBd(QDate D) {
+    QList <Event> BdEvent;
+    QList <QString> BName = AB->getBirthdays(D);
+    for(int i = 0; i < BName.size(); i++) {
+        Event tmp;
+        tmp.Name = BName[i];
+        tmp.Datet = QDateTime(D,QTime(8,0));
+        tmp.Edatet = QDateTime(D,QTime(12,0));
+        tmp.Priority = 0;
+        BdEvent.append(tmp);
     }
-    return Output;
-}
-QList <uint> qorgCalendar::checkEvR(QDate Input, char P) {
-    QList  <uint>  Output;
-    for (uint i = 0; i < Recurrent.size(); i++) {
-        if (Input >= Recurrent[i].datet.date()&&Input <= Recurrent[i].edate) {
-            if ((category == Recurrent[i].category||category.isEmpty())&&Recurrent[i].priority == P) {
-                switch (Recurrent[i].type) {
-                case 1:
-                {
-                    Output.append(i);
-                }break;
-                case 2:
-                {
-                    if (Input.dayOfWeek() == Recurrent[i].datet.date().dayOfWeek()) {
-                        Output.append(i);
-                    }
-                }break;
-                case 3:
-                {
-                    if (Input.day() == Recurrent[i].datet.date().day()) {
-                        Output.append(i);
-                    }
-                }break;
-                case 4:
-                {
-                    if (Input.day() == Recurrent[i].datet.date().day()&&Input.month() == Recurrent[i].datet.date().month()) {
-                        Output.append(i);
-                    }
-                }break;
-                }
-            }
-        }
-    }
-    return Output;
-}
-QList  <QString>  qorgCalendar::checkBd(QDate D) {
-    return AB->getBirthdays(D);
+    return BdEvent;
 }
 void qorgCalendar::updateAll() {
     Incoming->clear();
-    QList  <uint>  DUID;
-    for (uint i = 0, j = 0; i < 30&&j < 25; i++) {
-        if (category.isEmpty()||category == "Birthdays") {
-            QList  <QString>  B = checkBd(QDate::currentDate().addDays(i));
-            for (int k = 0; k < B.size(); k++) {
-                QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
-                Itm->setText(0, B[k]);
-                Itm->setToolTip(0, B[k]);
-                Itm->setText(1, "08:00 "+QDate::currentDate().addDays(i).toString("dd/MM/yyyy"));
-                Itm->setText(2, "12:00 "+QDate::currentDate().addDays(i).toString("dd/MM/yyyy"));
-                Itm->setText(3, "Birthdays");
-                Itm->setText(4, "");
-                Itm->setText(5, "");
-                colorItem(Itm, 0);
-            }
-            j+=B.size();
+    QList <uint> DuplicateLock;
+    QList <Event> Events;
+    for (uint i = 0; i < 30 && Events.size() < 25; i++) {
+        if (category.isEmpty()
+                || category == "Birthdays") {
+            Events.append(checkBd(QDate::currentDate().addDays(i)));
         }
-        for (char k = 5; k > 0; k--) {
-            QList  <uint>  N = checkEvN(QDate::currentDate().addDays(i), k);
-            QList  <uint>  R = checkEvR(QDate::currentDate().addDays(i), k);
-            for (int l = 0; l < N.size(); l++) {
-                if (!(DUID.contains(N[l]))) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
-                    Itm->setText(0, Normal[N[l]].name);
-                    Itm->setToolTip(0, Normal[N[l]].name);
-                    Itm->setText(1, Normal[N[l]].datet.toString("HH:mm dd/MM/yyyy"));
-                    Itm->setText(2, Normal[N[l]].edatet.toString("HH:mm dd/MM/yyyy"));
-                    Itm->setText(3, Normal[N[l]].category);
-                    Itm->setText(4, "");
-                    Itm->setText(5, "");
-                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, N[l]);
-                    Incoming->setItemWidget(Itm, 4, Edit);
-                    connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, N[l]);
-                    Incoming->setItemWidget(Itm, 5, Delete);
-                    connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
-                    colorItem(Itm, k);
-                    DUID.append(N[l]);
-                    j++;
-                }
-            }
-            for (int l = 0; l < R.size(); l++) {
-                if (!DUID.contains(R[l]|0xF0000000)) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
-                    Itm->setText(0, Recurrent[R[l]].name);
-                    Itm->setToolTip(0, Recurrent[R[l]].name);
-                    QString DateS;
-                    QString DateF;
-                    if (Recurrent[R[l]].type == 1) {
-                        DateS = Recurrent[R[l]].datet.toString("HH:mm dd/MM/yyyy");
-                        DateF = QDateTime(Recurrent[R[l]].edate, Recurrent[R[l]].edatet.time()).toString("HH:mm dd/MM/yyyy");
-                    } else {
-                        DateS = QDateTime(QDate::currentDate().addDays(i), Recurrent[R[l]].datet.time()).toString("HH:mm dd/MM/yyyy");
-                        DateF = QDateTime(QDate::currentDate().addDays(i), Recurrent[R[l]].edatet.time()).toString("HH:mm dd/MM/yyyy");
-                    }
-                    Itm->setText(1, DateS);
-                    Itm->setText(2, DateF);
-                    Itm->setText(3, Recurrent[R[l]].category);
-                    Itm->setText(4, "");
-                    Itm->setText(5, "");
-                    QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, R[l]|0xF0000000);
-                    Incoming->setItemWidget(Itm, 4, Edit);
-                    connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                    QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, R[l]|0xF0000000);
-                    Incoming->setItemWidget(Itm, 5, Delete);
-                    connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
-                    DUID.append(R[l]|0xF0000000);
-                    colorItem(Itm, k);
-                    j++;
+        uint BDSize = Events.size();
+        QList <uint> IIDs;
+        for (char j = 5; j > 0; j--) {
+            for (uint k = 0; k < Eventv.size(); k++) {
+                if ((Eventv[k].Category == category
+                     || category.isEmpty())
+                        && Eventv[k].Priority == j
+                        && Eventv[k].occursOnDate(QDate::currentDate().addDays(i))
+                        && !DuplicateLock.contains(k)) {
+                    Events.append(Eventv[k]);
+                    DuplicateLock.append(k);
+                    IIDs.append(k);
                 }
             }
         }
-        if (QDate::currentDate().addDays(i).day() == 28 //28.02 problem solver
-                && QDate::currentDate().addDays(i).month() == 2
-                &&!(QDate::isLeapYear(QDate::currentDate().year()))) {
-            if (category.isEmpty()||category == "Birthdays") {
-                QList  <QString>  B = checkBd(QDate(2012, 2, 29));
-                for (int k = 0; k < B.size(); k++) {
-                    QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
-                    Itm->setText(0, B[k]);
-                    Itm->setToolTip(0, B[k]);
-                    Itm->setText(1, "08:00 29/02/"+QDate::currentDate().toString("yyyy"));
-                    Itm->setText(2, "12:00 29/02/"+QDate::currentDate().toString("yyyy"));
-                    Itm->setText(3, "Birthdays");
-                    Itm->setText(4, "");
-                    Itm->setText(5, "");
-                    colorItem(Itm, 0);
-                }
-                j+=B.size();
+        for (int j = 0; j < Events.size(); j++) {
+            QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
+            Itm->setText(0, Events[j].Name);
+            Itm->setToolTip(0, Events[j].Name);
+            Itm->setText(1, Events[j].starts(QDate::currentDate().addDays(i)).toString("HH:mm dd.MM.yyyy"));
+            Itm->setText(2, Events[j].ends(QDate::currentDate().addDays(i)).toString("HH:mm dd.MM.yyyy"));
+            Itm->setText(3, Events[j].Category);
+            Itm->setText(4, "");
+            Itm->setText(5, "");
+            if (Events[j].Priority != 0) {
+                QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, IIDs[j-BDSize]);
+                Incoming->setItemWidget(Itm, 4, Edit);
+                connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
+                QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, IIDs[j-BDSize]);
+                Incoming->setItemWidget(Itm, 5, Delete);
+                connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
             }
-            for (char k = 5; k > 0; k--) {
-                for (uint l = 0; l < Recurrent.size(); l++) {
-                    if (QDate::currentDate().addDays(i) >= Recurrent[l].datet.date()&&QDate::currentDate().addDays(i+1) <= Recurrent[l].edate) {
-                        if ((category == Recurrent[l].category||category.isEmpty())&&Recurrent[l].priority == k&&Recurrent[l].type == 4) {
-                            if (29 == Recurrent[l].datet.date().day()&&2 == Recurrent[l].datet.date().month()) {
-                                QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
-                                Itm->setText(0, Recurrent[l].name);
-                                Itm->setToolTip(0, Recurrent[l].name);
-                                Itm->setText(1, Recurrent[l].datet.time().toString("HH:mm")+" 29/02/"+QDate::currentDate().toString("yyyy"));
-                                Itm->setText(2, Recurrent[l].edatet.time().toString("HH:mm")+" 29/02/"+QDate::currentDate().toString("yyyy"));
-                                Itm->setText(3, Recurrent[l].category);
-                                Itm->setText(4, "");
-                                Itm->setText(5, "");
-                                QItemPushButton* Edit = new QItemPushButton(QIcon(":/main/Edit.png"), this, i|0xF0000000);
-                                Incoming->setItemWidget(Itm, 4, Edit);
-                                connect(Edit, SIGNAL(clicked(uint)), this, SLOT(Edit(uint)));
-                                QItemPushButton* Delete = new QItemPushButton(QIcon(":/main/Delete.png"), this, i|0xF0000000);
-                                Incoming->setItemWidget(Itm, 5, Delete);
-                                connect(Delete, SIGNAL(clicked(uint)), this, SLOT(Delete(uint)));
-                                colorItem(Itm, k);
-                                j++;
-                            }
-                        }
-                    }
-                }
-            }
+            colorItem(Itm, Events[j].Priority);
         }
+        Events.clear();
     }
     setCalendar();
 }
 void qorgCalendar::sort() {
-    if (Normal.size() > 1) {
-        while (1) {
+    if (Eventv.size() > 1) {
+        while (true) {
             bool Sorted = true;
-            for (uint i = 0; i < Normal.size()-1; i++) {
-                if (Normal[i].priority < Normal[i+1].priority) {
-                    std::swap(Normal[i], Normal[i+1]);
+            for (uint i = 0; i < Eventv.size()-1; i++) {
+                if (Eventv[i].Datet > Eventv[i+1].Datet) {
+                    std::swap(Eventv[i], Eventv[i+1]);
                     Sorted = false;
-                } else if (Normal[i].priority == Normal[i+1].priority) {
-                    if (Normal[i].datet > Normal[i+1].datet) {
-                        std::swap(Normal[i], Normal[i+1]);
-                        Sorted = false;
-                    }
-                }
-            }
-            if (Sorted) {
-                break;
-            }
-        }
-    }
-    if (Recurrent.size() > 1) {
-        while (1) {
-            bool Sorted = true;
-            for (uint i = 0; i < Recurrent.size()-1; i++) {
-                if (Recurrent[i].priority < Recurrent[i+1].priority) {
-                    std::swap(Recurrent[i], Recurrent[i+1]);
-                    Sorted = false;
-                } else if (Recurrent[i].priority == Recurrent[i+1].priority) {
-                    if (Recurrent[i].datet.time() > Recurrent[i+1].datet.time()) {
-                        std::swap(Recurrent[i], Recurrent[i+1]);
+                } else if (Eventv[i].Datet == Eventv[i+1].Datet) {
+                    if (Eventv[i].Priority < Eventv[i+1].Priority) {
+                        std::swap(Eventv[i], Eventv[i+1]);
                         Sorted = false;
                     }
                 }
@@ -1089,7 +962,7 @@ void qorgCalendar::sort() {
     }
 }
 void qorgCalendar::Add(QDate Input) {
-    if ((new QCalDialogAdd(Input, this))->exec() == 1) {
+    if ((new QCalDialog(Input, this))->exec() == QDialog::Accepted) {
         sort();
         updateAll();
         setNotification();
@@ -1097,7 +970,7 @@ void qorgCalendar::Add(QDate Input) {
     }
 }
 void qorgCalendar::Edit(uint IID) {
-    if ((new QCalDialogEdit(IID, this))->exec() == QDialog::Accepted) {
+    if ((new QCalDialog(IID, this))->exec() == QDialog::Accepted) {
         sort();
         updateAll();
         setNotification();
@@ -1105,21 +978,16 @@ void qorgCalendar::Edit(uint IID) {
     }
 }
 void qorgCalendar::Delete(uint IID) {
-    if (!(IID&0xF0000000)) {
-        Normal.erase(Normal.begin()+IID);
-        NotifiedN.removeOne(IID);
-    } else {
-        Recurrent.erase(Recurrent.begin()+(IID&0xF0000000));
-        NotifiedR.removeOne((IID&0xF0000000));
-    }
+    Eventv.erase(Eventv.begin()+IID);
     sort();
     updateAll();
     setNotification();
     emit updateTree();
 }
 void qorgCalendar::dayChanged(QTableWidgetItem* Input) {
-    QDate picked = QDate::fromString(Input->toolTip(), "d/MM/yyyy");
-    if (picked.year() >= QDate::currentDate().year()-20&&picked.year() <= QDate::currentDate().year()+20) {
+    QDate picked = QDate::fromString(Input->toolTip(), "dd.MM.yyyy");
+    if (picked.year() >= QDate::currentDate().year()-20
+            && picked.year() <= QDate::currentDate().year()+20) {
         Month->blockSignals(true);
         Month->setCurrentIndex(picked.month()-1);
         Month->blockSignals(false);
@@ -1131,8 +999,7 @@ void qorgCalendar::dayChanged(QTableWidgetItem* Input) {
     }
 }
 void qorgCalendar::doubleClick(QModelIndex I) {
-    if (Incoming->topLevelItem(I.row()) != NULL) {
-        QDate D = QDateTime::fromString(Incoming->topLevelItem(I.row())->text(1), "HH:mm dd/MM/yyyy").date();
+        QDate D = QDateTime::fromString(Incoming->topLevelItem(I.row())->text(1), "HH:mm dd.MM.yyyy").date();
         Month->blockSignals(true);
         Month->setCurrentIndex(D.month()-1);
         Month->blockSignals(false);
@@ -1141,7 +1008,6 @@ void qorgCalendar::doubleClick(QModelIndex I) {
         Year->blockSignals(false);
         currentDate = D;
         setCalendar();
-    }
 }
 
 void qorgCalendar::monthChanged(int Input) {
@@ -1178,151 +1044,57 @@ void qorgCalendar::MidnightChange() {
     Midnight->start();
 }
 void qorgCalendar::setNotification(bool first) {
-    QDateTime Tmp = QDateTime::currentDateTime();
-    QString cur = category;
-    category="";
-    uint closest = 86400;
-    if (first) {
-        QList  <QString>  Immediate;
-        for (char a = 0; a < 2; a++) {
-            Tmp = Tmp.addDays(a);
-            for (char i = 5; i > 0; i--) {
-                QList  <uint>  NID = checkEvN(Tmp.date(), i);
-                QList  <uint>  RID = checkEvR(Tmp.date(), i);
-                for (int j = 0; j < NID.size(); j++) {
-                    if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) <= 900
-                            &&QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) > 0
-                            &&!(NotifiedN.contains(NID[j]))) {
-                        NotifiedN.append(NID[j]);
-                        Immediate.append(Normal[NID[j]].name);
-                    } else {
-                        if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) < 0) {
-                            NotifiedN.removeOne(NID[j]);
-                        }
-                    }
-                }
-                for (int j = 0; j < RID.size(); j++) {
-                    QDateTime R = QDateTime(Tmp.date(), Recurrent[RID[j]].datet.time());
-                    if (QDateTime::currentDateTime().secsTo(R) <= 900
-                            &&QDateTime::currentDateTime().secsTo(R) > 0
-                            &&!(NotifiedR.contains(RID[j]))) {
-                        NotifiedR.append(RID[j]);
-                        Immediate.append(Recurrent[RID[j]].name);
-                    } else {
-                        if (QDateTime::currentDateTime().time().secsTo(Recurrent[RID[j]].datet.time()) < 0) {
-                            NotifiedR.removeOne(RID[j]);
-                        }
-                    }
-                }
-                for (int j = 0; j < NID.size(); j++) {
-                    if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) > 900
-                            &&!(NotifiedN.contains(NID[j]))
-                            &&QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) < closest) {
-                        closest = QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet);
-                    }
-                }
-                for (int j = 0; j < RID.size(); j++) {
-                    QDateTime R = QDateTime(Tmp.date(), Recurrent[RID[j]].datet.time());
-                    if (QDateTime::currentDateTime().secsTo(R) > 900
-                            &&!(NotifiedR.contains(RID[j]))
-                            &&QDateTime::currentDateTime().secsTo(R) < closest) {
-                        closest = QDateTime::currentDateTime().secsTo(R);
-                    }
+    QList <Event> LT15Min;
+    QList <Event> MT15LT30Min;
+    int closest = 24*60*60;
+    for(uint i = 0; i < Eventv.size(); i++) {
+        if (Eventv[i].occursOnDate(QDate::currentDate())
+                && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) >= 0) {
+            if (first
+                    && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) < 15*60) {
+                LT15Min.append(Eventv[i]);
+            }
+            if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) >= 15*60
+                    && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) <= 30*60) {
+                MT15LT30Min.append(Eventv[i]);
+            }
+            if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) > 30*60) {
+                if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) < closest) {
+                    closest = QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate()));
                 }
             }
-        }
-        if (Immediate.size() > 0) {
-            QString M="Immediate notification for:\n";
-            for (int i = 0; i < Immediate.size(); i++) {
-                M.append(Immediate[i]+"\n");
-            }
-            M = M.mid(0, M.length()-1);
-            emit Notification("Event notification", M);
-        }
-    } else {
-        QList  <QString>  Notify;
-        for (char a = 0; a < 2; a++) {
-            Tmp = Tmp.addDays(a);
-            for (char i = 5; i > 0; i--) {
-                QList  <uint>  NID = checkEvN(Tmp.date(), i);
-                QList  <uint>  RID = checkEvR(Tmp.date(), i);
-                if (QObject::sender() == NTimer) {
-                    for (int j = 0; j < NID.size(); j++) {
-                        if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) <= 1800
-                                &&QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) >= 900
-                                &&!(NotifiedN.contains(NID[j]))) {
-                            NotifiedN.append(NID[j]);
-                            Notify.append(Normal[NID[j]].name);
-                        } else {
-                            if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) < 0) {
-                                NotifiedN.removeOne(NID[j]);
-                            }
-                        }
-                    }
-                    for (int j = 0; j < RID.size(); j++) {
-                        QDateTime R = QDateTime(Tmp.date(), Recurrent[RID[j]].datet.time());
-                        if (QDateTime::currentDateTime().secsTo(R) <= 1800
-                                &&QDateTime::currentDateTime().secsTo(R) >= 900
-                                &&!(NotifiedR.contains(RID[j]))) {
-                            NotifiedR.append(RID[j]);
-                            Notify.append(Recurrent[RID[j]].name);
-                        } else {
-                            if (QDateTime::currentDateTime().time().secsTo(Recurrent[RID[j]].datet.time()) < 0) {
-                                NotifiedR.removeOne(RID[j]);
-                            }
-                        }
-                    }
-                    for (int j = 0; j < NID.size(); j++) {
-                        if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) > 1800
-                                &&!(NotifiedN.contains(NID[j]))
-                                &&QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) < closest) {
-                            closest = QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet);
-                        }
-                    }
-                    for (int j = 0; j < RID.size(); j++) {
-                        QDateTime R = QDateTime(Tmp.date(), Recurrent[RID[j]].datet.time());
-                        if (QDateTime::currentDateTime().secsTo(R) > 1800
-                                &&!(NotifiedR.contains(RID[j]))
-                                &&QDateTime::currentDateTime().secsTo(R) < closest) {
-                            closest = QDateTime::currentDateTime().secsTo(R);
-                        }
-                    }
-                } else {
-                    for (int j = 0; j < NID.size(); j++) {
-                        if (QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) > 900
-                                &&!(NotifiedN.contains(NID[j]))
-                                &&QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet) < closest) {
-                            closest = QDateTime::currentDateTime().secsTo(Normal[NID[j]].datet);
-                        }
-                    }
-                    for (int j = 0; j < RID.size(); j++) {
-                        QDateTime R = QDateTime(Tmp.date(), Recurrent[RID[j]].datet.time());
-                        if (QDateTime::currentDateTime().secsTo(R) > 900
-                                &&!(NotifiedR.contains(RID[j]))
-                                &&QDateTime::currentDateTime().secsTo(R) < closest) {
-                            closest = QDateTime::currentDateTime().secsTo(R);
-                        }
-                    }
-                }
-            }
-        }
-        if (Notify.size() > 0) {
-            QString M="At least 15 minutes notification for:\n";
-            for (int i = 0; i < Notify.size(); i++) {
-                M.append(Notify[i]+"\n");
-            }
-            M = M.mid(0, M.length()-1);
-            emit Notification("Event notification", M);
         }
     }
-    category = cur;
-    NTimer->setInterval((closest-900)*1000);
+    QString Message;
+    if (first
+            && LT15Min.size() > 0) {
+        Message.append("Immediate notification for:");
+        for(int i = 0; i < LT15Min.size(); i++) {
+            Message.append("\n" + LT15Min[i].Name);
+        }
+    }
+    if (MT15LT30Min.size() > 0) {
+        if (first && LT15Min.size() > 0) {
+            Message.append("\n");
+        }
+        Message.append("At least 15 minuts notification for:");
+        for(int i = 0; i < MT15LT30Min.size(); i++) {
+            Message.append("\n" + MT15LT30Min[i].Name);
+        }
+    }
+    if (!Message.isEmpty()) {
+        emit Notification("Event notification",Message);
+    }
+    NTimer->setInterval((closest-15*60)*1000);
     NTimer->setSingleShot(true);
     NTimer->start();
 }
 void qorgCalendar::checkMidnight() {
     int difference = Midnight->remainingTime()-QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00)));
-    if (abs(difference)<500) {
+    if (abs(difference) > 500) {
+        if (abs(difference) > 2000) {
+            emit TimeChangeBlock();
+        }
         Midnight->stop();
         Midnight->setInterval(QDateTime::currentDateTime().msecsTo(QDateTime(QDate::currentDate().addDays(1), QTime(00, 00))));
         Midnight->start();
@@ -1330,4 +1102,5 @@ void qorgCalendar::checkMidnight() {
         updateAll();
     }
 }
+
 #include "qorgcalendar.moc"

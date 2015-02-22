@@ -67,6 +67,7 @@ Mail::Mail() {
     this->Mboxv.clear();
 }
 
+
 class SSLCON : public QThread {
     Q_OBJECT
 public:
@@ -524,7 +525,7 @@ void SSLCON::DownloadMBoxVector() {
 
 void SSLCON::ProcessSubjects(QList <QString> SubL,vector <Email*>* Vec,uint Fn) {
     SubL.removeFirst();
-    for (int k = 0; k < SubL.size(); k++) {
+    for (int k = 0; k < SubL.size() && Fn+k-1 < Vec->size(); k++) {
         if (SubL[k].contains("SUBJECT:", Qt::CaseInsensitive)) {
             QString Sub = SubL[k].mid(SubL[k].indexOf("SUBJECT: ", 0, Qt::CaseInsensitive)+9, SubL[k].indexOf("\r\n)", SubL[k].indexOf("SUBJECT: ", 0, Qt::CaseInsensitive)+9)-SubL[k].indexOf("SUBJECT:", 0, Qt::CaseInsensitive)-9);
             Sub.remove("\r\n");
@@ -542,7 +543,7 @@ void SSLCON::ProcessSubjects(QList <QString> SubL,vector <Email*>* Vec,uint Fn) 
 }
 void SSLCON::ProcessDates(QList <QString> DateL,vector <Email*>* Vec,uint Fn) {
     DateL.removeFirst();
-    for (int k = 0; k < DateL.size(); k++) {
+    for (int k = 0; k < DateL.size() && Fn+k-1 < Vec->size(); k++) {
         QString Date = DateL[k].mid(0, DateL[k].indexOf("\""));
         QList <QString> Mon;
         Mon << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun" << "Jul" << "Aug" << "Sep" << "Oct" << "Nov" << "Dec";
@@ -568,7 +569,7 @@ void SSLCON::ProcessDates(QList <QString> DateL,vector <Email*>* Vec,uint Fn) {
 }
 void SSLCON::ProcessFroms(QList <QString> FromsL,vector <Email*>* Vec,uint Fn) {
     FromsL.removeFirst();
-    for (int k = 0; k < FromsL.size(); k++) {
+    for (int k = 0; k < FromsL.size() && Fn+k-1 < Vec->size(); k++) {
         if (FromsL[k].contains("FROM:", Qt::CaseInsensitive)) {
             QString From = FromsL[k].mid(FromsL[k].indexOf("FROM: ", 0, Qt::CaseInsensitive)+6, FromsL[k].indexOf("\r\n)", FromsL[k].indexOf("FROM: ", 0, Qt::CaseInsensitive)+6)-FromsL[k].indexOf("FROM: ", 0, Qt::CaseInsensitive)-6);
             (*Vec)[Fn+k-1]->Email_From = From.mid(From.indexOf("<")+1, From.indexOf(">")-From.indexOf("<")-1).simplified();
@@ -577,7 +578,7 @@ void SSLCON::ProcessFroms(QList <QString> FromsL,vector <Email*>* Vec,uint Fn) {
 }
 void SSLCON::ProcessFlags(QList <QString> FlagsL,vector <Email*>* Vec,uint Fn) {
     FlagsL.removeFirst();
-    for (int k = 0; k < FlagsL.size(); k++) {
+    for (int k = 0; k < FlagsL.size() && Fn+k-1 < Vec->size(); k++) {
         QString Fla = FlagsL[k].mid(0, FlagsL[k].indexOf(")"));
         char Flag = 0;
         if (Fla.contains("\\Seen")) {
@@ -603,7 +604,7 @@ void SSLCON::ProcessFlags(QList <QString> FlagsL,vector <Email*>* Vec,uint Fn) {
 }
 void SSLCON::ProcessMessageIDs(QList <QString> MIDL,vector <Email*>* Vec,uint Fn) {
     MIDL.removeFirst();
-    for (int k = 0; k < MIDL.size(); k++) {
+    for (int k = 0; k < MIDL.size() && Fn+k-1 < Vec->size(); k++) {
         if (MIDL[k].contains("MESSAGE-ID:", Qt::CaseInsensitive)) {
             (*Vec)[Fn+k-1]->Email_MessageID = MIDL[k].mid(MIDL[k].indexOf("<")+1, MIDL[k].indexOf(">", MIDL[k].indexOf("<")+1)-MIDL[k].indexOf("<")-1);
         }
@@ -611,7 +612,7 @@ void SSLCON::ProcessMessageIDs(QList <QString> MIDL,vector <Email*>* Vec,uint Fn
 }
 void SSLCON::ProcessReplyTos(QList <QString> RPLL,vector <Email*>* Vec,uint Fn) {
     RPLL.removeFirst();
-    for (int k = 0; k < RPLL.size(); k++) {
+    for (int k = 0; k < RPLL.size() && Fn+k-1 < Vec->size(); k++) {
         if (RPLL[k].contains("REPLY-TO:", Qt::CaseInsensitive)) {
             RPLL[k] = RPLL[k].mid(RPLL[k].indexOf("REPLY-TO:: ", 0, Qt::CaseInsensitive)+10, RPLL[k].indexOf("\r\n)", RPLL[k].indexOf("REPLY-TO: ", 0, Qt::CaseInsensitive)+10)-RPLL[k].indexOf("REPLY-TO: ", 0, Qt::CaseInsensitive)-10);
             (*Vec)[Fn+k-1]->Email_ReplyTo = RPLL[k].mid(RPLL[k].indexOf("<")+1, RPLL[k].indexOf(">", RPLL[k].indexOf("<")+1)-RPLL[k].indexOf("<")-1).simplified();
@@ -620,7 +621,7 @@ void SSLCON::ProcessReplyTos(QList <QString> RPLL,vector <Email*>* Vec,uint Fn) 
 }
 void SSLCON::ProcessTos(QList <QString> FTL,vector <Email*>* Vec,uint Fn) {
     FTL.removeFirst();
-    for (int k = 0; k <FTL.size(); k++) {
+    for (int k = 0; k <FTL.size() && Fn+k-1 < Vec->size(); k++) {
         if (FTL[k].contains("TO:", Qt::CaseInsensitive)) {
             FTL[k] = FTL[k].mid(FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)+4, FTL[k].indexOf("\r\n)", FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)+4)-FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)-4);
             QList <QString> FTLL = FTL[k].split(",");
@@ -636,7 +637,7 @@ void SSLCON::ProcessTos(QList <QString> FTL,vector <Email*>* Vec,uint Fn) {
 }
 void SSLCON::ProcessCCs(QList <QString> FCL,vector <Email*>* Vec,uint Fn) {
     FCL.removeFirst();
-    for (int k = 0; k < FCL.size(); k++) {
+    for (int k = 0; k < FCL.size() && Fn+k-1 < Vec->size(); k++) {
         if (FCL[k].contains("CC:", Qt::CaseInsensitive)) {
             FCL[k] = FCL[k].mid(FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)+4, FCL[k].indexOf("\r\n)", FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)+4)-FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)-4);
             QList <QString> FTLL = FCL[k].split(",");
@@ -1024,17 +1025,26 @@ void SSLCON::DownloadEmails() {
                                 Structure* Tmp = new Structure();
                                 QList <QString> IL;
                                 int L = 0;
+                                int Q = 0;
                                 QString Data;
                                 for (int m = 0; m < RBS[l].length(); m++) {
-                                    if (RBS[l][m] == ' '&&L == 0) {
+                                    if (RBS[l][m] == ' '
+                                            && L == 0
+                                            && Q == 0) {
                                         IL.append(Data);
                                         Data.clear();
                                     } else {
                                         if (RBS[l][m] == '(') {
                                             L++;
-                                        }
-                                        if (RBS[l][m] == ')') {
+                                        } else if (RBS[l][m] == ')') {
                                             L--;
+                                        }
+                                        if (RBS[l][m] == '"'
+                                                && Q == 0) {
+                                            Q++;
+                                        } else if (RBS[l][m] == '"'
+                                                   && Q == 1) {
+                                            Q--;
                                         }
                                         Data.append(RBS[l][m]);
                                     }
@@ -1060,7 +1070,7 @@ void SSLCON::DownloadEmails() {
                                     IL[4]=IL[4].mid(1, IL[4].length()-2);
                                 }
                                 Tmp->Structure_CID = NILCleaner(IL[4]);
-                                Tmp->Structure_Descryption = NILCleaner(IL[5]).toUpper();
+                                Tmp->Structure_Descryption = NILCleaner(IL[5]);
                                 Tmp->Structure_Encoding = NILCleaner(IL[6]).toUpper();
                                 Tmp->Structure_Size = IL[7].toInt();
                                 if (Tmp->Structure_Type == "TEXT") {
@@ -1072,7 +1082,7 @@ void SSLCON::DownloadEmails() {
                                     if (BILL.indexOf("FILENAME", 0) >= 0) {
                                         Tmp->Structure_Attrybutes.Name = ILL[BILL.indexOf("FILENAME", 0)+1];
                                     }
-                                    Tmp->Structure_Language = NILCleaner(IL[11]).toUpper();
+                                    Tmp->Structure_Language = NILCleaner(IL[11]);
                                     if (IL.size() == 13) {
                                         Tmp->Structure_Location = NILCleaner(IL[12]);
                                     }
@@ -1084,7 +1094,7 @@ void SSLCON::DownloadEmails() {
                                     if (BILL.indexOf("FILENAME", 0) >= 0) {
                                         Tmp->Structure_Attrybutes.Name = ILL[BILL.indexOf("FILENAME", 0)+1];
                                     }
-                                    Tmp->Structure_Language = NILCleaner(IL[10]).toUpper();
+                                    Tmp->Structure_Language = NILCleaner(IL[10]);
                                     if (IL.size() == 12) {
                                         Tmp->Structure_Location = NILCleaner(IL[11]);
                                     }
@@ -1141,10 +1151,19 @@ void SSLCON::DownloadEmails() {
                                         } else if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Encoding == "QUOTED-PRINTABLE") {
                                             Text = QPDecode(Text);
                                         }
-                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset != "UTF-8" && (!(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.isEmpty())) {
-                                            if (QTextCodec::availableCodecs().contains((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.toUtf8())) {
-                                                QTextCodec* C = QTextCodec::codecForName((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.toUtf8());
+                                        if ((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset != "UTF-8"
+                                                && (*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset != "UTF8"
+                                                && (!(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.contains("ASCII"))
+                                                && (!(*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset.isEmpty())) {
+                                            QStringList AvaliableCodecs;
+                                            for (int i = 0; i < QTextCodec::availableCodecs().size(); i++) {
+                                                AvaliableCodecs.append(QString(QTextCodec::availableCodecs()[i].toUpper()));
+                                            }
+                                            if (AvaliableCodecs.contains((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset)) {
+                                                QTextCodec* C = QTextCodec::codecForName(QTextCodec::availableCodecs()[AvaliableCodecs.indexOf((*Vec)[Fn+k-1]->Structurev[l]->Structure_Attrybutes.Charset)]);
                                                 (*Vec)[Fn+k-1]->Email_Body[t] = C->toUnicode(Text);
+                                            } else {
+                                                (*Vec)[Fn+k-1]->Email_Body[t] = Text;
                                             }
                                         } else {
                                             (*Vec)[Fn+k-1]->Email_Body[t] = Text;
@@ -2039,7 +2058,7 @@ class MailboxTree : public QDialog {
 public:
     MailboxTree(Mail* M, QWidget* parent) :QDialog(parent) {
         vec=&M->Mboxv;
-        setWindowTitle("Choose mailboxes to use.");
+        setWindowTitle("Choose mailboxes to synchronise.");
         setWindowIcon(QIcon(":/main/QOrganizer.png"));
         QGridLayout* Layout = new QGridLayout(this);
         Tree = new QTreeWidget(this);
@@ -2305,14 +2324,6 @@ public:
         }
 
         if (E != NULL) {
-            QString Str = E->Email_Body[0];
-            Str.replace("<", "&lt;");
-            Str.replace(">", "&gt;");
-            Str.replace("&amp;", "&");
-            QTextDocument D;
-            D.setHtml(Str);
-            Str = D.toPlainText();
-
             if (I == Reply) {
                 Subject->setText("Re: "+E->Email_Subject);
                 Header.append("In-Reply-To: <"+E->Email_MessageID+">\r\n");
@@ -2321,7 +2332,7 @@ public:
                 } else if (!(E->Email_From.contains("noreply") || E->Email_From.contains("no-reply"))) {
                     To->setText(E->Email_From);
                 }
-                Text->setText("Message replied:\n----------\n"+Str+"\n----------\n");
+                Text->setText("Message replied:\n----------\n"+E->Email_Body[0]+"\n----------\n");
             } else if (I == ReplyAll) {
                 Subject->setText("Re: "+E->Email_Subject);
                 Header.append("In-Reply-To: <"+E->Email_MessageID+">\r\n");
@@ -2343,17 +2354,17 @@ public:
                 }
                 To->setText(StringTo);
                 CC->setText(StringCC);
-                Text->setText("Message replied:\n----------\n"+Str+"\n----------\n");
+                Text->setText("Message replied:\n----------\n"+E->Email_Body[0]+"\n----------\n");
             } else if (I == Forward) {
                 Subject->setText("Fwd: "+E->Email_Subject);
-                Text->setText("Message forwarded:\n----------\n"+Str+"\n----------\n");
+                Text->setText("Message forwarded:\n----------\n"+E->Email_Body[0]+"\n----------\n");
             }
             for (uint i = 0; i < E->Structurev.size(); i++) {
                 if (!(E->Structurev[i]->Structure_Type == "TEXT" && E->Structurev[i]->Structure_Disposition.isEmpty())) {
                     QListWidgetItem* Itm = new QListWidgetItem(Attachments);
                     if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
                         if (E->Structurev[i]->Structure_CID.isEmpty()) {
-                            Itm->setText("attachment."+E->Structurev[i]->Structure_Subtype.toLower());
+                            Itm->setText(E->Structurev[i]->Structure_Type.toLower()+"."+E->Structurev[i]->Structure_Subtype.toLower());
                         } else {
                             Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
                         }
@@ -2559,10 +2570,7 @@ private slots:
     }
 };
 
-
-qorgMail::qorgMail(QWidget* parent, qorgAB* AddressBook, qorgOptions* Options) :QWidget(parent) {
-    this->AddressBook = AddressBook;
-    this->Options = Options;
+qorgMail::qorgMail(QWidget* parent) :QWidget(parent) {
     currentMail = -1;
     mailboxAction = false;
     emailAction = false;
@@ -2685,6 +2693,11 @@ qorgMail::~qorgMail() {
     MailHtml->page()->deleteLater();
 }
 // Public
+void qorgMail::setPointers(qorgAB* AddressBook, qorgOptions* Options) {
+    this->AddressBook = AddressBook;
+    this->Options = Options;
+}
+
 QString qorgMail::output() {
     QString out;
     for (uint i = 0; i < Mailv.size(); i++) {
@@ -2850,6 +2863,8 @@ void qorgMail::setMail(int setMail) {
         } else {
             currentMailbox = 0;
             currentEmail = -1;
+            mailboxAction = false;
+            emailAction = false;
             Mailboxes->clear();
             setLayoutF();
             int I = 0;
@@ -2890,7 +2905,7 @@ uint qorgMail::threadNumber() {
 bool qorgMail::SSLSocketError(QList<QSslError> I) {
     int response = Options->checkCertificate(I.first().certificate());
     if (response == 0) {
-        Options->addForVeryfication(I.first().certificate());
+        Options->addForVerification(I.first().certificate());
         return false;
     } else if (response == 1) {
         return true;
@@ -3205,11 +3220,10 @@ void qorgMail::EditMailS(bool I, QString R) {
             Bar->exec();
         }
     } else {
-        T->setMethod(SSLCON::Stop);
-        if (!I && !T->Cancelled) {
-            QMessageBox::critical(this, "Mailboxes error", R);
+        if (!T->Cancelled) {
+            QMessageBox::critical(this, "Email error", R);
         }
-        QMessageBox::critical(this, "Error", "Wrong settings.");
+        T->setMethod(SSLCON::Stop);
     }
 }
 void qorgMail::EditMailSS(bool I, QString R) {
@@ -3360,36 +3374,34 @@ void qorgMail::UpdateS(bool I, QString R) {
     SSLCON* T = qobject_cast<SSLCON*>(QObject::sender());
     if (I) {
         delete T->M;
-        if (UpdateQuene == 1) {
-            uint unread = 0;
-            for (uint i = 0; i < Mailv.size(); i++) {
-                for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
-                    if (Mailv[i].Mboxv[j]->Mbox_Attrybutes&Mailbox::INBOX) {
-                        for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size(); k++) {
-                            if (!(Mailv[i].Mboxv[j]->Emailv[k]->Email_Flags&Email::Seen)) {
-                                unread++;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            if (unread == 1) {
-                emit sendUpdate("Mail: 1 unreaded message.");
-            } else {
-                emit sendUpdate("Mail: "+QString::number(unread)+" unreaded messages.");
-            }
-        } else {
-            UpdateQuene--;
-        }
     } else {
         if (!(R == "ERROR: Problem with connection." ||
-              R == "ERROR: Problem with SSL certificate. Check your SSL Manager.")) {
+              R == "ERROR: Problem with SSL certificate. Check your SSL Manager." || T->M->Name == "Repeated")) {
+            T->M->Name = "Repeated";
             SSLCON* Ta = new SSLCON(this, T->M);
             Ta->setMethod(SSLCON::Emails);
             connect(Ta, SIGNAL(EmailS(bool, QString)), this, SLOT(UpdateS(bool, QString)));
             Ta->start();
+            UpdateQuene++;
         }
+    }
+    if (UpdateQuene == 1) {
+        uint unread = 0;
+        for (uint i = 0; i < Mailv.size(); i++) {
+            for (uint j = 0; j < Mailv[i].Mboxv.size(); j++) {
+                if (Mailv[i].Mboxv[j]->Mbox_Attrybutes&Mailbox::INBOX) {
+                    for (uint k = 0; k < Mailv[i].Mboxv[j]->Emailv.size(); k++) {
+                        if (!(Mailv[i].Mboxv[j]->Emailv[k]->Email_Flags&Email::Seen)) {
+                            unread++;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        emit sendUpdate("Mail: "+QString::number(unread)+" unreaded "+(unread == 1 ? "message.": "messages."));
+    } else {
+        UpdateQuene--;
     }
 }
 
@@ -3400,63 +3412,67 @@ void qorgMail::AttachmentS(bool I, QString R) {
     Email* E = S->E[0];
     Structure* A = S->A;
     QList <QString> Data = S->Data;
-    if (I) {
-        if (E->Email_Quene == 1) {
-            QList  <QString>  ToClear;
-            QString HTML = E->Email_Body[1];
-            uint position = 0;
-            QList <QString> AlreadyDeleted;
-            while (HTML.indexOf("\"cid:", position) != -1) {
-                int s = HTML.indexOf("\"cid:", position);
-                int e = HTML.indexOf("\"", s+5);
-                position = e;
-                QString CID = HTML.mid(s+5, e-s-5).trimmed();
-                if (!AlreadyDeleted.contains(CID)) {
-                    for (uint i = 1; i < E->Structurev.size(); i++) {
-                        if (E->Structurev[i]->Structure_CID == CID) {
-                            QUrl A = QUrl::fromLocalFile(QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                            ToClear.append(QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
-                            AlreadyDeleted.append(CID);
-                            HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
-                            break;
+    if (emailAction && (currentMail != -1) && E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]) {
+        if (I) {
+            if (E->Email_Quene == 1) {
+                QList  <QString>  ToClear;
+                QString HTML = E->Email_Body[1];
+                uint position = 0;
+                QList <QString> AlreadyDeleted;
+                while (HTML.indexOf("\"cid:", position) != -1) {
+                    int s = HTML.indexOf("\"cid:", position);
+                    int e = HTML.indexOf("\"", s+5);
+                    position = e;
+                    QString CID = HTML.mid(s+5, e-s-5).trimmed();
+                    if (!AlreadyDeleted.contains(CID)) {
+                        for (uint i = 1; i < E->Structurev.size(); i++) {
+                            if (E->Structurev[i]->Structure_CID == CID) {
+                                QUrl A = QUrl::fromLocalFile(QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                                ToClear.append(QDir::tempPath()+QDir::separator()+"qorganizer"+QDir::separator()+QString::number(E->Email_UID)+CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
+                                AlreadyDeleted.append(CID);
+                                HTML = HTML.mid(0, s)+"\""+A.toString()+HTML.mid(e, HTML.length()-e);
+                                break;
+                            }
                         }
                     }
                 }
+                if (E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]) {
+                    MailHtml->setHtml(HTML);
+                    QEventLoop loop;
+                    connect(MailHtml, SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
+                    connect(MailHtml, SIGNAL(urlChanged(QUrl)), &loop, SLOT(quit()));
+                    loop.exec();
+                    emailAction = false;
+                }
+                for (int i = 0; i < ToClear.size(); i++) {
+                    QFile::remove(ToClear[i]);
+                }
+                QDir().rmdir(QDir::tempPath()+QDir::separator()+"qorganizer");
             }
-            if (E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail] && emailAction) {
-                MailHtml->setHtml(HTML);
-                QEventLoop loop;
-                connect(MailHtml, SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
-                connect(MailHtml, SIGNAL(urlChanged(QUrl)), &loop, SLOT(quit()));
-                loop.exec();
-                emailAction = false;
-            }
-            for (int i = 0; i < ToClear.size(); i++) {
-                QFile::remove(ToClear[i]);
-            }
-            QDir().rmdir(QDir::tempPath()+QDir::separator()+"qorganizer");
-        }
-        if (E->Email_Quene != 0) {
-            E->Email_Quene--;
-        }
-    } else {
-        if (E->Email_Quene != 0) {
-            if (E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail] && emailAction && !((R == "ERROR: No response from server.") || (R == "ERROR: Problem with connection."))) {
-                SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
-                T->setMethod(SSLCON::Attachment);
-                T->setMailbox(B);
-                T->setEmail(E);
-                T->setAttachment(A);
-                T->setData(Data);
-                connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool, QString)));
-                T->start();
-            } else {
+            if (E->Email_Quene > 0) {
                 E->Email_Quene--;
             }
+        } else {
+            if (E->Email_Quene > 0) {
+                if (E == Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail] && !((R == "ERROR: No response from server.") || (R == "ERROR: Problem with connection."))) {
+                    SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
+                    T->setMethod(SSLCON::Attachment);
+                    T->setMailbox(B);
+                    T->setEmail(E);
+                    T->setAttachment(A);
+                    T->setData(Data);
+                    connect(T, SIGNAL(AttachmentS(bool, QString)), this, SLOT(AttachmentS(bool, QString)));
+                    T->start();
+                } else {
+                    E->Email_Quene--;
+                }
+            }
+            if (E->Email_Quene == 0) {
+                MailHtml->setHtml(E->Email_Body[1]);
+            }
         }
-        if (E->Email_Quene == 0) {
-            MailHtml->setHtml(E->Email_Body[1]);
-        }
+    } else {
+        E->Email_Quene = 0;
     }
 }
 void qorgMail::AttachmentSUser(bool I, QString R) {
@@ -3469,6 +3485,7 @@ void qorgMail::AttachmentSUser(bool I, QString R) {
         QLabel* L = new QLabel("Downloading...");
         L->setAttribute(Qt::WA_DeleteOnClose);
         L->setStyleSheet("background-color: #FF8888;");
+        L->setWindowIcon(QIcon(":/main/QOrganizer.png"));
         L->setWindowTitle(S->Data.first().mid(S->Data.first().lastIndexOf(QDir::separator())+1, S->Data.first().length()-S->Data.first().lastIndexOf(QDir::separator())-1));
         L->show();
         SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
@@ -3604,7 +3621,7 @@ void qorgMail::chooseEmail(QModelIndex I) {
             QListWidgetItem* Itm = new QListWidgetItem(AttachmentList);
             if (E->Structurev[i]->Structure_Attrybutes.Name.isEmpty()) {
                 if (E->Structurev[i]->Structure_CID.isEmpty()) {
-                    Itm->setText("text."+E->Structurev[i]->Structure_Subtype.toLower());
+                    Itm->setText(E->Structurev[i]->Structure_Type.toLower()+"."+E->Structurev[i]->Structure_Subtype.toLower());
                 } else {
                     Itm->setText(E->Structurev[i]->Structure_CID+"."+E->Structurev[i]->Structure_Subtype.toLower());
                 }
@@ -3660,6 +3677,7 @@ void qorgMail::downloadAttachment(uint I, QString path) {
 void qorgMail::RefreshS() {
     if (!mailboxAction) {
         mailboxAction = true;
+        emailAction = false;
         Mail* M = new Mail();
         M->IMAPserver = Mailv[currentMail].IMAPserver;
         M->User = Mailv[currentMail].User;
@@ -3697,22 +3715,32 @@ void qorgMail::SendEmail() {
     }
 }
 void qorgMail::DeleteEmail() {
-    if (currentEmail != -1 && !mailboxAction) {
+    QList <QTreeWidgetItem*> I = MailView->selectedItems();
+    if (!mailboxAction && !I.isEmpty()) {
         mailboxAction = true;
+        emailAction = false;
         if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
-            SSLCON* T = new SSLCON(this, &Mailv[currentMail]);
-            T->setMethod(SSLCON::DeleteE);
-            T->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
-            T->setEmail(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]);
-            connect(T, SIGNAL(DeleteES(bool, QString)), this, SLOT(DeleteES(bool, QString)));
-            T->start();
-        } else {
-            for (uint i = 0; i < Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev.size(); i++) {
-                delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail]->Structurev[i];
+            SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
+            S->setMethod(SSLCON::DeleteE);
+            S->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
+            QList <Email*> E;
+            for (int i = 0; i < I.size(); i++) {
+                E.append(Mailv[currentMail].Mboxv[currentMailbox]->Emailv[Mailv[currentMail].Mboxv[currentMailbox]->Emailv.size()-MailView->indexOfTopLevelItem(I[i])-1]);
             }
-            delete Mailv[currentMail].Mboxv[currentMailbox]->Emailv[currentEmail];
-            Mailv[currentMail].Mboxv[currentMailbox]->Emailv.erase(Mailv[currentMail].Mboxv[currentMailbox]->Emailv.begin()+currentEmail);
-            setMailbox(currentMailbox);
+            S->setEmails(E);
+            connect(S, SIGNAL(DeleteES(bool, QString)), this, SLOT(DeleteES(bool, QString)));
+            S->start();
+        } else {
+            vector <Email*>* BV = &Mailv[currentMail].Mboxv[currentMailbox]->Emailv;
+            for (int i = 0; i < I.size(); i++) {
+                Email* E = (*BV)[BV->size()-MailView->indexOfTopLevelItem(I[i])-1];
+                for (uint j = 0; j < E->Structurev.size(); j++) {
+                    delete E->Structurev[j];
+                }
+                BV->erase(BV->begin()+(BV->size()-MailView->indexOfTopLevelItem(I[i])-1));
+                delete E;
+                delete I[i];
+            }
         }
     }
 }
@@ -3761,8 +3789,9 @@ void qorgMail::sortMail() {
 }
 // Menus and actions
 void qorgMail::MailViewMenu(QPoint P) {
-    if (!mailboxAction && MailView->selectedItems().size()>0) {
+    if (!mailboxAction && MailView->selectedItems().size() > 0) {
         mailboxAction = true;
+        emailAction = false;
         QMenu* main = new QMenu(this);
         QList <QTreeWidgetItem*> I = MailView->selectedItems();
         QList <QAction*> CMailboxes;
@@ -3804,7 +3833,10 @@ void qorgMail::MailViewMenu(QPoint P) {
                 connect(S, SIGNAL(CopyES(bool, QString)), this, SLOT(CopyES(bool, QString)));
                 S->start();
             } else if (Exe == Delete) {
-                if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
+                mailboxAction = false;
+                emailAction = false;
+                DeleteEmail();
+                /*if (Mailv[currentMail].Mboxv[currentMailbox]->Mbox_Refresh) {
                     SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
                     S->setMethod(SSLCON::DeleteE);
                     S->setMailbox(Mailv[currentMail].Mboxv[currentMailbox]);
@@ -3826,7 +3858,7 @@ void qorgMail::MailViewMenu(QPoint P) {
                         delete E;
                         delete I[i];
                     }
-                }
+                }*/
             } else if (MMailboxes.contains(Exe)) {
                 SSLCON* S = new SSLCON(this, &Mailv[currentMail]);
                 S->setMethod(SSLCON::MoveE);
@@ -3848,6 +3880,7 @@ void qorgMail::MailViewMenu(QPoint P) {
 void qorgMail::MailboxesMenu(QPoint P) {
     if (!mailboxAction) {
         mailboxAction = true;
+        emailAction = false;
         QMenu* main = new QMenu(this);
         QTreeWidgetItem* I = Mailboxes->itemAt(P);
         QAction* C = new QAction("Create", main);
