@@ -609,5 +609,4 @@ void QOrganizer::Unlock() {
     }
     BlockL->clear();
 }
-
 #include <qorganizer.moc>

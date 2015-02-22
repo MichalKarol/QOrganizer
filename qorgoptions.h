@@ -61,21 +61,21 @@ private:
     QWidget* WidgetsQWidget[4];
     QGroupBox* BoxesQGroupBox[3];
 
-    //Password changing widget
+    // Password changing widget
     QLabel* CurrentPasswordQLabel;
     QLabel* NewPasswordQLabel;
     QLineEdit* CurrentPasswordQLineEdit;
     QLineEdit* NewPasswordQLineEdit;
     QPushButton* PasswordQPushButton;
 
-    //Interval changing widget
+    // Interval changing widget
     QLabel* UpdateQLabel;
     QLabel* BlockQLabel;
     QSpinBox* UpdateIntervalQSpinBox;
     QSpinBox* BlockIntervalQSpinBox;
     QPushButton* IntervalQPushButton;
 
-    //Export widget
+    // Export widget
     QLabel* vCalendarQLabel;
     QLabel* vNoteQLabel;
     QLabel* vCardQLabel;
@@ -83,7 +83,7 @@ private:
     QPushButton* vNoteQPushButton;
     QPushButton* vCardQPushButton;
 
-    //SSL manager widget
+    // SSL manager widget
     QLabel* AcceptedQLabel;
     QLabel* BlacklistedQLabel;
     QListWidget* AcceptedQListWidget;

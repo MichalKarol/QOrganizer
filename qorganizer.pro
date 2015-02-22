@@ -11,7 +11,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = QOrganizer
 TEMPLATE = app
 
-
 SOURCES += main.cpp\
     qorgio.cpp \
     qorgcalendar.cpp \
@@ -39,7 +38,6 @@ HEADERS  += \
     qorgoptions.h
 
 LIBS += -lcrypto
-CONFIG += qt
 
 RESOURCES += \
     resources.qrc

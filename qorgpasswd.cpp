@@ -395,5 +395,3 @@ void qorgPasswd::Delete(QPoint P) {
 }
 
 #include "qorgpasswd.moc"
-
-
