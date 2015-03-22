@@ -26,205 +26,251 @@ Event::Event() {
     this->Edate = QDateTime::fromMSecsSinceEpoch(0).date();
 }
 bool Event::occursOnDate(QDate D) {
-    if (starts(D).date() <= D
-            && ends(D).date() >= D) {
-        return true;
-    } else {
-        return false;
-    }
-}
-QDateTime Event::starts(QDate D) {
-    if (OccuranceType != NoOccurance) {
-        if (D >= Datet.date() && D <= Edate) {
-            switch (OccuranceType) {
-            case NoOccurance: {
-            };break;
-            case Daily: {
-                if (D >= Datet.date()) {
-                    return QDateTime(D,Datet.time());
-                } else if (D != Datet.date()) {
-                    return QDateTime(D.addDays(-1),Datet.time());
-                }
-            };break;
-            case Weekly: {
-                for (int i = 0; i > -7; i--) {
-                    if (D.addDays(i).dayOfWeek() == Datet.date().dayOfWeek()) {
-                        if (QDateTime(D.addDays(i-7),Datet.time()).addSecs(Datet.secsTo(Edatet)).date() >= D
-                                && D < D.addDays(i)) {
-                            return QDateTime(D.addDays(i-7),Datet.time());
-                        } else {
-                            return QDateTime(D.addDays(i),Datet.time());
-                        }
-                    }
-                }
-            };break;
-            case Monthly: {
-                return QDateTime(QDate(D.year(),D.month(),Datet.date().day()),Datet.time());
-            };break;
-            case Yearly: {
-                return QDateTime(QDate(D.year(),Datet.date().month(),Datet.date().day()),Datet.time());
-            };break;
+    if (D >= Datet.date()
+            && ((OccuranceType == NoOccurance && D <= Edatet.date())
+                ||  (OccuranceType != NoOccurance && D <= Edate))) {
+        if (!QDate::isLeapYear(D.year())
+                && OccuranceType == Yearly
+                && Datet.date().day() == 29
+                && Datet.date().month() == 2) {
+            if (D .month() == 2
+                 && D.day() == 28) {
+                return true;
+            } else {
+                return false;
             }
         }
-    } else {
-        if (D >= Datet.date() && D <= Edatet.date()) {
-            return Datet;
-        }
-    }
-    if (!QDate::isLeapYear(D.year())
-            && D .month() == 2
-            && D.day() == 28
-            && OccuranceType == Yearly
-            && Datet.date().day() == 29
-            && Datet.date().month() == 2) {
-        return QDateTime(QDate(D.year(),2,28),Datet.time());
-    }
-    return QDateTime();
-}
-QDateTime Event::starts(QDateTime D) {
-    if (D >= Datet) {
-        if (OccuranceType != NoOccurance && D.date() <= Edate) {
-            switch (OccuranceType) {
-            case NoOccurance: {
-            };break;
-            case Daily: {
-                if (QDateTime(D.addDays(-1).date(),Datet.time()) >= Datet) {
-                    if (QDateTime(D.addDays(-1).date(),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                            && D < QDateTime(D.date(),Datet.time())) {
-                        return QDateTime(D.addDays(-1).date(),Datet.time());
-                    } else {
-                        return QDateTime(D.date(),Datet.time());
-                    }
-                } else {
-                    return QDateTime(D.date(),Datet.time());
-                }
-            };break;
-            case Weekly: {
-                for (int i = 0; i > -7; i--) {
-                    if (D.addDays(i).date().dayOfWeek() == Datet.date().dayOfWeek()) {
-                        if (QDateTime(D.addDays(i-7).date(),Datet.time()) >= Datet) {
-                            if (QDateTime(D.addDays(i-7).date(),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                                    && D < QDateTime(D.addDays(i).date(),Datet.time())) {
-                                return QDateTime(D.addDays(i-7).date(),Datet.time());
-                            } else {
-                                return QDateTime(D.addDays(i).date(),Datet.time());
-                            }
-                        } else {
-                            return QDateTime(D.addDays(i).date(),Datet.time());
-                        }
-                    }
-                }
-            };break;
-            case Monthly: {
-                QDate Date = QDate(D.date().year(),D.date().month(),Datet.date().day());
-                if (QDateTime(Date.addMonths(-1),Datet.time()) >= Datet) {
-                    if (QDateTime(Date.addMonths(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                            && D < QDateTime(Date,Datet.time())) {
-                        return QDateTime(Date.addMonths(-1),Datet.time());
-                    } else {
-                        return QDateTime(Date,Datet.time());
-                    }
-                } else {
-                    return QDateTime(Date,Datet.time());
-                }
-            };break;
-            case Yearly: {
-                QDate Date = QDate(D.date().year(),Datet.date().month(),Datet.date().day());
-                if (QDateTime(Date.addYears(-1),Datet.time()) >= Datet) {
-                    if (QDateTime(Date.addYears(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                            && D < QDateTime(Date,Datet.time())) {
-                        return QDateTime(Date.addYears(-1),Datet.time());
-                    } else {
-                        return QDateTime(Date,Datet.time());
-                    }
-                } else {
-                    return QDateTime(Date,Datet.time());
-                }
-            };break;
-            }
-        } else {
-            if (D <= Edatet) {
-                return Datet;
-            }
-        }
-    }
-    if (!QDate::isLeapYear(D.date().year())
-            && D.date().month() == 2
-            && D.date().day() == 28
-            && OccuranceType == Yearly
-            && Datet.date().day() == 29
-            && Datet.date().month() == 2) {
-        return QDateTime(QDate(D.date().year(),2,28),Datet.time());
-    }
-    return QDateTime();
-}
-QDateTime Event::ends(QDate D) {
-    return starts(D).addSecs(Datet.secsTo(Edatet));
-}
-QDateTime Event::ends(QDateTime D) {
-    QDateTime E = starts(D).addSecs(Datet.secsTo(Edatet));
-    if (OccuranceType != NoOccurance) {
         switch (OccuranceType) {
         case NoOccurance: {
+            return true;
         };break;
         case Daily: {
-            if (E.addDays(1).date() <= Edate) {
-                return QDateTime();
-            } else {
-                return QDateTime(D.date(),Datet.time());
-            }
+            return true;
         };break;
         case Weekly: {
-            for (int i = 0; i > -7; i--) {
-                if (D.addDays(i).date().dayOfWeek() == Datet.date().dayOfWeek()) {
-                    if (QDateTime(D.addDays(i-7).date(),Datet.time()) >= Datet) {
-                        if (QDateTime(D.addDays(i-7).date(),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                                && D < QDateTime(D.addDays(i).date(),Datet.time())) {
-                            return QDateTime(D.addDays(i-7).date(),Datet.time());
-                        } else {
-                            return QDateTime(D.addDays(i).date(),Datet.time());
-                        }
-                    } else {
-                        return QDateTime(D.addDays(i).date(),Datet.time());
+            if  (Datet.daysTo(Edatet) < 7) {
+                if (Edatet.date().dayOfWeek() -  Datet.date().dayOfWeek() >= 0)  {
+                    if (Datet.date().dayOfWeek() <= D.dayOfWeek()
+                            && D.dayOfWeek() <= Edatet.date().dayOfWeek()) {
+                        return true;
+                    }
+                } else {
+                    if (Datet.date().dayOfWeek() <= D.dayOfWeek()
+                            || D.dayOfWeek() <= Edatet.date().dayOfWeek()) {
+                        return true;
                     }
                 }
+            } else {
+                return true;
             }
         };break;
         case Monthly: {
-            QDate Date = QDate(D.date().year(),D.date().month(),Datet.date().day());
-            if (QDateTime(Date.addMonths(-1),Datet.time()) >= Datet) {
-                if (QDateTime(Date.addMonths(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                        && D < QDateTime(Date,Datet.time())) {
-                    return QDateTime(Date.addMonths(-1),Datet.time());
-                } else {
-                    return QDateTime(Date,Datet.time());
+            if (Datet.date().month() == Edatet.date().month()) {
+                if  (Datet.date().day() <= D.day()
+                     && D.day() <= Edatet.date().day()){
+                    return true;
                 }
             } else {
-                return QDateTime(Date,Datet.time());
+                if (Datet.date().day() > Edatet.date().day()) {
+                    if (D.day() <= Edatet.date().day()
+                            ||  Datet.date().day() <= D.day()) {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
             }
         };break;
         case Yearly: {
-            QDate Date = QDate(D.date().year(),Datet.date().month(),Datet.date().day());
-            if (QDateTime(Date.addYears(-1),Datet.time()) >= Datet) {
-                if (QDateTime(Date.addYears(-1),Datet.time()).addSecs(Datet.secsTo(Edatet)) >= D
-                        && D < QDateTime(Date,Datet.time())) {
-                    return QDateTime(Date.addYears(-1),Datet.time());
+            if (Datet.date().year() == Edatet.date().year()) {
+                if (Datet.date().month() == Edatet.date().month()
+                        && D.month() == Datet.date().month()) {
+                    if (Datet.date().day() <= D.day()
+                            && D.day() <= Edatet.date().day()) {
+                        return true;
+                    }
                 } else {
-                    return QDateTime(Date,Datet.time());
+                    if (Datet.date().month() == D.month()
+                            && Datet.date().day() <= D.day()) {
+                        return true;
+                    } else if (D.month() == Edatet.date().month()
+                               && D.day() <= Edatet.date().day()) {
+                        return true;
+                    } else if (Datet.date().month() < D.month()
+                               && D.month() < Edatet.date().month()) {
+                        return true;
+                    }
                 }
             } else {
-                return QDateTime(Date,Datet.time());
+                if (Datet.date().month() == Edatet.date().month()
+                        && D.month() == Datet.date().month()) {
+                    if (Datet.date().day() > Edatet.date().day()) {
+                        if (Datet.date().day() <= D.day()
+                                || D.day() <= Edatet.date().day()) {
+                            return true;
+                        }
+                    } else {
+                        return true;
+                    }
+                } else if (Datet.date().month() > Edatet.date().month()) {
+                    if (Edatet.date().month() == D.month()
+                            && D.day() <= Edatet.date().day()) {
+                        return true;
+                    } else if (D.month() <Edatet.date().month()
+                               ||  Datet.date().month() < D.month()) {
+                        return true;
+                    }  else if  (Datet.date().month() == D.month()
+                                 && Datet.date().day() <= D.day()){
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
             }
         };break;
         }
-        if (E.date() > Edate) {
-            return QDateTime(Edate,QTime(23,59));
-        } else {
-            return E;
-        }
-    } else {
-        return E;
+
     }
+
+    return false;
+}
+QDateTime Event::starts(QDateTime D) {
+    if (Datet <= D) {
+        if (!QDate::isLeapYear(D.date().year())
+                && D.date().month() == 2
+                && D.date().day() == 28
+                && OccuranceType == Yearly
+                && Datet.date().day() == 29
+                && Datet.date().month() == 2) {
+            return QDateTime(D.date(),QTime(8,0));
+        }
+        if (OccuranceType != NoOccurance) {
+            switch (OccuranceType) {
+            case NoOccurance: {
+            };break;
+            case Daily: {
+                if (Datet.date() != D.date()) {
+                    if (D.time() < Datet.time()) {
+                        return QDateTime(D.date().addDays(-1),Datet.time());
+                    } else {
+                        return QDateTime(D.date(),Datet.time());
+                    }
+                }
+            };break;
+            case Weekly: {
+                if (Datet.date() != D.date()) {
+                    if (Datet.date().dayOfWeek() == D.date().dayOfWeek()) {
+                        if (D.time() < Datet.time()) {
+                            return QDateTime(D.date().addDays(-7),Datet.time());
+                        } else {
+                            return QDateTime(D.date(),Datet.time());
+                        }
+                    } else {
+                        return QDateTime(D.date().addDays(-((D.date().dayOfWeek()+7-Datet.date().dayOfWeek())%7)),Datet.time());
+                    }
+                }
+            };break;
+            case Monthly: {
+                if (Datet.date() != D.date()) {
+                    if (Datet.date().day() == D.date().day()) {
+                        if (D.time() < Datet.time()) {
+                            return QDateTime(D.date().addMonths(-1),Datet.time());
+                        } else {
+                            return QDateTime(D.date(),Datet.time());
+                        }
+                    } else if (Datet.date().day() < D.date().day()) {
+                        return QDateTime(QDate(D.date().year(),D.date().month(),Datet.date().day()),Datet.time());
+                    } else {
+                        return QDateTime(QDate(D.date().addMonths(-1).year(),D.date().addMonths(-1).month(),Datet.date().day()),Datet.time());
+                    }
+                }
+            };break;
+            case Yearly: {
+                if (Datet.date() != D.date()) {
+                    if (Datet.date().month() == D.date().month()) {
+                        if (Datet.date().day() == D.date().day()) {
+                            if (D.time() < Datet.time()) {
+                                return QDateTime(D.date().addYears(-1),Datet.time());
+                            } else {
+                                return QDateTime(D.date(),Datet.time());
+                            }
+                        } else if (Datet.date().day() < D.date().day()) {
+                            return QDateTime(QDate(D.date().year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                        } else {
+                            return QDateTime(QDate(D.date().addYears(-1).year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                        }
+                    } else if (Datet.date().month() < D.date().month()) {
+                        return QDateTime(QDate(D.date().year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                    } else {
+                        return QDateTime(QDate(D.date().addYears(-1).year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                    }
+                }
+            };break;
+            }
+        }
+    }
+    return Datet;
+}
+QDateTime Event::ends(QDateTime D) {
+    QDateTime S = starts(D);
+    if (Datet <= S) {
+        if (!QDate::isLeapYear(D.date().year())
+                && D.date().month() == 2
+                && D.date().day() == 28
+                && OccuranceType == Yearly
+                && Datet.date().day() == 29
+                && Datet.date().month() == 2) {
+            return QDateTime(D.date(),QTime(12,0));
+        }
+        if (OccuranceType != NoOccurance) {
+            switch (OccuranceType) {
+            case NoOccurance: {
+            };break;
+            case Daily: {
+                if (Edatet >= Datet.addDays(1)) {
+                    return S.addDays(1).addSecs(-1*60);
+                } else {
+                    return QDateTime(S.addDays(Datet.daysTo(Edatet)).date(),Edatet.time());
+                }
+            };break;
+            case Weekly: {
+                if (Edatet >= Datet.addDays(7)) {
+                    return S.addDays(7).addSecs(-1*60);
+                } else {
+                    return QDateTime(S.addDays(Datet.daysTo(Edatet)).date(),Edatet.time());
+                }
+            };break;
+            case Monthly: {
+                if (Edatet >= Datet.addMonths(1)) {
+                    return S.addMonths(1).addSecs(-1*60);
+                } else {
+                    if (Datet.date().year() == Edatet.date().year()) {
+                        if (Datet.date().month() == Edatet.date().month()) {
+                            return QDateTime(QDate(S.date().year(),S.date().month(),Edatet.date().day()),Edatet.time());
+                        } else {
+                            return QDateTime(QDate(S.date().year(),S.date().addMonths(1).month(),Edatet.date().day()),Edatet.time());
+                        }
+                    } else {
+                        return QDateTime(QDate(S.date().addYears(1).year(),Edatet.date().month(),Edatet.date().day()),Edatet.time());
+                    }
+                }
+            };break;
+            case Yearly: {
+                if (Edatet >= Datet.addYears(1)) {
+                    return S.addYears(1).addSecs(-1*60);
+                } else {
+                    if (Datet.date().year() == Edatet.date().year()) {
+                        return QDateTime(QDate(S.date().year(),Edatet.date().month(),Edatet.date().day()),Edatet.time());
+                    } else {
+                        return QDateTime(QDate(S.date().addYears(1).year(),S.date().month(),Edatet.date().day()),Edatet.time());
+                    }
+                }
+            };break;
+            }
+        }
+        return Edatet;
+    }
+    return QDateTime();
 }
 
 
@@ -309,6 +355,7 @@ public:
         connect(Occurance, SIGNAL(currentIndexChanged(int)), this, SLOT(lock(int)));
         CWidgetS = new QCalendarWidget(this);
         CWidgetF = new QCalendarWidget(this);
+        CWidgetE = new QCalendarWidget(this);
         Start = new QDateTimeEdit(QDateTime(Date,QTime(12, 00)),this);
         Start->setCalendarPopup(true);
         Start->setCalendarWidget(CWidgetS);
@@ -317,6 +364,8 @@ public:
         Finish->setCalendarPopup(true);
         Finish->setCalendarWidget(CWidgetF);
         OccuraneEndDate = new QDateEdit(Date, this);
+        OccuraneEndDate->setCalendarPopup(true);
+        OccuraneEndDate->setCalendarWidget(CWidgetE);
         OccuraneEndDate->setDisabled(true);
         ActionButtons[0]=new QPushButton(this);
         ActionButtons[0]->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
@@ -379,6 +428,7 @@ public:
         connect(Occurance, SIGNAL(currentIndexChanged(int)), this, SLOT(lock(int)));
         CWidgetS = new QCalendarWidget(this);
         CWidgetF = new QCalendarWidget(this);
+        CWidgetE = new QCalendarWidget(this);
         Start = new QDateTimeEdit(Tmp.Datet,this);
         Start->setCalendarPopup(true);
         Start->setCalendarWidget(CWidgetS);
@@ -386,7 +436,9 @@ public:
         Finish = new QDateTimeEdit(Tmp.Edatet,this);
         Finish->setCalendarPopup(true);
         Finish->setCalendarWidget(CWidgetF);
-        OccuraneEndDate = new QDateEdit(this);
+        OccuraneEndDate = new QDateEdit(Tmp.Edate, this);
+        OccuraneEndDate->setCalendarPopup(true);
+        OccuraneEndDate->setCalendarWidget(CWidgetE);
         OccuraneEndDate->setDisabled(true);
         if (Tmp.OccuranceType == Event::NoOccurance) {
             OccuraneEndDate->setDate(QDate::currentDate());
@@ -424,6 +476,7 @@ private:
     QComboBox* Occurance;
     QCalendarWidget* CWidgetS;
     QCalendarWidget* CWidgetF;
+    QCalendarWidget* CWidgetE;
     QDateTimeEdit* Start;
     QDateTimeEdit* Finish;
     QDateEdit* OccuraneEndDate;
@@ -440,7 +493,12 @@ private slots:
             if (i < 3) {
                 OccuraneEndDate->setDate(Start->date().addDays(1));
             } else {
-                OccuraneEndDate->setDate(QDate(2099, Start->date().month(), Start->date().day()));
+                if (Start->date().month() == 2
+                        && Start->date().day() == 29) {
+                    OccuraneEndDate->setDate(QDate(2099, 2, 28));
+                } else {
+                    OccuraneEndDate->setDate(QDate(2099, Start->date().month(), Start->date().day()));
+                }
             }
         }
     }
@@ -462,34 +520,6 @@ private slots:
             return;
         }
         Event::Type OccurancecI = static_cast<Event::Type>(Occurance->currentIndex());
-        switch (OccurancecI) {
-        case Event::NoOccurance: {
-        };break;
-        case Event::Daily: {
-            if(Start->dateTime().secsTo(Finish->dateTime()) > 24*60*60) {
-                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
-                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-            }
-        };break;
-        case Event::Weekly: {
-            if(Start->dateTime().secsTo(Finish->dateTime()) > 7*24*60*60) {
-                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
-                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-            }
-        };break;
-        case Event::Monthly: {
-            if(Start->dateTime().secsTo(Finish->dateTime()) > 30*24*60*60) {
-                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
-                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-            }
-        };break;
-        case Event::Yearly: {
-            if(Start->dateTime().secsTo(Finish->dateTime()) > 365*24*60*60) {
-                Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
-                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-            }
-        };break;
-        }
         Event event;
         event.Name = Name->text();
         event.Category = Category->text();
@@ -709,8 +739,8 @@ QString qorgCalendar::getUpdate() {
         uint tomorrow = 0;
         for(uint i = 0; i < Eventv.size(); i++) {
             if (Eventv[i].occursOnDate(QDate::currentDate())) {
-                if (Eventv[i].starts(QDate::currentDate()).time() < QTime::currentTime().addSecs(3600)
-                        && Eventv[i].starts(QDate::currentDate()).time() >= QTime::currentTime()) {
+                if (Eventv[i].starts(QDateTime::currentDateTime()).time() < QTime::currentTime().addSecs(3600)
+                        && Eventv[i].starts(QDateTime::currentDateTime()).time() >= QTime::currentTime()) {
                     hour++;
                 }
                 today++;
@@ -732,14 +762,90 @@ QString qorgCalendar::getUpdate() {
         return "Calendar: No event.";
     }
 }
+QString qorgCalendar::exportToICalendar(){
+    QString Output;
+    Output.append("BEGIN:VCALENDAR\nVERSION:2.0\n");
+    for (uint i = 0; i < Eventv.size(); i++) {
+        QString vcalendar;
+        vcalendar.append("BEGIN:VEVENT\n");
+        vcalendar.append("UID: "+QUuid::createUuidV5(QUuid(),QString(Eventv[i].Name+Eventv[i].Category+Eventv[i].Datet.toString(Qt::ISODate)+Eventv[i].Edatet.toString(Qt::ISODate)).toUtf8()).toString().mid(1,36)+"\n");
+        vcalendar.append("DTSTART:" + Eventv[i].Datet.toUTC().toString("yyyyMMddThhmmss")+"\n");
+        vcalendar.append("DTEND:"+Eventv[i].Edatet.toUTC().toString("yyyyMMddThhmmss")+"\n");
+        QString priority;
+        switch (Eventv[i].Priority) {
+        case 5: {
+            priority="1";
+        }; break;
+        case 4: {
+            priority="3";
+        }; break;
+        case 3: {
+            priority="5";
+        }; break;
+        case 2: {
+            priority="7";
+        }; break;
+        case 1: {
+            priority="9";
+        }; break;
+        }
+        vcalendar.append("PRIORITY:"+priority+"\n");
+        vcalendar.append("SUMMARY:"+Eventv[i].Name+"\n");
+        vcalendar.append("DESCRIPTION:"+Eventv[i].Category+"\n");
+        switch (Eventv[i].OccuranceType) {
+        case Event::NoOccurance: {
+        }; break;
+        case Event::Daily: {
+            if (Eventv[i].Edate.year() != 2099) {
+                vcalendar.append("RRULE:FREQ=DAILY;UNTIL="+QDateTime(Eventv[i].Edate).toUTC().toString("yyyyMMddThhmmss")+"\n");
+            } else {
+                vcalendar.append("RRULE:FREQ=DAILY\n");
+            }
+        }; break;
+        case Event::Weekly: {
+            if (Eventv[i].Edate.year() != 2099) {
+                vcalendar.append("RRULE:FREQ=WEEKLY;UNTIL= "+QDateTime(Eventv[i].Edate).toUTC().toString("yyyyMMddThhmmss")+"\n");
+            } else {
+                vcalendar.append("RRULE:FREQ=WEEKLY\n");
+            }
+        }; break;
+        case Event::Monthly: {
+            if (Eventv[i].Edate.year() != 2099) {
+                vcalendar.append("RRULE:FREQ=MONTHLY;UNTIL= "+QDateTime(Eventv[i].Edate).toUTC().toString("yyyyMMddThhmmss")+"\n");
+            } else {
+                vcalendar.append("RRULE:FREQ=MONTHLY\n");
+            }
+        }; break;
+        case Event::Yearly: {
+            if (Eventv[i].Edate.year() != 2099) {
+                vcalendar.append("RRULE:FREQ=YEARLY ;UNTIL="+QDateTime(Eventv[i].Edate).toUTC().toString("yyyyMMddThhmmss")+"\n");
+            } else {
+                vcalendar.append("RRULE:FREQ=YEARLY\n");
+            }
+        }; break;
+        }
+        QString valarm;
+        valarm.append("BEGIN:VALARM\n");
+        valarm.append("TRIGGER:-PT30M\n");
+        valarm.append("ACTION:AUDIO\n");
+        valarm.append("END:VALARM\n");
+
+        vcalendar.append(valarm);
+        vcalendar.append("END:VEVENT\n");
+        Output.append(vcalendar);
+    }
+    Output.append("END:VCALENDAR");
+    return Output;
+}
+
 void qorgCalendar::setCalendar() {
     Calendar->clearContents();
     DayView->clear();
 
-    QDateTime Tmp = QDateTime(currentDate, QTime(0, 0));
+    QDateTime Tmp = QDateTime(currentDate, QTime(0,0));
     QTreeWidgetItem* Hours[24];
     for (int i = 0; i < 24; i++) {
-        Hours[i]=new QTreeWidgetItem(DayView);
+        Hours[i] = new QTreeWidgetItem(DayView);
         Hours[i]->setText(0, Tmp.toString("HH"));
         Hours[i]->setIcon(0, QIcon(":/cal/Clock"));
 
@@ -790,7 +896,7 @@ void qorgCalendar::setCalendar() {
                 colorItem(Itm, Events[j].Priority);
             }
         }
-        Tmp.setTime(QTime(Tmp.time().hour()+1, 0));
+        Tmp = Tmp.addSecs(60*60);
     }
 
     DayView->expandAll();
@@ -921,8 +1027,8 @@ void qorgCalendar::updateAll() {
             QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
             Itm->setText(0, Events[j].Name);
             Itm->setToolTip(0, Events[j].Name);
-            Itm->setText(1, Events[j].starts(QDate::currentDate().addDays(i)).toString("HH:mm dd.MM.yyyy"));
-            Itm->setText(2, Events[j].ends(QDate::currentDate().addDays(i)).toString("HH:mm dd.MM.yyyy"));
+            Itm->setText(1, Events[j].starts(QDateTime(QDate::currentDate().addDays(i),QTime(00,00))).toString("HH:mm dd.MM.yyyy"));
+            Itm->setText(2, Events[j].ends(QDateTime(QDate::currentDate().addDays(i),QTime(00,00))).toString("HH:mm dd.MM.yyyy"));
             Itm->setText(3, Events[j].Category);
             Itm->setText(4, "");
             Itm->setText(5, "");
@@ -999,15 +1105,15 @@ void qorgCalendar::dayChanged(QTableWidgetItem* Input) {
     }
 }
 void qorgCalendar::doubleClick(QModelIndex I) {
-        QDate D = QDateTime::fromString(Incoming->topLevelItem(I.row())->text(1), "HH:mm dd.MM.yyyy").date();
-        Month->blockSignals(true);
-        Month->setCurrentIndex(D.month()-1);
-        Month->blockSignals(false);
-        Year->blockSignals(true);
-        Year->setCurrentIndex(Year->currentIndex()-(currentDate.year()-D.year()));
-        Year->blockSignals(false);
-        currentDate = D;
-        setCalendar();
+    QDate D = QDateTime::fromString(Incoming->topLevelItem(I.row())->text(1), "HH:mm dd.MM.yyyy").date();
+    Month->blockSignals(true);
+    Month->setCurrentIndex(D.month()-1);
+    Month->blockSignals(false);
+    Year->blockSignals(true);
+    Year->setCurrentIndex(Year->currentIndex()-(currentDate.year()-D.year()));
+    Year->blockSignals(false);
+    currentDate = D;
+    setCalendar();
 }
 
 void qorgCalendar::monthChanged(int Input) {
@@ -1020,18 +1126,19 @@ void qorgCalendar::yearChanged(QString Input) {
         QPushButton* Ypom = qobject_cast<QPushButton*>(QObject::sender());
         if (Ypom == Yminus) {
             if (currentDate.year()-1 >= QDate::currentDate().year()-20) {
-                currentDate.setDate(currentDate.year()-1, currentDate.month(), currentDate.day());
+                currentDate = currentDate.addYears(-1);
                 Year->setCurrentIndex(Year->currentIndex()-1);
             }
         } else {
             if (currentDate.year()+1 < QDate::currentDate().year()+21) {
-                currentDate.setDate(currentDate.year()+1, currentDate.month(), currentDate.day());
+                currentDate = currentDate.addYears(1);
                 Year->setCurrentIndex(Year->currentIndex()+1);
             }
         }
         Year->blockSignals(false);
     } else {
-        currentDate.setDate(Input.toInt(), currentDate.month(), currentDate.day());
+        int difference = Input.toInt() - currentDate.year();
+        currentDate = currentDate.addYears(difference);
     }
     setCalendar();
 }
@@ -1049,18 +1156,18 @@ void qorgCalendar::setNotification(bool first) {
     int closest = 24*60*60;
     for(uint i = 0; i < Eventv.size(); i++) {
         if (Eventv[i].occursOnDate(QDate::currentDate())
-                && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) >= 0) {
+                && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) >= 0) {
             if (first
-                    && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) < 15*60) {
+                    && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) < 15*60) {
                 LT15Min.append(Eventv[i]);
             }
-            if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) >= 15*60
-                    && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) <= 30*60) {
+            if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) >= 15*60
+                    && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) <= 30*60) {
                 MT15LT30Min.append(Eventv[i]);
             }
-            if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) > 30*60) {
-                if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate())) < closest) {
-                    closest = QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDate::currentDate()));
+            if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) > 30*60) {
+                if (QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) < closest) {
+                    closest = QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime()));
                 }
             }
         }

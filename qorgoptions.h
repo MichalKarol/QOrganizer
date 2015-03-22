@@ -58,8 +58,8 @@ private:
     QTimer* BlockQTimer;
     int currentWidget;
     QGridLayout* LayoutQGridLayout;
-    QWidget* WidgetsQWidget[4];
-    QGroupBox* BoxesQGroupBox[3];
+    QWidget* WidgetsQWidget[5];
+    QGroupBox* BoxesQGroupBox[4];
 
     // Password changing widget
     QLabel* CurrentPasswordQLabel;
@@ -76,18 +76,33 @@ private:
     QPushButton* IntervalQPushButton;
 
     // Export widget
-    QLabel* vCalendarQLabel;
+    QLabel* iCalendarQLabel;
+    QPushButton* iCalendarQPushButton;
     QLabel* vNoteQLabel;
-    QLabel* vCardQLabel;
-    QPushButton* vCalendarQPushButton;
     QPushButton* vNoteQPushButton;
+    QLabel* vCardQLabel;
     QPushButton* vCardQPushButton;
+
+    // Proxy widget
+    QLabel* ProxyTypeQLabel;
+    QComboBox* ProxyTypeQComboBox;
+    QLabel* ProxyServerQLabel;
+    QLineEdit* ProxyServerQLineEdit;
+    QLabel* ProxyPortQLabel;
+    QSpinBox* ProxyPortQSpinBox;
+    QLabel* ProxyUsernameQLabel;
+    QLineEdit* ProxyUsernameQLineEdit;
+    QLabel* ProxyPasswordQLabel;
+    QLineEdit* ProxyPasswordQLineEdit;
+    QPushButton* ProxySetupQPushButton;
 
     // SSL manager widget
     QLabel* AcceptedQLabel;
     QLabel* BlacklistedQLabel;
     QListWidget* AcceptedQListWidget;
     QListWidget* BlacklistedQListWidget;
+
+    // TODO Cleaning up settings
 
 public slots:
     void start(bool);
@@ -98,6 +113,8 @@ private slots:
     void ChangePassword();
     void ChangeInterval();
     void ExportToVSth();
+    void proxyTypeChanged(int);
+    void setupProxy();
     void Validator(QString);
     void CertificateClicked(QModelIndex);
 signals:

@@ -34,48 +34,70 @@ RSSChannel::RSSChannel() {
     Itemv.clear();
 }
 
-class Download :public QNetworkAccessManager {
+class Download :public QThread {
     Q_OBJECT
 public:
     explicit Download(qorgRSS*, RSSChannel*);
     ~Download();
     RSSChannel* ChannelRSSChannel;
-    void get();
 private:
     uint counter;
-private slots:
-    void CheckResponse(QNetworkReply*);
+    void get();
+protected:
+    void run();
 signals:
-    void Downloaded(QNetworkReply*);
+    void Downloaded(QString);
 };
-Download::Download(qorgRSS* parent, RSSChannel* C) :QNetworkAccessManager(parent) {
+Download::Download(qorgRSS* parent, RSSChannel* Channel) :QThread(parent) {
     counter = 0;
     QMutexLocker L(&RSSaccessToCounter);
     RSSthreadCounter++;
-    this->ChannelRSSChannel = C;
-    connect(this,SIGNAL(finished(QNetworkReply*)),this,SLOT(CheckResponse(QNetworkReply*)));
-    connect(this,SIGNAL(Downloaded(QNetworkReply*)),this,SLOT(deleteLater()));
+    this->ChannelRSSChannel = Channel;
 }
 Download::~Download() {
     QMutexLocker L(&RSSaccessToCounter);
     RSSthreadCounter--;
 }
-void Download::get() {
-    QNetworkRequest Request(QUrl::fromUserInput(ChannelRSSChannel->Link));
-    QNetworkAccessManager::get(Request);
+void Download::run() {
+    this->get();
+    this->deleteLater();
 }
-void Download::CheckResponse(QNetworkReply* QNR) {
-    QVariant possibleRedirectUrl = QNR->attribute(QNetworkRequest::RedirectionTargetAttribute);
-        if(!possibleRedirectUrl.toUrl().isEmpty()
-                && counter < 10) {
+void Download::get(){
+    QNetworkRequest Request(QUrl::fromUserInput(ChannelRSSChannel->Link));
+    QNetworkAccessManager* QNAM = new QNetworkAccessManager();
+    QNetworkReply* QNRe = QNAM->get(Request);
+
+    QTimer timer;
+    timer.setSingleShot(true);
+    QEventLoop loop;
+    connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    connect(QNRe,SIGNAL(finished()),&loop,SLOT(quit()));
+    timer.start(30000);   // 30 secs. timeout
+    loop.exec();
+    if(timer.isActive()) {
+        timer.stop();
+        QVariant possibleRedirectUrl = QNRe->attribute(QNetworkRequest::RedirectionTargetAttribute);
+        if (!possibleRedirectUrl.toUrl().isEmpty()
+                && QNRe->error() == QNetworkReply::NoError
+                && counter < 2) {
             counter++;
             ChannelRSSChannel->Link = possibleRedirectUrl.toString();
+           this->get();
+        } else if (QNRe->error() != QNetworkReply::NoError
+                   && counter < 2) {
+            counter++;
             this->get();
-            QNR->deleteLater();
+        } else {
+            QString Rep =QNRe->readAll();
+            emit Downloaded(Rep);
         }
-        else {
-            emit Downloaded(QNR);
-        }
+    } else {
+       disconnect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
+       QNRe->abort();
+       emit Downloaded(QString());
+    }
+    delete QNRe;
+    delete QNAM;
 }
 
 QString stringBetween(QString Tag, QString Text) {
@@ -170,7 +192,7 @@ qorgRSS::~qorgRSS() {
     }
 }
 void qorgRSS::setPointer(qorgOptions* Options) {
-   this->Options = Options;
+    this->Options = Options;
 }
 
 QString qorgRSS::output() {
@@ -251,11 +273,11 @@ QStringList qorgRSS::getChannels() {
 void qorgRSS::getUpdate() {
     if (RSSv.size() != 0) {
         for (uint i = 0; i < RSSv.size(); i++) {
-            Download* D = new Download(this, &RSSv[i]);
-            connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(DownloadedS(QNetworkReply*)));
-            connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(UpdateS()));
-            D->get();
             UpdateQuene++;
+            Download* D = new Download(this, &RSSv[i]);
+            connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
+            connect(D, SIGNAL(Downloaded(QString)), this, SLOT(UpdateS()));
+            D->start();
         }
     } else {
         emit sendUpdate("RSS: No channels.");
@@ -319,18 +341,17 @@ void qorgRSS::AddS() {
         RSSChannel* Channel = new RSSChannel();
         Channel->Link = URL->text();
         URL->clear();
-        QEventLoop* eventLoop = new QEventLoop(this);
+        QEventLoop eventLoop;
         Download* D = new Download(this, Channel);
-        connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(DownloadedS(QNetworkReply*)));
+        connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
         connect(D, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), this, SLOT(SSLSocketError(QNetworkReply*,QList<QSslError>)));
-        connect(D, SIGNAL(Downloaded(QNetworkReply*)), eventLoop, SLOT(quit()));
-        D->get();
-        eventLoop->exec();
+        connect(D, SIGNAL(Downloaded(QString)), &eventLoop, SLOT(quit()));
+        D->start();
+        eventLoop.exec();
         URL->clear();
     }
 }
-void qorgRSS::DownloadedS(QNetworkReply* QNR) {
-    QString Rep = QString(QNR->readAll());
+void qorgRSS::DownloadedS(QString Rep) {
     vector  <RSSItem*>  Itm;
     Download* D = qobject_cast<Download*>(QObject::sender());
     RSSChannel* Channel = D->ChannelRSSChannel;
@@ -486,8 +507,8 @@ void qorgRSS::chooseItem(QModelIndex I) {
 }
 void qorgRSS::RefreshS() {
     Download* D = new Download(this, &RSSv[currentC]);
-    connect(D, SIGNAL(Downloaded(QNetworkReply*)), this, SLOT(DownloadedS(QNetworkReply*)));
-    D->get();
+    connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
+    D->start();
 }
 void qorgRSS::UpdateS() {
     if (UpdateQuene == 1) {
@@ -520,7 +541,7 @@ void qorgRSS::HTTPSS(QNetworkReply* QNR, QList<QSslError> I) {
     } else if (response == 1) {
         QNR->ignoreSslErrors(I);
     }
-    connect(QNR, SIGNAL(Downloaded()), QNR, SLOT(deleteLater()));
+    connect(QNR, SIGNAL(finished()), QNR, SLOT(deleteLater()));
 }
 void qorgRSS::SSLSocketError(QNetworkReply* QNR, QList<QSslError> I) {
     int response = Options->checkCertificate(I.first().certificate());

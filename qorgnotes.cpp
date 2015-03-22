@@ -43,11 +43,11 @@ qorgNotes::qorgNotes(QWidget* parent) :QWidget(parent) {
                             "}");
     Text = new QTextEdit(this);
     Text->setReadOnly(true);
-    OK = new QPushButton("OK", this);
-    OK->setIcon(style()->standardIcon(QStyle::SP_DialogOkButton));
+    OK = new QPushButton( this);
+    OK->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
     OK->hide();
     connect(OK, SIGNAL(clicked()), this, SLOT(EOK()));
-    Cancel = new QPushButton("Cancel", this);
+    Cancel = new QPushButton( this);
     Cancel->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     Cancel->hide();
     connect(Cancel, SIGNAL(clicked()), this, SLOT(EC()));

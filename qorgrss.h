@@ -77,7 +77,7 @@ private:
     void setLayoutF();
 private slots:
     void AddS();
-    void DownloadedS(QNetworkReply*);
+    void DownloadedS(QString);
     void DeleteS(uint);
     void row(QString);
     void chooseChannel(QModelIndex);
