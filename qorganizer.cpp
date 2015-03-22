@@ -36,30 +36,39 @@ protected:
     void run() {
         QNetworkAccessManager* QNAM = new QNetworkAccessManager();
         QNetworkRequest QNR(QUrl("https://raw.githubusercontent.com//MichalKarol/QOrganizer/master/latestVersion.md"));
+        QNetworkReply* QNRe = QNAM->get(QNR);
+        QNRe->ignoreSslErrors();
 
         while (running) {
             work = true;
-            QNetworkReply* QNRe = QNAM->get(QNR);
-            QNRe->ignoreSslErrors();
-            QEventLoop* Loop = new QEventLoop();
-            connect(QNRe,SIGNAL(finished()),Loop,SLOT(quit()));
-            connect(QNRe,SIGNAL(finished()),Loop,SLOT(deleteLater()));
-            Loop->exec();
-
-            QString Reply = QNRe->readAll();
-            if (!Reply.isEmpty()) {
-                uint V = Reply.mid(0, 1).toInt();
-                uint SV = Reply.mid(1, 2).toInt();
-                if (V != 1 || SV != 4) {
-                    emit VersionUpdate(Reply.mid(0,4));
+            QTimer timer;
+            timer.setSingleShot(true);
+            QEventLoop loop;
+            connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+            connect(QNRe,SIGNAL(finished()),&loop,SLOT(quit()));
+            timer.start(30000);   // 30 secs. timeout
+            loop.exec();
+            if(timer.isActive()) {
+                timer.stop();
+                QString Reply = QNRe->readAll();
+                if (!Reply.isEmpty()) {
+                    uint V = Reply.mid(0, 1).toInt();
+                    uint SV = Reply.mid(1, 2).toInt();
+                    if (V != 1 || SV != 4) {
+                        emit VersionUpdate(Reply.mid(0,4));
+                    }
                 }
+            } else {
+               disconnect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
+               QNRe->abort();
             }
-
+            delete QNRe;
             work = false;
             for (int i = 0; i < 24*60*60 && running; i++) {
                 this->sleep(1);
             }
         }
+
         delete QNAM;
     }
 signals:
@@ -148,9 +157,7 @@ QOrganizer::QOrganizer() {
     QTextBrowser* Label = new QTextBrowser(this);
     Label->setText("QOrganizer 1.04\nCreated by: Mkarol (mkarol@linux.pl)\n1.12.2014\nYou could help in developing this software by donating:"
                    "\nBitcoins: 17wTU13S31LMdVuVmxxXyBwnj7kJwm74wK");
-    VU = new VersionUpdater(this);
-    connect(VU, SIGNAL(VersionUpdate(QString)), this, SLOT(VersionUpdate(QString)));
-    VU->start();
+
 
     // Timers and tray
     Tray = new QSystemTrayIcon(QIcon(":/main/QOrganizer.png"), this);
@@ -201,6 +208,9 @@ void QOrganizer::setUser(QString user, QByteArray hash, QByteArray hashed) {
     this->hash = hash;
     this->hashed = hashed;
     connect(Tray, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(TrayClick(QSystemTrayIcon::ActivationReason)));
+    VU = new VersionUpdater(this);
+    connect(VU, SIGNAL(VersionUpdate(QString)), this, SLOT(VersionUpdate(QString)));
+    VU->start();
     setTree();
 }
 void QOrganizer::setTree() {
@@ -596,7 +606,7 @@ void QOrganizer::NewPassword(QByteArray CA, QByteArray CB, QByteArray NA, QByteA
 
 void QOrganizer::Unlock() {
     QByteArray H = QCryptographicHash::hash(
-                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(BlockL->text().toUtf8()), BlockL->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), BlockL->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
                 +BlockL->text().toUtf8()
                 +QCryptographicHash::hash(BlockL->text().toUtf8(),QCryptographicHash::Sha3_512)
                                   ,QCryptographicHash::Sha3_256);

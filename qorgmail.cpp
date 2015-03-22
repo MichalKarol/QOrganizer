@@ -2378,14 +2378,16 @@ public:
             Z.append(E->Email_ReplyTo);
             Z.append(QStringList::fromVector(QVector<QString>::fromStdVector(E->Email_RecipientsTo)));
             Z.append(QStringList::fromVector(QVector<QString>::fromStdVector(E->Email_RecipientsCC)));
+            CheckCC = false;
+        } else {
+            CheckCC = true;
         }
-
-
     }
 private:
     Mail* M;
     Mailbox* B;
     Email* E;
+    bool CheckCC;
     QStringList Z;
     QLabel* Descriptions[4];
     QString Header;
@@ -2456,6 +2458,12 @@ private slots:
             QList  <QString>  Att;
             for (int i = 0; i < Attachments->count(); i++) {
                 Att.append(Attachments->item(i)->data(Qt::UserRole).toString());
+            }
+            if (CheckCC
+                    && CcL.size() > 10) {
+                if (QMessageBox::question(this,"CC field","There are more then 10 addresses in CC field.\nAre you sure that you did not want to use BCC field?") != QMessageBox::Yes) {
+                    return;
+                }
             }
 
             SSLCON* SSL = new SSLCON(qobject_cast<qorgMail*>(this->parent()),M);

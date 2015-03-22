@@ -56,6 +56,7 @@ public:
     QStringList getCategories();
     void setCategory(QString);
     QString getUpdate();
+    QString exportToICalendar();
     QString category;
     vector <Event> Eventv;
 private:
@@ -77,7 +78,8 @@ private:
     QTimer* MidnightTester;
     QTimer* Midnight;
     QTimer* NTimer;
-    // TODO Import & export from vCalendar
+    // TODO Import from vCalendar
+    // TODO whole day events
 private slots:
     void Add(QDate);
     void Edit(uint);

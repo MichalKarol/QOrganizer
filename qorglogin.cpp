@@ -102,7 +102,7 @@ void qorgLogin::Authentication() {
                 if (fileQFile.open(QIODevice::ReadOnly)) {
                     hash = RandomQByteArray();
                     hashed = calculateXOR(QCryptographicHash::hash(
-                                              QCryptographicHash::hash(QUuid::createUuidV5(QUuid(Line[1]->text().toUtf8()),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                                              QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
                                               +Line[1]->text().toUtf8()
                                               +QCryptographicHash::hash(Line[1]->text().toUtf8(),QCryptographicHash::Sha3_512)
                                                                 ,QCryptographicHash::Sha3_256),hash);
@@ -146,7 +146,7 @@ void qorgLogin::Register() {
             if (Repeat == Line[1]->text()) {
                 hash = RandomQByteArray();
                 hashed = calculateXOR(QCryptographicHash::hash(
-                                          QCryptographicHash::hash(QUuid::createUuidV5(QUuid(Line[1]->text().toUtf8()),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                                          QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
                                           +Line[1]->text().toUtf8()
                                           +QCryptographicHash::hash(Line[1]->text().toUtf8(),QCryptographicHash::Sha3_512)
                                                             ,QCryptographicHash::Sha3_256),hash);
@@ -157,7 +157,7 @@ void qorgLogin::Register() {
                     this->accept();
                 }
             } else {
-                QMessageBox::critical(this, "Error", "Passwords vary.");
+                QMessageBox::critical(this, "Error", "Passwords are different.");
             }
         }
         Line[1]->clear();

@@ -290,7 +290,7 @@ QByteArray RandomQByteArray() {
              QBA.append(QChar(char(qrand() % 255)));
     }
     QBA = QCryptographicHash::hash(
-                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(QBA),QBA).toByteArray(),QCryptographicHash::Sha3_512)
+                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),QBA).toByteArray(),QCryptographicHash::Sha3_512)
                 +QBA
                 +QCryptographicHash::hash(QBA,QCryptographicHash::Sha3_512)
                                   ,QCryptographicHash::Sha3_256);
