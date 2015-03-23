@@ -287,13 +287,13 @@ QByteArray RandomQByteArray() {
     QByteArray QBA;
     qsrand(QDateTime::currentMSecsSinceEpoch());
     for (int s = 0; s < 1024 ; s++) {
-             QBA.append(QChar(char(qrand() % 255)));
+             QBA.append(QChar(static_cast<char>(qrand() % 255)));
     }
     QBA = QCryptographicHash::hash(
-                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),QBA).toByteArray(),QCryptographicHash::Sha3_512)
+                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), QBA).toByteArray(), QCryptographicHash::Sha3_512)
                 +QBA
-                +QCryptographicHash::hash(QBA,QCryptographicHash::Sha3_512)
-                                  ,QCryptographicHash::Sha3_256);
+                +QCryptographicHash::hash(QBA, QCryptographicHash::Sha3_512)
+                                  , QCryptographicHash::Sha3_256);
     return QBA;
 }
 QByteArray encryptUsingAES(QByteArray IV, QByteArray data, QByteArray password) {
@@ -302,7 +302,7 @@ QByteArray encryptUsingAES(QByteArray IV, QByteArray data, QByteArray password) 
             memset(Out, '\0', DataSize);
     AES_KEY* aesKey = new AES_KEY;
     AES_set_encrypt_key(reinterpret_cast<uchar*>(password.data()), 256, aesKey);
-    if (IV.isEmpty()){
+    if (IV.isEmpty()) {
         AES_ecb_encrypt(reinterpret_cast<uchar*>(data.data()), Out, aesKey, AES_ENCRYPT);
     } else {
         AES_cbc_encrypt(reinterpret_cast<uchar*>(data.data()), Out, DataSize, aesKey,
@@ -326,7 +326,7 @@ QByteArray decryptUsingAES(QByteArray IV, QByteArray data, QByteArray password) 
             memset(Out, '\0', DataSize);
     AES_KEY* aesKey = new AES_KEY;
     AES_set_decrypt_key(reinterpret_cast<uchar*>(password.data()), 256, aesKey);
-    if (IV.isEmpty()){
+    if (IV.isEmpty()) {
         AES_ecb_encrypt(reinterpret_cast<uchar*>(data.data()), Out, aesKey, AES_DECRYPT);
     } else {
         AES_cbc_encrypt(reinterpret_cast<uchar*>(data.data()), Out, DataSize, aesKey,

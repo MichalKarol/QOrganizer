@@ -46,7 +46,7 @@ private:
     QPushButton* Cancel;
     QTreeWidget* List;
     QPushButton* AddB;
-    // TODO Import from vNote
+    // TODO(mkarol) Import from vNote
     int edited;
 private slots:
     void Add();

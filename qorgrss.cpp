@@ -62,7 +62,7 @@ void Download::run() {
     this->get();
     this->deleteLater();
 }
-void Download::get(){
+void Download::get() {
     QNetworkRequest Request(QUrl::fromUserInput(ChannelRSSChannel->Link));
     QNetworkAccessManager* QNAM = new QNetworkAccessManager();
     QNetworkReply* QNRe = QNAM->get(Request);
@@ -71,10 +71,10 @@ void Download::get(){
     timer.setSingleShot(true);
     QEventLoop loop;
     connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
-    connect(QNRe,SIGNAL(finished()),&loop,SLOT(quit()));
+    connect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
     timer.start(30000);   // 30 secs. timeout
     loop.exec();
-    if(timer.isActive()) {
+    if (timer.isActive()) {
         timer.stop();
         QVariant possibleRedirectUrl = QNRe->attribute(QNetworkRequest::RedirectionTargetAttribute);
         if (!possibleRedirectUrl.toUrl().isEmpty()
@@ -344,7 +344,7 @@ void qorgRSS::AddS() {
         QEventLoop eventLoop;
         Download* D = new Download(this, Channel);
         connect(D, SIGNAL(Downloaded(QString)), this, SLOT(DownloadedS(QString)));
-        connect(D, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), this, SLOT(SSLSocketError(QNetworkReply*,QList<QSslError>)));
+        connect(D, SIGNAL(sslErrors(QNetworkReply*, QList<QSslError>)), this, SLOT(SSLSocketError(QNetworkReply*, QList<QSslError>)));
         connect(D, SIGNAL(Downloaded(QString)), &eventLoop, SLOT(quit()));
         D->start();
         eventLoop.exec();

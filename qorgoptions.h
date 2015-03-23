@@ -13,8 +13,8 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef QORGOPTIONSH
-#define QORGOPTIONSH
+#ifndef QORGOPTIONS_H_
+#define QORGOPTIONS_H_
 
 #include <qorgtools.h>
 #include <qorgcalendar.h>
@@ -102,7 +102,7 @@ private:
     QListWidget* AcceptedQListWidget;
     QListWidget* BlacklistedQListWidget;
 
-    // TODO Cleaning up settings
+    // TODO(mkarol) Cleaning up settings
 
 public slots:
     void start(bool);
@@ -123,4 +123,4 @@ signals:
     void Block();
 };
 
-#endif  // QORGOPTIONSH
+#endif  // QORGOPTIONS_H_

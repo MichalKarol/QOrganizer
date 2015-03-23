@@ -43,10 +43,10 @@ bool Event::occursOnDate(QDate D) {
         switch (OccuranceType) {
         case NoOccurance: {
             return true;
-        };break;
+        }; break;
         case Daily: {
             return true;
-        };break;
+        }; break;
         case Weekly: {
             if  (Datet.daysTo(Edatet) < 7) {
                 if (Edatet.date().dayOfWeek() -  Datet.date().dayOfWeek() >= 0)  {
@@ -63,11 +63,11 @@ bool Event::occursOnDate(QDate D) {
             } else {
                 return true;
             }
-        };break;
+        }; break;
         case Monthly: {
             if (Datet.date().month() == Edatet.date().month()) {
                 if  (Datet.date().day() <= D.day()
-                     && D.day() <= Edatet.date().day()){
+                     && D.day() <= Edatet.date().day()) {
                     return true;
                 }
             } else {
@@ -80,7 +80,7 @@ bool Event::occursOnDate(QDate D) {
                     return true;
                 }
             }
-        };break;
+        }; break;
         case Yearly: {
             if (Datet.date().year() == Edatet.date().year()) {
                 if (Datet.date().month() == Edatet.date().month()
@@ -120,14 +120,14 @@ bool Event::occursOnDate(QDate D) {
                                ||  Datet.date().month() < D.month()) {
                         return true;
                     }  else if  (Datet.date().month() == D.month()
-                                 && Datet.date().day() <= D.day()){
+                                 && Datet.date().day() <= D.day()) {
                         return true;
                     }
                 } else {
                     return true;
                 }
             }
-        };break;
+        }; break;
         }
 
     }
@@ -142,70 +142,70 @@ QDateTime Event::starts(QDateTime D) {
                 && OccuranceType == Yearly
                 && Datet.date().day() == 29
                 && Datet.date().month() == 2) {
-            return QDateTime(D.date(),QTime(8,0));
+            return QDateTime(D.date(), QTime(8, 0));
         }
         if (OccuranceType != NoOccurance) {
             switch (OccuranceType) {
             case NoOccurance: {
-            };break;
+            }; break;
             case Daily: {
                 if (Datet.date() != D.date()) {
                     if (D.time() < Datet.time()) {
-                        return QDateTime(D.date().addDays(-1),Datet.time());
+                        return QDateTime(D.date().addDays(-1), Datet.time());
                     } else {
-                        return QDateTime(D.date(),Datet.time());
+                        return QDateTime(D.date(), Datet.time());
                     }
                 }
-            };break;
+            }; break;
             case Weekly: {
                 if (Datet.date() != D.date()) {
                     if (Datet.date().dayOfWeek() == D.date().dayOfWeek()) {
                         if (D.time() < Datet.time()) {
-                            return QDateTime(D.date().addDays(-7),Datet.time());
+                            return QDateTime(D.date().addDays(-7), Datet.time());
                         } else {
-                            return QDateTime(D.date(),Datet.time());
+                            return QDateTime(D.date(), Datet.time());
                         }
                     } else {
-                        return QDateTime(D.date().addDays(-((D.date().dayOfWeek()+7-Datet.date().dayOfWeek())%7)),Datet.time());
+                        return QDateTime(D.date().addDays(-((D.date().dayOfWeek()+7-Datet.date().dayOfWeek())%7)), Datet.time());
                     }
                 }
-            };break;
+            }; break;
             case Monthly: {
                 if (Datet.date() != D.date()) {
                     if (Datet.date().day() == D.date().day()) {
                         if (D.time() < Datet.time()) {
-                            return QDateTime(D.date().addMonths(-1),Datet.time());
+                            return QDateTime(D.date().addMonths(-1), Datet.time());
                         } else {
-                            return QDateTime(D.date(),Datet.time());
+                            return QDateTime(D.date(), Datet.time());
                         }
                     } else if (Datet.date().day() < D.date().day()) {
-                        return QDateTime(QDate(D.date().year(),D.date().month(),Datet.date().day()),Datet.time());
+                        return QDateTime(QDate(D.date().year(), D.date().month(), Datet.date().day()), Datet.time());
                     } else {
-                        return QDateTime(QDate(D.date().addMonths(-1).year(),D.date().addMonths(-1).month(),Datet.date().day()),Datet.time());
+                        return QDateTime(QDate(D.date().addMonths(-1).year(), D.date().addMonths(-1).month(), Datet.date().day()), Datet.time());
                     }
                 }
-            };break;
+            }; break;
             case Yearly: {
                 if (Datet.date() != D.date()) {
                     if (Datet.date().month() == D.date().month()) {
                         if (Datet.date().day() == D.date().day()) {
                             if (D.time() < Datet.time()) {
-                                return QDateTime(D.date().addYears(-1),Datet.time());
+                                return QDateTime(D.date().addYears(-1), Datet.time());
                             } else {
-                                return QDateTime(D.date(),Datet.time());
+                                return QDateTime(D.date(), Datet.time());
                             }
                         } else if (Datet.date().day() < D.date().day()) {
-                            return QDateTime(QDate(D.date().year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                            return QDateTime(QDate(D.date().year(), Datet.date().month(), Datet.date().day()), Datet.time());
                         } else {
-                            return QDateTime(QDate(D.date().addYears(-1).year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                            return QDateTime(QDate(D.date().addYears(-1).year(), Datet.date().month(), Datet.date().day()), Datet.time());
                         }
                     } else if (Datet.date().month() < D.date().month()) {
-                        return QDateTime(QDate(D.date().year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                        return QDateTime(QDate(D.date().year(), Datet.date().month(), Datet.date().day()), Datet.time());
                     } else {
-                        return QDateTime(QDate(D.date().addYears(-1).year(),Datet.date().month(),Datet.date().day()),Datet.time());
+                        return QDateTime(QDate(D.date().addYears(-1).year(), Datet.date().month(), Datet.date().day()), Datet.time());
                     }
                 }
-            };break;
+            }; break;
             }
         }
     }
@@ -220,52 +220,52 @@ QDateTime Event::ends(QDateTime D) {
                 && OccuranceType == Yearly
                 && Datet.date().day() == 29
                 && Datet.date().month() == 2) {
-            return QDateTime(D.date(),QTime(12,0));
+            return QDateTime(D.date(), QTime(12, 0));
         }
         if (OccuranceType != NoOccurance) {
             switch (OccuranceType) {
             case NoOccurance: {
-            };break;
+            }; break;
             case Daily: {
                 if (Edatet >= Datet.addDays(1)) {
                     return S.addDays(1).addSecs(-1*60);
                 } else {
-                    return QDateTime(S.addDays(Datet.daysTo(Edatet)).date(),Edatet.time());
+                    return QDateTime(S.addDays(Datet.daysTo(Edatet)).date(), Edatet.time());
                 }
-            };break;
+            }; break;
             case Weekly: {
                 if (Edatet >= Datet.addDays(7)) {
                     return S.addDays(7).addSecs(-1*60);
                 } else {
-                    return QDateTime(S.addDays(Datet.daysTo(Edatet)).date(),Edatet.time());
+                    return QDateTime(S.addDays(Datet.daysTo(Edatet)).date(), Edatet.time());
                 }
-            };break;
+            }; break;
             case Monthly: {
                 if (Edatet >= Datet.addMonths(1)) {
                     return S.addMonths(1).addSecs(-1*60);
                 } else {
                     if (Datet.date().year() == Edatet.date().year()) {
                         if (Datet.date().month() == Edatet.date().month()) {
-                            return QDateTime(QDate(S.date().year(),S.date().month(),Edatet.date().day()),Edatet.time());
+                            return QDateTime(QDate(S.date().year(), S.date().month(), Edatet.date().day()), Edatet.time());
                         } else {
-                            return QDateTime(QDate(S.date().year(),S.date().addMonths(1).month(),Edatet.date().day()),Edatet.time());
+                            return QDateTime(QDate(S.date().year(), S.date().addMonths(1).month(), Edatet.date().day()), Edatet.time());
                         }
                     } else {
-                        return QDateTime(QDate(S.date().addYears(1).year(),Edatet.date().month(),Edatet.date().day()),Edatet.time());
+                        return QDateTime(QDate(S.date().addYears(1).year(), Edatet.date().month(), Edatet.date().day()), Edatet.time());
                     }
                 }
-            };break;
+            }; break;
             case Yearly: {
                 if (Edatet >= Datet.addYears(1)) {
                     return S.addYears(1).addSecs(-1*60);
                 } else {
                     if (Datet.date().year() == Edatet.date().year()) {
-                        return QDateTime(QDate(S.date().year(),Edatet.date().month(),Edatet.date().day()),Edatet.time());
+                        return QDateTime(QDate(S.date().year(), Edatet.date().month(), Edatet.date().day()), Edatet.time());
                     } else {
-                        return QDateTime(QDate(S.date().addYears(1).year(),S.date().month(),Edatet.date().day()),Edatet.time());
+                        return QDateTime(QDate(S.date().addYears(1).year(), S.date().month(), Edatet.date().day()), Edatet.time());
                     }
                 }
-            };break;
+            }; break;
             }
         }
         return Edatet;
@@ -356,11 +356,11 @@ public:
         CWidgetS = new QCalendarWidget(this);
         CWidgetF = new QCalendarWidget(this);
         CWidgetE = new QCalendarWidget(this);
-        Start = new QDateTimeEdit(QDateTime(Date,QTime(12, 00)),this);
+        Start = new QDateTimeEdit(QDateTime(Date, QTime(12, 00)), this);
         Start->setCalendarPopup(true);
         Start->setCalendarWidget(CWidgetS);
         connect(Start, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
-        Finish = new QDateTimeEdit(QDateTime(Date,QTime(13, 00)),this);
+        Finish = new QDateTimeEdit(QDateTime(Date, QTime(13, 00)), this);
         Finish->setCalendarPopup(true);
         Finish->setCalendarWidget(CWidgetF);
         OccuraneEndDate = new QDateEdit(Date, this);
@@ -401,8 +401,8 @@ public:
         Labels[5]=new QLabel("Finish: ", this);
         Labels[6]=new QLabel("Date of occurane ending: ", this);
         Labels[6]->setDisabled(true);
-        Name = new QLineEdit(Tmp.Name,this);
-        Category = new QLineEdit(Tmp.Category,this);
+        Name = new QLineEdit(Tmp.Name, this);
+        Category = new QLineEdit(Tmp.Category, this);
         QCompleter* completer = new QCompleter(Calendar->getCategories(), Category);
         Category->setCompleter(completer);
         Priority = new QSlider(Qt::Horizontal, this);
@@ -429,11 +429,11 @@ public:
         CWidgetS = new QCalendarWidget(this);
         CWidgetF = new QCalendarWidget(this);
         CWidgetE = new QCalendarWidget(this);
-        Start = new QDateTimeEdit(Tmp.Datet,this);
+        Start = new QDateTimeEdit(Tmp.Datet, this);
         Start->setCalendarPopup(true);
         Start->setCalendarWidget(CWidgetS);
         connect(Start, SIGNAL(timeChanged(QTime)), this, SLOT(time(QTime)));
-        Finish = new QDateTimeEdit(Tmp.Edatet,this);
+        Finish = new QDateTimeEdit(Tmp.Edatet, this);
         Finish->setCalendarPopup(true);
         Finish->setCalendarWidget(CWidgetF);
         OccuraneEndDate = new QDateEdit(Tmp.Edate, this);
@@ -514,8 +514,8 @@ private slots:
             if (Finish->styleSheet() != "QDateTimeEdit{background: #FF8888;}") {
                 Start->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
                 Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
-                connect(Start,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+                connect(Start, SIGNAL(dateTimeChanged(QDateTime)), this, SLOT(row()));
+                connect(Finish, SIGNAL(dateTimeChanged(QDateTime)), this, SLOT(row()));
             }
             return;
         }
@@ -543,8 +543,8 @@ private slots:
             if (Finish->styleSheet() != "QDateTimeEdit{background: #FF8888;}") {
                 Start->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
                 Finish->setStyleSheet("QDateTimeEdit{background: #FF8888;}");
-                connect(Start,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-                connect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+                connect(Start, SIGNAL(dateTimeChanged(QDateTime)), this, SLOT(row()));
+                connect(Finish, SIGNAL(dateTimeChanged(QDateTime)), this, SLOT(row()));
             }
             return;
         }
@@ -580,8 +580,8 @@ private slots:
         if (!(Start->dateTime() <= Finish->dateTime())) {
             Start->setStyleSheet("QDateTimeEdit{background: white;}");
             Finish->setStyleSheet("QDateTimeEdit{background: white;}");
-            disconnect(Start,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
-            disconnect(Finish,SIGNAL(dateTimeChanged(QDateTime)),this,SLOT(row()));
+            disconnect(Start, SIGNAL(dateTimeChanged(QDateTime)), this, SLOT(row()));
+            disconnect(Finish, SIGNAL(dateTimeChanged(QDateTime)), this, SLOT(row()));
         }
     }
 };
@@ -666,7 +666,7 @@ void qorgCalendar::setPointer(qorgAB* AB) {
 }
 QString qorgCalendar::output() {
     QString out;
-    for(uint i = 0; i < Eventv.size(); i++) {
+    for (uint i = 0; i < Eventv.size(); i++) {
         out.append(Output(Eventv[i].Name)+" ");
         out.append(Output(Eventv[i].Category)+" ");
         out.append(Output(Eventv[i].Priority)+" ");
@@ -695,7 +695,7 @@ void qorgCalendar::input(QString Input) {
                 event.Datet = InputDT(B[3]);
                 event.Edatet = InputDT(B[4]);
                 if (event.Datet > event.Edatet) {
-                    event.Edatet = QDateTime(event.Datet.date(),event.Edatet.time());
+                    event.Edatet = QDateTime(event.Datet.date(), event.Edatet.time());
                 }
                 if (B.size()-1 == 7) {
                     event.OccuranceType = static_cast<Event::Type>(InputC(B[5]));
@@ -737,7 +737,7 @@ QString qorgCalendar::getUpdate() {
         uint hour = 0;
         uint today = 0;
         uint tomorrow = 0;
-        for(uint i = 0; i < Eventv.size(); i++) {
+        for (uint i = 0; i < Eventv.size(); i++) {
             if (Eventv[i].occursOnDate(QDate::currentDate())) {
                 if (Eventv[i].starts(QDateTime::currentDateTime()).time() < QTime::currentTime().addSecs(3600)
                         && Eventv[i].starts(QDateTime::currentDateTime()).time() >= QTime::currentTime()) {
@@ -762,13 +762,13 @@ QString qorgCalendar::getUpdate() {
         return "Calendar: No event.";
     }
 }
-QString qorgCalendar::exportToICalendar(){
+QString qorgCalendar::exportToICalendar() {
     QString Output;
     Output.append("BEGIN:VCALENDAR\nVERSION:2.0\n");
     for (uint i = 0; i < Eventv.size(); i++) {
         QString vcalendar;
         vcalendar.append("BEGIN:VEVENT\n");
-        vcalendar.append("UID: "+QUuid::createUuidV5(QUuid(),QString(Eventv[i].Name+Eventv[i].Category+Eventv[i].Datet.toString(Qt::ISODate)+Eventv[i].Edatet.toString(Qt::ISODate)).toUtf8()).toString().mid(1,36)+"\n");
+        vcalendar.append("UID: "+QUuid::createUuidV5(QUuid(), QString(Eventv[i].Name+Eventv[i].Category+Eventv[i].Datet.toString(Qt::ISODate)+Eventv[i].Edatet.toString(Qt::ISODate)).toUtf8()).toString().mid(1, 36)+"\n");
         vcalendar.append("DTSTART:" + Eventv[i].Datet.toUTC().toString("yyyyMMddThhmmss")+"\n");
         vcalendar.append("DTEND:"+Eventv[i].Edatet.toUTC().toString("yyyyMMddThhmmss")+"\n");
         QString priority;
@@ -842,7 +842,7 @@ void qorgCalendar::setCalendar() {
     Calendar->clearContents();
     DayView->clear();
 
-    QDateTime Tmp = QDateTime(currentDate, QTime(0,0));
+    QDateTime Tmp = QDateTime(currentDate, QTime(0, 0));
     QTreeWidgetItem* Hours[24];
     for (int i = 0; i < 24; i++) {
         Hours[i] = new QTreeWidgetItem(DayView);
@@ -857,7 +857,7 @@ void qorgCalendar::setCalendar() {
         }
         uint BDSize = Events.size();
         for (char j = 5; j > 0; j--) {
-            for(uint k = 0; k < Eventv.size(); k++) {
+            for (uint k = 0; k < Eventv.size(); k++) {
                 if ((Eventv[k].Category == category
                      || category.isEmpty())
                         && Eventv[k].Priority == j
@@ -989,11 +989,11 @@ void qorgCalendar::setCalendar() {
 QList <Event> qorgCalendar::checkBd(QDate D) {
     QList <Event> BdEvent;
     QList <QString> BName = AB->getBirthdays(D);
-    for(int i = 0; i < BName.size(); i++) {
+    for (int i = 0; i < BName.size(); i++) {
         Event tmp;
         tmp.Name = BName[i];
-        tmp.Datet = QDateTime(D,QTime(8,0));
-        tmp.Edatet = QDateTime(D,QTime(12,0));
+        tmp.Datet = QDateTime(D, QTime(8, 0));
+        tmp.Edatet = QDateTime(D, QTime(12, 0));
         tmp.Priority = 0;
         BdEvent.append(tmp);
     }
@@ -1027,8 +1027,8 @@ void qorgCalendar::updateAll() {
             QTreeWidgetItem* Itm = new QTreeWidgetItem(Incoming);
             Itm->setText(0, Events[j].Name);
             Itm->setToolTip(0, Events[j].Name);
-            Itm->setText(1, Events[j].starts(QDateTime(QDate::currentDate().addDays(i),QTime(00,00))).toString("HH:mm dd.MM.yyyy"));
-            Itm->setText(2, Events[j].ends(QDateTime(QDate::currentDate().addDays(i),QTime(00,00))).toString("HH:mm dd.MM.yyyy"));
+            Itm->setText(1, Events[j].starts(QDateTime(QDate::currentDate().addDays(i), QTime(00, 00))).toString("HH:mm dd.MM.yyyy"));
+            Itm->setText(2, Events[j].ends(QDateTime(QDate::currentDate().addDays(i), QTime(00, 00))).toString("HH:mm dd.MM.yyyy"));
             Itm->setText(3, Events[j].Category);
             Itm->setText(4, "");
             Itm->setText(5, "");
@@ -1154,7 +1154,7 @@ void qorgCalendar::setNotification(bool first) {
     QList <Event> LT15Min;
     QList <Event> MT15LT30Min;
     int closest = 24*60*60;
-    for(uint i = 0; i < Eventv.size(); i++) {
+    for (uint i = 0; i < Eventv.size(); i++) {
         if (Eventv[i].occursOnDate(QDate::currentDate())
                 && QDateTime::currentDateTime().secsTo(Eventv[i].starts(QDateTime::currentDateTime())) >= 0) {
             if (first
@@ -1176,7 +1176,7 @@ void qorgCalendar::setNotification(bool first) {
     if (first
             && LT15Min.size() > 0) {
         Message.append("Immediate notification for:");
-        for(int i = 0; i < LT15Min.size(); i++) {
+        for (int i = 0; i < LT15Min.size(); i++) {
             Message.append("\n" + LT15Min[i].Name);
         }
     }
@@ -1185,12 +1185,12 @@ void qorgCalendar::setNotification(bool first) {
             Message.append("\n");
         }
         Message.append("At least 15 minuts notification for:");
-        for(int i = 0; i < MT15LT30Min.size(); i++) {
+        for (int i = 0; i < MT15LT30Min.size(); i++) {
             Message.append("\n" + MT15LT30Min[i].Name);
         }
     }
     if (!Message.isEmpty()) {
-        emit Notification("Event notification",Message);
+        emit Notification("Event notification", Message);
     }
     NTimer->setInterval((closest-15*60)*1000);
     NTimer->setSingleShot(true);

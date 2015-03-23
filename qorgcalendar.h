@@ -49,7 +49,7 @@ public:
 class qorgCalendar: public QWidget {
     Q_OBJECT
 public:
-    qorgCalendar(QWidget*);
+    explicit qorgCalendar(QWidget*);
     void setPointer(qorgAB*);
     QString output();
     void input(QString);
@@ -78,8 +78,8 @@ private:
     QTimer* MidnightTester;
     QTimer* Midnight;
     QTimer* NTimer;
-    // TODO Import from vCalendar
-    // TODO whole day events
+    // TODO(mkarol) Import from vCalendar
+    // TODO(mkarol) whole day events
 private slots:
     void Add(QDate);
     void Edit(uint);
@@ -94,7 +94,7 @@ private slots:
 
 signals:
     void updateTree();
-    void Notification(QString,QString);
+    void Notification(QString, QString);
     void TimeChangeBlock();
 };
 

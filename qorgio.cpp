@@ -30,8 +30,8 @@ bool qorgIO::ReadFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QStr
              IV = text.mid(15, text.indexOf("\n") - 15);
             Data = text.mid(text.indexOf("\n") + 1, text.length()-text.indexOf("\n") - 1);
         } else {
-            IV = text.mid(16, text.indexOf("\n",17) - 16);
-            Data = text.mid(text.indexOf("\n" ,17) + 1, text.length()-text.indexOf("\n",17) - 1);
+            IV = text.mid(16, text.indexOf("\n", 17) - 16);
+            Data = text.mid(text.indexOf("\n" , 17) + 1, text.length()-text.indexOf("\n", 17) - 1);
         }
 
         QByteArray IVBA = QByteArray::fromBase64(IV.toUtf8());
@@ -49,7 +49,7 @@ bool qorgIO::ReadFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QStr
             }
         } else {
             QByteArray P1 = Password;
-            IVBA = decryptUsingAES(QByteArray(), IVBA, Password).mid(0,16);
+            IVBA = decryptUsingAES(QByteArray(), IVBA, Password).mid(0, 16);
             Password = calculateXOR(P1, IVBA);
         }
 
@@ -83,10 +83,10 @@ bool qorgIO::ReadFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QStr
 
         return true;
     } else {
-        if(main->isHidden()) {
+        if (main->isHidden()) {
             QMessageBox::critical(main, "Error", "Cannot open file due to"+fileQFile.errorString());
         } else {
-            main->Notification("Error","Cannot open file due to: "+fileQFile.errorString());
+            main->Notification("Error", "Cannot open file due to: "+fileQFile.errorString());
         }
         return false;
     }
@@ -111,7 +111,7 @@ bool qorgIO::SaveFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QStr
     uchar IV[AES_BLOCK_SIZE];
     RAND_bytes(IV, AES_BLOCK_SIZE);
 
-    QByteArray IVBA(reinterpret_cast<const char*>(IV),AES_BLOCK_SIZE);
+    QByteArray IVBA(reinterpret_cast<const char*>(IV), AES_BLOCK_SIZE);
 
     memset(&IV, '\0', AES_BLOCK_SIZE);
 
@@ -137,10 +137,10 @@ bool qorgIO::SaveFile(QByteArray hash, QByteArray hashed, QOrganizer* main, QStr
         Out.clear();
         return true;
     } else {
-        if(main->isHidden()) {
+        if (main->isHidden()) {
             QMessageBox::critical(main, "Error", "Cannot save file due to"+file.errorString());
         } else {
-           main->Notification("Error","Cannot save file due to: "+file.errorString());
+           main->Notification("Error", "Cannot save file due to: "+file.errorString());
         }
         return false;
    }
@@ -149,8 +149,8 @@ QString qorgIO::From102(QString I) {
     QString O;
     QStringList L = I.split("\n\n");
     O.append(L[0]+"\n\n");
-    O.append(L[1]+"\n\n"); // Options
-    O.append(L[2]+"\n\n"); // Calendar
+    O.append(L[1]+"\n\n");  // Options
+    O.append(L[2]+"\n\n");  // Calendar
     if (!L[3].isEmpty()) {
         QStringList A = L[3].split("\n");
         for (int i = 0; i < A.size(); i++) {
@@ -187,18 +187,18 @@ QString qorgIO::From102(QString I) {
         }
     }
     O.append(L[3]+"\n");
-    O.append(L[4]+"\n\n"); // Mail
-    O.append(L[5]+"\n\n"); // Notes
-    O.append(L[6]+"\n\n"); // AddressBook
-    O.append(L[7]+"\n\n"); // Pass manager
-    O.append(L[8]); // AES Check
+    O.append(L[4]+"\n\n");  // Mail
+    O.append(L[5]+"\n\n");  // Notes
+    O.append(L[6]+"\n\n");  // AddressBook
+    O.append(L[7]+"\n\n");  // Pass manager
+    O.append(L[8]);  // AES Check
     return O;
 }
 QString qorgIO::From103(QString I) {
     QString O;
     QStringList L = I.split("\n\n");
     O.append(L[0]+"\n\n");
-    O.append(L[1]+"\n\n"); // Options
+    O.append(L[1]+"\n\n");  // Options
     if (!L[2].isEmpty()) {
         QStringList A = L[2].split("\n");
         for (int i = 0; i < A.size(); i++) {
@@ -207,7 +207,7 @@ QString qorgIO::From103(QString I) {
                 QString tmp = B[3];
                 B.removeAt(3);
                 B[6] = B[5];
-                B[5] = tmp; // Set order
+                B[5] = tmp;  // Set order
                 B.append("");
 
             }
@@ -227,9 +227,9 @@ QString qorgIO::From103(QString I) {
             L[2].append(A[i]);
         }
     }
-    O.append(L[2]+"\n"); // Calendar
-    O.append(L[3]+"\n\n"); // Mail
-    O.append(L[4]+"\n\n"); // Notes
+    O.append(L[2]+"\n");  // Calendar
+    O.append(L[3]+"\n\n");  // Mail
+    O.append(L[4]+"\n\n");  // Notes
     if (!L[5].isEmpty()) {
         QStringList A = L[5].split("\n");
         for (int i = 0; i < A.size(); i++) {
@@ -254,9 +254,9 @@ QString qorgIO::From103(QString I) {
             L[5].append(A[i]);
         }
     }
-    O.append(L[5]+"\n"); // Address Book
-    O.append(L[6]+"\n\n"); // RSS
-    O.append(L[7]+"\n\n"); // Pass manager
-    O.append(L[8]); // AES Check
+    O.append(L[5]+"\n");  // Address Book
+    O.append(L[6]+"\n\n");  // RSS
+    O.append(L[7]+"\n\n");  // Pass manager
+    O.append(L[8]);  // AES Check
     return O;
 }

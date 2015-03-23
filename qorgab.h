@@ -70,7 +70,7 @@ private:
     QPushButton* OKB;
     QPushButton* Cancel;
     QCompleter* C;
-    // TODO Import from vCard
+    // TODO(mkarol) Import from vCard
 private slots:
     void SelectPhoto();
     void ActivateBirthdayField();
