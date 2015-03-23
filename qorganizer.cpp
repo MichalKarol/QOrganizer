@@ -45,17 +45,17 @@ protected:
             timer.setSingleShot(true);
             QEventLoop loop;
             connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
-            connect(QNRe,SIGNAL(finished()),&loop,SLOT(quit()));
+            connect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
             timer.start(30000);   // 30 secs. timeout
             loop.exec();
-            if(timer.isActive()) {
+            if (timer.isActive()) {
                 timer.stop();
                 QString Reply = QNRe->readAll();
                 if (!Reply.isEmpty()) {
                     uint V = Reply.mid(0, 1).toInt();
                     uint SV = Reply.mid(1, 2).toInt();
                     if (V != 1 || SV != 4) {
-                        emit VersionUpdate(Reply.mid(0,4));
+                        emit VersionUpdate(Reply.mid(0, 4));
                     }
                 }
             } else {
@@ -121,7 +121,7 @@ QOrganizer::QOrganizer() {
 
     Calendar = new qorgCalendar(this);
     connect(Calendar, SIGNAL(updateTree()), this, SLOT(updateCalendar()));
-    connect(Calendar, SIGNAL(Notification(QString,QString)), this, SLOT(Notification(QString,QString)));
+    connect(Calendar, SIGNAL(Notification(QString, QString)), this, SLOT(Notification(QString, QString)));
     connect(Calendar, SIGNAL(TimeChangeBlock()), this, SLOT(Block()));
 
     Mail = new qorgMail(this);
@@ -606,10 +606,10 @@ void QOrganizer::NewPassword(QByteArray CA, QByteArray CB, QByteArray NA, QByteA
 
 void QOrganizer::Unlock() {
     QByteArray H = QCryptographicHash::hash(
-                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), BlockL->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), BlockL->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
                 +BlockL->text().toUtf8()
-                +QCryptographicHash::hash(BlockL->text().toUtf8(),QCryptographicHash::Sha3_512)
-                                  ,QCryptographicHash::Sha3_256);
+                +QCryptographicHash::hash(BlockL->text().toUtf8(), QCryptographicHash::Sha3_512)
+                                  , QCryptographicHash::Sha3_256);
     if (H == calculateXOR(hashed, hash)) {
         TreeWidget->setEnabled(true);
         BlockL->setStyleSheet("QLineEdit{background: white;}");

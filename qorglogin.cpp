@@ -102,15 +102,15 @@ void qorgLogin::Authentication() {
                 if (fileQFile.open(QIODevice::ReadOnly)) {
                     hash = RandomQByteArray();
                     hashed = calculateXOR(QCryptographicHash::hash(
-                                              QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                                              QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), Line[1]->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
                                               +Line[1]->text().toUtf8()
-                                              +QCryptographicHash::hash(Line[1]->text().toUtf8(),QCryptographicHash::Sha3_512)
-                                                                ,QCryptographicHash::Sha3_256),hash);
+                                              +QCryptographicHash::hash(Line[1]->text().toUtf8(), QCryptographicHash::Sha3_512)
+                                                                , QCryptographicHash::Sha3_256), hash);
                     QByteArray Header = fileQFile.read(15);
                     if (Header == "QOrganizer 1.02"
                             || Header == "QOrganizer 1.03") {
                         QByteArray hash1 = RandomQByteArray();
-                        QByteArray hashed1 = calculateXOR(Line[1]->text().toUtf8()+QByteArray(32-Line[1]->text().length(),'\0'), hash1);
+                        QByteArray hashed1 = calculateXOR(Line[1]->text().toUtf8()+QByteArray(32-Line[1]->text().length(), '\0'), hash1);
                         if (qorgIO::ReadFile(hash1, hashed1, pointer, path)) {
                             pointer->setUser(Line[0]->text(), hash, hashed);
                             this->accept();
@@ -142,14 +142,14 @@ void qorgLogin::Register() {
         if (QFile::exists(path)) {
             QMessageBox::critical(this, "Error", "User already exists");
         } else {
-            QString Repeat = QInputDialog::getText(this,"Passsword","Repeat password",QLineEdit::Password);
+            QString Repeat = QInputDialog::getText(this, "Passsword", "Repeat password", QLineEdit::Password);
             if (Repeat == Line[1]->text()) {
                 hash = RandomQByteArray();
                 hashed = calculateXOR(QCryptographicHash::hash(
-                                          QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),Line[1]->text().toUtf8()).toByteArray(),QCryptographicHash::Sha3_512)
+                                          QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), Line[1]->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
                                           +Line[1]->text().toUtf8()
-                                          +QCryptographicHash::hash(Line[1]->text().toUtf8(),QCryptographicHash::Sha3_512)
-                                                            ,QCryptographicHash::Sha3_256),hash);
+                                          +QCryptographicHash::hash(Line[1]->text().toUtf8(), QCryptographicHash::Sha3_512)
+                                                            , QCryptographicHash::Sha3_256), hash);
                 Line[1]->clear();
                 qorgIO::SaveFile(hash, hashed, pointer, path);
                 if (qorgIO::ReadFile(hash, hashed, pointer, path)) {

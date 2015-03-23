@@ -47,13 +47,12 @@ qorgOptions::qorgOptions(QWidget* parent) :QWidget(parent) {
     PasswordQPushButton = new QPushButton("Change password", WidgetsQWidget[0]);
     connect(PasswordQPushButton, SIGNAL(clicked()), this, SLOT(ChangePassword()));
     QGridLayout* W0QGridLayout = new QGridLayout(WidgetsQWidget[0]);
-    W0QGridLayout->addWidget(CurrentPasswordQLabel,0,0);
-    W0QGridLayout->addWidget(CurrentPasswordQLineEdit,1,0);
-    W0QGridLayout->addWidget(NewPasswordQLabel,2,0);
-    W0QGridLayout->addWidget(NewPasswordQLineEdit,3,0);
-    W0QGridLayout->addWidget(PasswordQPushButton,4,0);
-    //WidgetsQWidget[0]->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-    BoxesQGroupBox[0] = new QGroupBox("Changing password",this);
+    W0QGridLayout->addWidget(CurrentPasswordQLabel, 0, 0);
+    W0QGridLayout->addWidget(CurrentPasswordQLineEdit, 1, 0);
+    W0QGridLayout->addWidget(NewPasswordQLabel, 2, 0);
+    W0QGridLayout->addWidget(NewPasswordQLineEdit, 3, 0);
+    W0QGridLayout->addWidget(PasswordQPushButton, 4, 0);
+    BoxesQGroupBox[0] = new QGroupBox("Changing password", this);
     BoxesQGroupBox[0]->setLayout(W0QGridLayout);
     BoxesQGroupBox[0]->hide();
 
@@ -65,82 +64,80 @@ qorgOptions::qorgOptions(QWidget* parent) :QWidget(parent) {
     IntervalQPushButton = new QPushButton("Change intervals", WidgetsQWidget[1]);
     connect(IntervalQPushButton, SIGNAL(clicked()), this, SLOT(ChangeInterval()));
     QGridLayout* W1QGridLayout = new QGridLayout(WidgetsQWidget[1]);
-    W1QGridLayout->addWidget(UpdateQLabel,0,0);
-    W1QGridLayout->addWidget(BlockQLabel,0,1);
-    W1QGridLayout->addWidget(UpdateIntervalQSpinBox,1,0);
-    W1QGridLayout->addWidget(BlockIntervalQSpinBox,1,1);
-    W1QGridLayout->addWidget(IntervalQPushButton,2,0,1,2);
-    //WidgetsQWidget[1]->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-    BoxesQGroupBox[1] = new QGroupBox("Changing intervals",this);
+    W1QGridLayout->addWidget(UpdateQLabel, 0, 0);
+    W1QGridLayout->addWidget(BlockQLabel, 0, 1);
+    W1QGridLayout->addWidget(UpdateIntervalQSpinBox, 1, 0);
+    W1QGridLayout->addWidget(BlockIntervalQSpinBox, 1, 1);
+    W1QGridLayout->addWidget(IntervalQPushButton, 2, 0, 1, 2);
+    BoxesQGroupBox[1] = new QGroupBox("Changing intervals", this);
     BoxesQGroupBox[1]->setLayout(W1QGridLayout);
     BoxesQGroupBox[1]->hide();
 
     WidgetsQWidget[2] = new QWidget(this);
-    iCalendarQLabel = new QLabel("Export calendar to iCalendar",WidgetsQWidget[2]);
-    iCalendarQPushButton = new QPushButton("Export",WidgetsQWidget[2]);
-    connect(iCalendarQPushButton,SIGNAL(clicked()),this,SLOT(ExportToVSth()));
-    vNoteQLabel = new QLabel("Export notes to vNote",WidgetsQWidget[2]);
-    vNoteQPushButton = new QPushButton("Export",WidgetsQWidget[2]);
-    connect(vNoteQPushButton,SIGNAL(clicked()),this,SLOT(ExportToVSth()));
-    vCardQLabel = new QLabel("Export address book to vCard",WidgetsQWidget[2]);
-    vCardQPushButton = new QPushButton("Export",WidgetsQWidget[2]);
-    connect(vCardQPushButton,SIGNAL(clicked()),this,SLOT(ExportToVSth()));
+    iCalendarQLabel = new QLabel("Export calendar to iCalendar", WidgetsQWidget[2]);
+    iCalendarQPushButton = new QPushButton("Export", WidgetsQWidget[2]);
+    connect(iCalendarQPushButton, SIGNAL(clicked()), this, SLOT(ExportToVSth()));
+    vNoteQLabel = new QLabel("Export notes to vNote", WidgetsQWidget[2]);
+    vNoteQPushButton = new QPushButton("Export", WidgetsQWidget[2]);
+    connect(vNoteQPushButton, SIGNAL(clicked()), this, SLOT(ExportToVSth()));
+    vCardQLabel = new QLabel("Export address book to vCard", WidgetsQWidget[2]);
+    vCardQPushButton = new QPushButton("Export", WidgetsQWidget[2]);
+    connect(vCardQPushButton, SIGNAL(clicked()), this, SLOT(ExportToVSth()));
     QGridLayout* W2QGridLayout = new QGridLayout(WidgetsQWidget[2]);
-    W2QGridLayout->addWidget(iCalendarQLabel,0,0);
-    W2QGridLayout->addWidget(iCalendarQPushButton,0,1);
-    W2QGridLayout->addWidget(vNoteQLabel,1,0);
-    W2QGridLayout->addWidget(vNoteQPushButton,1,1);
-    W2QGridLayout->addWidget(vCardQLabel,2,0);
-    W2QGridLayout->addWidget(vCardQPushButton,2,1);
-    //WidgetsQWidget[2]->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-    BoxesQGroupBox[2] = new QGroupBox("Exporting",this);
+    W2QGridLayout->addWidget(iCalendarQLabel, 0, 0);
+    W2QGridLayout->addWidget(iCalendarQPushButton, 0, 1);
+    W2QGridLayout->addWidget(vNoteQLabel, 1, 0);
+    W2QGridLayout->addWidget(vNoteQPushButton, 1, 1);
+    W2QGridLayout->addWidget(vCardQLabel, 2, 0);
+    W2QGridLayout->addWidget(vCardQPushButton, 2, 1);
+    BoxesQGroupBox[2] = new QGroupBox("Exporting", this);
     BoxesQGroupBox[2]->setLayout(W2QGridLayout);
     BoxesQGroupBox[2]->hide();
 
     WidgetsQWidget[3] = new QWidget(this);
-    ProxyTypeQLabel = new QLabel("Proxy type",this);
+    ProxyTypeQLabel = new QLabel("Proxy type", this);
     ProxyTypeQComboBox = new QComboBox(this);
     ProxyTypeQComboBox->addItem("None");
     ProxyTypeQComboBox->addItem("SOCKS5");
     ProxyTypeQComboBox->addItem("HTTP");
     ProxyTypeQComboBox->setCurrentIndex(0);
-    connect(ProxyTypeQComboBox,SIGNAL(currentIndexChanged(int)),this,SLOT(proxyTypeChanged(int)));
-    ProxyServerQLabel = new QLabel("SOCKS server",this);
+    connect(ProxyTypeQComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(proxyTypeChanged(int)));
+    ProxyServerQLabel = new QLabel("SOCKS server", this);
     ProxyServerQLabel->setDisabled(true);
     ProxyServerQLineEdit = new QLineEdit(this);
     ProxyServerQLineEdit->setDisabled(true);
-    ProxyPortQLabel = new QLabel("SOCKS port",this);
+    ProxyPortQLabel = new QLabel("SOCKS port", this);
     ProxyPortQLabel->setDisabled(true);
     ProxyPortQSpinBox = new QSpinBox(this);
-    ProxyPortQSpinBox->setRange(0,65535);
+    ProxyPortQSpinBox->setRange(0, 65535);
     ProxyPortQSpinBox->setValue(1080);
     ProxyPortQSpinBox->setDisabled(true);
-    ProxyUsernameQLabel = new QLabel("SOCKS username",this);
+    ProxyUsernameQLabel = new QLabel("SOCKS username", this);
     ProxyUsernameQLabel->setDisabled(true);
     ProxyUsernameQLineEdit = new QLineEdit(this);
     ProxyUsernameQLineEdit->setDisabled(true);
-    ProxyPasswordQLabel = new QLabel("SOCKS password",this);
+    ProxyPasswordQLabel = new QLabel("SOCKS password", this);
     ProxyPasswordQLabel->setDisabled(true);
     ProxyPasswordQLineEdit = new QLineEdit(this);
     ProxyPasswordQLineEdit->setEchoMode(QLineEdit::Password);
     ProxyPasswordQLineEdit->setDisabled(true);
-    ProxySetupQPushButton = new QPushButton("Setup",this);
+    ProxySetupQPushButton = new QPushButton("Setup", this);
     ProxySetupQPushButton->setDisabled(true);
 
-    connect(ProxySetupQPushButton,SIGNAL(clicked()),this,SLOT(setupProxy()));
+    connect(ProxySetupQPushButton, SIGNAL(clicked()), this, SLOT(setupProxy()));
     QGridLayout* W3QGridLayout = new QGridLayout(WidgetsQWidget[3]);
-    W3QGridLayout->addWidget(ProxyTypeQLabel,0,0);
-    W3QGridLayout->addWidget(ProxyTypeQComboBox,0,1);
-    W3QGridLayout->addWidget(ProxyServerQLabel,1,0);
-    W3QGridLayout->addWidget(ProxyServerQLineEdit,1,1);
-    W3QGridLayout->addWidget(ProxyPortQLabel,2,0);
-    W3QGridLayout->addWidget(ProxyPortQSpinBox,2,1);
-    W3QGridLayout->addWidget(ProxyUsernameQLabel,3,0);
-    W3QGridLayout->addWidget(ProxyUsernameQLineEdit,3,1);
-    W3QGridLayout->addWidget(ProxyPasswordQLabel,4,0);
-    W3QGridLayout->addWidget(ProxyPasswordQLineEdit,4,1);
-    W3QGridLayout->addWidget(ProxySetupQPushButton,5,0,1,2);
-    BoxesQGroupBox[3] = new QGroupBox("Proxy",this);
+    W3QGridLayout->addWidget(ProxyTypeQLabel, 0, 0);
+    W3QGridLayout->addWidget(ProxyTypeQComboBox, 0, 1);
+    W3QGridLayout->addWidget(ProxyServerQLabel, 1, 0);
+    W3QGridLayout->addWidget(ProxyServerQLineEdit, 1, 1);
+    W3QGridLayout->addWidget(ProxyPortQLabel, 2, 0);
+    W3QGridLayout->addWidget(ProxyPortQSpinBox, 2, 1);
+    W3QGridLayout->addWidget(ProxyUsernameQLabel, 3, 0);
+    W3QGridLayout->addWidget(ProxyUsernameQLineEdit, 3, 1);
+    W3QGridLayout->addWidget(ProxyPasswordQLabel, 4, 0);
+    W3QGridLayout->addWidget(ProxyPasswordQLineEdit, 4, 1);
+    W3QGridLayout->addWidget(ProxySetupQPushButton, 5, 0, 1, 2);
+    BoxesQGroupBox[3] = new QGroupBox("Proxy", this);
     BoxesQGroupBox[3]->setLayout(W3QGridLayout);
     BoxesQGroupBox[3]->hide();
 
@@ -152,10 +149,10 @@ qorgOptions::qorgOptions(QWidget* parent) :QWidget(parent) {
     BlacklistedQListWidget = new QListWidget(WidgetsQWidget[3]);
     connect(BlacklistedQListWidget, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(CertificateClicked(QModelIndex)));
     QGridLayout* W4QGridLayout = new QGridLayout(WidgetsQWidget[4]);
-    W4QGridLayout->addWidget(AcceptedQLabel,0,0);
-    W4QGridLayout->addWidget(BlacklistedQLabel,0,1);
-    W4QGridLayout->addWidget(AcceptedQListWidget,1,0);
-    W4QGridLayout->addWidget(BlacklistedQListWidget,1,1);
+    W4QGridLayout->addWidget(AcceptedQLabel, 0, 0);
+    W4QGridLayout->addWidget(BlacklistedQLabel, 0, 1);
+    W4QGridLayout->addWidget(AcceptedQListWidget, 1, 0);
+    W4QGridLayout->addWidget(BlacklistedQListWidget, 1, 1);
     WidgetsQWidget[4]->hide();
 
     LayoutQGridLayout = new QGridLayout(this);
@@ -179,13 +176,13 @@ void qorgOptions::setWidget(int W) {
         if (W == -1) {
             LayoutQGridLayout->removeWidget(WidgetsQWidget[4]);
             WidgetsQWidget[4]->hide();
-            LayoutQGridLayout->addWidget(BoxesQGroupBox[0],0,0);
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[0], 0, 0);
             BoxesQGroupBox[0]->show();
-            LayoutQGridLayout->addWidget(BoxesQGroupBox[1],1,0);
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[1], 1, 0);
             BoxesQGroupBox[1]->show();
-            LayoutQGridLayout->addWidget(BoxesQGroupBox[2],2,0);
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[2], 2, 0);
             BoxesQGroupBox[2]->show();
-            LayoutQGridLayout->addWidget(BoxesQGroupBox[3],3,0);
+            LayoutQGridLayout->addWidget(BoxesQGroupBox[3], 3, 0);
             BoxesQGroupBox[3]->show();
             currentWidget = -1;
         } else {
@@ -197,7 +194,7 @@ void qorgOptions::setWidget(int W) {
             BoxesQGroupBox[2]->hide();
             LayoutQGridLayout->removeWidget(BoxesQGroupBox[3]);
             BoxesQGroupBox[3]->hide();
-            LayoutQGridLayout->addWidget(WidgetsQWidget[4],0,0);
+            LayoutQGridLayout->addWidget(WidgetsQWidget[4], 0, 0);
             WidgetsQWidget[4]->show();
             currentWidget = 0;
             for (int i = SSLCertTmp.size(); i > 0; i--) {
@@ -328,16 +325,16 @@ void qorgOptions::ChangePassword() {
             && !NewPasswordQLineEdit->text().isEmpty()) {
         QByteArray CA = RandomQByteArray();
         QByteArray CB = calculateXOR(QCryptographicHash::hash(
-                                         QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),CurrentPasswordQLineEdit->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
+                                         QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), CurrentPasswordQLineEdit->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
                                          +CurrentPasswordQLineEdit->text().toUtf8()
                                          +QCryptographicHash::hash(CurrentPasswordQLineEdit->text().toUtf8(), QCryptographicHash::Sha3_512)
-                                         ,QCryptographicHash::Sha3_256),CA);
+                                         , QCryptographicHash::Sha3_256), CA);
         QByteArray NA = RandomQByteArray();
         QByteArray NB = calculateXOR(QCryptographicHash::hash(
-                                         QCryptographicHash::hash(QUuid::createUuidV5(QUuid(),NewPasswordQLineEdit->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
+                                         QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), NewPasswordQLineEdit->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
                                          +NewPasswordQLineEdit->text().toUtf8()
                                          +QCryptographicHash::hash(NewPasswordQLineEdit->text().toUtf8(), QCryptographicHash::Sha3_512)
-                                         ,QCryptographicHash::Sha3_256),NA);
+                                         , QCryptographicHash::Sha3_256), NA);
         CurrentPasswordQLineEdit->clear();
         NewPasswordQLineEdit->clear();
         CurrentPasswordQLineEdit->setStyleSheet("QLineEdit{background: white;}");
@@ -351,7 +348,7 @@ void qorgOptions::ExportToVSth() {
     QString Out;
     QString Extension;
     QString Suffix;
-    if(ButtonQPushButton == iCalendarQPushButton) {
+    if (ButtonQPushButton == iCalendarQPushButton) {
         Out = Calendar->exportToICalendar();
         Extension = "vCalendar (*.ics)";
         Suffix = ".ics";
@@ -364,7 +361,7 @@ void qorgOptions::ExportToVSth() {
         Extension = "VCard (*.vcf)";
         Suffix = ".vcf";
     }
-    QString path = QFileDialog::getSaveFileName(this,"Export to ...",QDir::homePath(),Extension);
+    QString path = QFileDialog::getSaveFileName(this, "Export to ...", QDir::homePath(), Extension);
     if (!path.isEmpty()) {
         if (!path.endsWith(Suffix)) {
             path = path + Suffix;

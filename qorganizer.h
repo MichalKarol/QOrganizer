@@ -83,6 +83,6 @@ private slots:
     // Block
     void Unlock();
 public slots:
-    void Notification(QString,QString);
+    void Notification(QString, QString);
 };
 #endif  // QORGANIZER_H_

@@ -30,7 +30,7 @@ public:
             Scene->addPixmap(QPixmap::fromImage(QImage(":/ad/Default.png")));
         }
         Photo = new QGraphicsView(Scene, this);
-        Photo->setFixedSize(130,130);
+        Photo->setFixedSize(130, 130);
         L[0]=new QLabel(P->Name+" "+P->Surname, this);
         L[1]=new QLabel(P->Category, this);
         L[2]=new QLabel(P->Town, this);
@@ -41,7 +41,7 @@ public:
         L[5]=new QLabel(P->Email, this);
         L[6]=new QLabel(this);
         if (!P->Birthday.isEmpty()) {
-            L[6]->setText("Birthday: "+QDate::fromString(P->Birthday,Qt::ISODate).toString("dd.MM.yyyy"));
+            L[6]->setText("Birthday: "+QDate::fromString(P->Birthday, Qt::ISODate).toString("dd.MM.yyyy"));
         }
         Edit = new QPushButton(QIcon(":/main/Edit.png"), "", this);
         Edit->setStyleSheet("QPushButton {border: 0px solid white;}");
@@ -97,20 +97,20 @@ qorgAB::qorgAB(QWidget* parent) :QWidget(parent) {
         E[i]=new QLineEdit(this);
     }
 
-    Photo = new QPushButton(QIcon(":/ad/Default.png"),"",this);
-    Photo->setFixedSize(128,128);
-    Photo->setIconSize(QSize(128,128));
-    connect(Photo,SIGNAL(clicked()),this,SLOT(SelectPhoto()));
+    Photo = new QPushButton(QIcon(":/ad/Default.png"), "", this);
+    Photo->setFixedSize(128, 128);
+    Photo->setIconSize(QSize(128, 128));
+    connect(Photo, SIGNAL(clicked()), this, SLOT(SelectPhoto()));
 
-    C = new QCompleter(E[2]); //Set completer for category
+    C = new QCompleter(E[2]);  // Set completer for category
     E[2]->setCompleter(C);
 
-    QIntValidator* V = new QIntValidator(this); //House number and apartment must be int
+    QIntValidator* V = new QIntValidator(this);  // House number and apartment must be int
     E[5]->setValidator(V);
     E[6]->setValidator(V);
 
     BDayCheckBox = new QCheckBox(this);
-    connect(BDayCheckBox,SIGNAL(stateChanged(int)),this,SLOT(ActivateBirthdayField()));
+    connect(BDayCheckBox, SIGNAL(stateChanged(int)), this, SLOT(ActivateBirthdayField()));
     CalendarPopup = new QCalendarWidget(this);
     D = new QDateEdit(QDate::currentDate(), this);
     D->setCalendarPopup(true);
@@ -122,7 +122,7 @@ qorgAB::qorgAB(QWidget* parent) :QWidget(parent) {
     ExtraInformationField->setAcceptRichText(false);
 
     Add = new QPushButton(QIcon(":/main/Add.png"), "Add", this);
-    Add->setShortcut(Qt::Key_Return);;
+    Add->setShortcut(Qt::Key_Return);
     connect(Add, SIGNAL(clicked()), this, SLOT(AddS()));
 
     OKB = new QPushButton(this);
@@ -139,7 +139,7 @@ qorgAB::qorgAB(QWidget* parent) :QWidget(parent) {
     HLayout->addWidget(List);
     La = new QGridLayout();
     QGridLayout* GLa = new QGridLayout();
-    GLa->addWidget(Photo, 0, 0, 3,3);
+    GLa->addWidget(Photo, 0, 0, 3, 3);
     GLa->addWidget(L[0], 0, 3);
     GLa->addWidget(E[0], 0, 4);
     GLa->addWidget(L[1], 1, 3);
@@ -168,7 +168,7 @@ qorgAB::qorgAB(QWidget* parent) :QWidget(parent) {
     Ha->addWidget(L[8]);
     Ha->addWidget(D);
     La->addLayout(Ha, 7, 0, 1, 2);
-    La->addWidget(ExtraInformationField,8,0,4,2);
+    La->addWidget(ExtraInformationField, 8, 0, 4, 2);
     La->addWidget(Add, 12, 0, 1, 2);
     HLayout->addLayout(La);
 }
@@ -230,7 +230,7 @@ QList  <QString>  qorgAB::getBirthdays(QDate D) {
     QList  <QString>  BList;
     for (uint i = 0; i < Personv.size(); i++) {
         if (!Personv[i].Birthday.isEmpty()) {
-            QDate BD = QDate::fromString(Personv[i].Birthday,Qt::ISODate);
+            QDate BD = QDate::fromString(Personv[i].Birthday, Qt::ISODate);
             if (BD.day() == D.day() && BD.month() == D.month()) {
                 BList.append(Personv[i].Name+" "+Personv[i].Surname+" ("+QString::number(D.year()-BD.year())+")");
             }
@@ -239,7 +239,7 @@ QList  <QString>  qorgAB::getBirthdays(QDate D) {
     if (!QDate::isLeapYear(D.year())
             && D .month() == 2
             && D.day() == 28) {
-        return getBirthdays(QDate(D.year(),2,29));
+        return getBirthdays(QDate(D.year(), 2, 29));
     }
 
     return BList;
@@ -258,10 +258,10 @@ void qorgAB::SelectPhoto() {
     if (!ImagePath.isEmpty()) {
         QImage Image;
         if (Image.load(ImagePath)) {
-            Image = Image.scaled(100,100,Qt::KeepAspectRatio);
+            Image = Image.scaled(100, 100, Qt::KeepAspectRatio);
             Photo->setIcon(QIcon(QPixmap::fromImage(Image)));
         } else {
-            QMessageBox::critical(this,"Error","File is not an supported image.");
+            QMessageBox::critical(this, "Error", "File is not an supported image.");
         }
     } else {
         Photo->setIcon(QIcon(":/ad/Default.png"));
@@ -301,11 +301,11 @@ void qorgAB::AddS() {
         if (BDayCheckBox->isChecked()) {
             temp.Birthday = D->date().toString(Qt::ISODate);
         }
-        if (Photo->icon().pixmap(100,100).toImage() != QIcon(":/ad/Default.png").pixmap(100,100).toImage()) {
-            QPixmap tempPixmap = Photo->icon().pixmap(100,100);
+        if (Photo->icon().pixmap(100, 100).toImage() != QIcon(":/ad/Default.png").pixmap(100, 100).toImage()) {
+            QPixmap tempPixmap = Photo->icon().pixmap(100, 100);
             QBuffer buffer(&Personv[lastIID].Photo);
             buffer.open(QIODevice::WriteOnly);
-            tempPixmap.save(&buffer,"JPG");
+            tempPixmap.save(&buffer, "JPG");
         }
         temp.ExtraInformation = ExtraInformationField->toPlainText();
         for (uint i = 0; i < 9; i++) {
@@ -372,7 +372,7 @@ void qorgAB::Edit(uint IID) {
     E[7]->setText(I->Email);
     E[8]->setText(I->Mobile);
     if (!I->Birthday.isEmpty()) {
-        D->setDate(QDate::fromString(I->Birthday,Qt::ISODate));
+        D->setDate(QDate::fromString(I->Birthday, Qt::ISODate));
         BDayCheckBox->setChecked(true);
     }
     if (!I->Photo.isEmpty()) {
@@ -422,11 +422,11 @@ void qorgAB::OK() {
         } else {
             Personv[lastIID].Birthday.clear();
         }
-        if (Photo->icon().pixmap(100,100).toImage() != QIcon(":/ad/Default.png").pixmap(100,100).toImage()) {
-            QPixmap tempPixmap = Photo->icon().pixmap(100,100);
+        if (Photo->icon().pixmap(100, 100).toImage() != QIcon(":/ad/Default.png").pixmap(100, 100).toImage()) {
+            QPixmap tempPixmap = Photo->icon().pixmap(100, 100);
             QBuffer buffer(&Personv[lastIID].Photo);
             buffer.open(QIODevice::WriteOnly);
-            tempPixmap.save(&buffer,"JPG");
+            tempPixmap.save(&buffer, "JPG");
         }
         Personv[lastIID].ExtraInformation = ExtraInformationField->toPlainText();
         emit updateTree();
@@ -523,7 +523,7 @@ QString qorgAB::exportToVCard() {
         }
         if (!Personv[i].Birthday.isEmpty()) {
             vcard.append("BDAY:"
-                         + QDate::fromString(Personv[i].Birthday,Qt::ISODate).toString("yyyy-MM-dd")
+                         + QDate::fromString(Personv[i].Birthday, Qt::ISODate).toString("yyyy-MM-dd")
                          +"\n");
         }
         if (!Personv[i].Category.isEmpty()) {
