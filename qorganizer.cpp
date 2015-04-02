@@ -53,7 +53,7 @@ protected:
                 QString Reply = QNRe->readAll();
                 if (!Reply.isEmpty()) {
                     uint V = Reply.mid(0, 1).toInt();
-                    uint SV = Reply.mid(1, 2).toInt();
+                    uint SV = Reply.mid(2, 2).toInt();
                     if (V != 1 || SV != 4) {
                         emit VersionUpdate(Reply.mid(0, 4));
                     }
