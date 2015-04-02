@@ -45,7 +45,10 @@ private:
     void get();
 protected:
     void run();
+private slots:
+    void sslErrorsSLOT(QList<QSslError>);
 signals:
+    void sslErrors(QNetworkReply*, QList<QSslError>);
     void Downloaded(QString);
 };
 Download::Download(qorgRSS* parent, RSSChannel* Channel) :QThread(parent) {
@@ -72,6 +75,7 @@ void Download::get() {
     QEventLoop loop;
     connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
     connect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
+    connect(QNRe, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(sslErrorsSLOT(QList<QSslError>)));
     timer.start(30000);   // 30 secs. timeout
     loop.exec();
     if (timer.isActive()) {
@@ -98,6 +102,10 @@ void Download::get() {
     }
     delete QNRe;
     delete QNAM;
+}
+void Download::sslErrorsSLOT(QList<QSslError> J) {
+    QNetworkReply* I = qobject_cast<QNetworkReply*>(QObject::sender());
+    emit sslErrors(I, J);
 }
 
 QString stringBetween(QString Tag, QString Text) {

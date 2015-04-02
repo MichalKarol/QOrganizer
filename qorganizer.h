@@ -85,4 +85,6 @@ private slots:
 public slots:
     void Notification(QString, QString);
 };
+// TODO(mkarol) QThread rebuild; https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-full-explanation/
+// TODO(mkarol) Bold TreeWidget's children which have: event today or unreded email or unreded post.
 #endif  // QORGANIZER_H_

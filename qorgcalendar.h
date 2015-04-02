@@ -79,7 +79,7 @@ private:
     QTimer* Midnight;
     QTimer* NTimer;
     // TODO(mkarol) Import from vCalendar
-    // TODO(mkarol) whole day events
+    // TODO(mkarol) Whole day events
 private slots:
     void Add(QDate);
     void Edit(uint);

@@ -36,8 +36,6 @@ protected:
     void run() {
         QNetworkAccessManager* QNAM = new QNetworkAccessManager();
         QNetworkRequest QNR(QUrl("https://raw.githubusercontent.com//MichalKarol/QOrganizer/master/latestVersion.md"));
-        QNetworkReply* QNRe = QNAM->get(QNR);
-        QNRe->ignoreSslErrors();
 
         while (running) {
             work = true;
@@ -45,6 +43,8 @@ protected:
             timer.setSingleShot(true);
             QEventLoop loop;
             connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+            QNetworkReply* QNRe = QNAM->get(QNR);
+            QNRe->ignoreSslErrors();
             connect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
             timer.start(30000);   // 30 secs. timeout
             loop.exec();
@@ -59,8 +59,8 @@ protected:
                     }
                 }
             } else {
-               disconnect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
-               QNRe->abort();
+                disconnect(QNRe, SIGNAL(finished()), &loop, SLOT(quit()));
+                QNRe->abort();
             }
             delete QNRe;
             work = false;
@@ -551,17 +551,23 @@ void QOrganizer::closeEvent(QCloseEvent* E) {
         this->hide();
         E->ignore();
     } else {
-        QEventLoop L1;
-        VU->end();
-        connect(VU, SIGNAL(finished()), &L1, SLOT(quit()));
-        L1.exec();
-        Closer* C = new Closer(this, Mail, RSS);
-        QEventLoop L2;
-        connect(C, SIGNAL(finished()), &L2, SLOT(quit()));
-        C->start();
-        L2.exec();
-        if (qorgIO::SaveFile(hash, hashed, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
-            E->accept();
+        this->Block();
+        this->show();
+        if (QMessageBox::question(this, "Closing", "Are you sure you want to close QOrganizer?") == QMessageBox::Yes) {
+            QEventLoop L1;
+            VU->end();
+            connect(VU, SIGNAL(finished()), &L1, SLOT(quit()));
+            L1.exec();
+            Closer* C = new Closer(this, Mail, RSS);
+            QEventLoop L2;
+            connect(C, SIGNAL(finished()), &L2, SLOT(quit()));
+            C->start();
+            L2.exec();
+            if (qorgIO::SaveFile(hash, hashed, this, QDir::homePath()+QDir::separator()+".qorganizer"+QDir::separator()+QString::fromUtf8(QCryptographicHash::hash(user.toUtf8(), QCryptographicHash::Sha3_512).toBase64()).remove("/")+".org")) {
+                E->accept();
+            } else {
+                E->ignore();
+            }
         } else {
             E->ignore();
         }
@@ -609,7 +615,7 @@ void QOrganizer::Unlock() {
                 QCryptographicHash::hash(QUuid::createUuidV5(QUuid(), BlockL->text().toUtf8()).toByteArray(), QCryptographicHash::Sha3_512)
                 +BlockL->text().toUtf8()
                 +QCryptographicHash::hash(BlockL->text().toUtf8(), QCryptographicHash::Sha3_512)
-                                  , QCryptographicHash::Sha3_256);
+                , QCryptographicHash::Sha3_256);
     if (H == calculateXOR(hashed, hash)) {
         TreeWidget->setEnabled(true);
         BlockL->setStyleSheet("QLineEdit{background: white;}");
