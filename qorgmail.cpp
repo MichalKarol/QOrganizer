@@ -624,7 +624,7 @@ void SSLCON::ProcessTos(QList <QString> FTL, vector <Email*>* Vec, uint Fn) {
     for (int k = 0; k <FTL.size() && Fn+k-1 < Vec->size(); k++) {
         if (FTL[k].contains("TO:", Qt::CaseInsensitive)) {
             FTL[k] = FTL[k].mid(FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)+4, FTL[k].indexOf("\r\n)", FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)+4)-FTL[k].indexOf("TO: ", 0, Qt::CaseInsensitive)-4);
-            QList <QString> FTLL = FTL[k].split(", ");
+            QList <QString> FTLL = FTL[k].split(",");
             for (int l = 0; l < FTLL.size(); l++) {
                 QString Email =  FTLL[l].mid(FTLL[l].indexOf("<")+1, FTLL[l].indexOf(">")-FTLL[l].indexOf("<")-1).simplified();
                 if (find((*Vec)[Fn+k-1]->Email_RecipientsTo.begin(), (*Vec)[Fn+k-1]->Email_RecipientsTo.end(), Email) == (*Vec)[Fn+k-1]->Email_RecipientsTo.end() &&
@@ -640,7 +640,7 @@ void SSLCON::ProcessCCs(QList <QString> FCL, vector <Email*>* Vec, uint Fn) {
     for (int k = 0; k < FCL.size() && Fn+k-1 < Vec->size(); k++) {
         if (FCL[k].contains("CC:", Qt::CaseInsensitive)) {
             FCL[k] = FCL[k].mid(FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)+4, FCL[k].indexOf("\r\n)", FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)+4)-FCL[k].indexOf("CC: ", 0, Qt::CaseInsensitive)-4);
-            QList <QString> FTLL = FCL[k].split(", ");
+            QList <QString> FTLL = FCL[k].split(",");
             for (int l = 0; l < FTLL.size(); l++) {
                 QString Email =  FTLL[l].mid(FTLL[l].indexOf("<")+1, FTLL[l].indexOf(">")-FTLL[l].indexOf("<")-1).simplified();
                 if (find((*Vec)[Fn+k-1]->Email_RecipientsCC.begin(), (*Vec)[Fn+k-1]->Email_RecipientsCC.end(), Email) == (*Vec)[Fn+k-1]->Email_RecipientsCC.end() &&
@@ -2344,12 +2344,12 @@ public:
                     StringTo = E->Email_From;
                 }
                 for (uint i =  0; i < E->Email_RecipientsTo.size(); i++) {
-                    StringTo.append(", "+E->Email_RecipientsTo[i]);
+                    StringTo.append(","+E->Email_RecipientsTo[i]);
                 }
                 for (uint i =  0; i < E->Email_RecipientsCC.size(); i++) {
                     StringCC.append(E->Email_RecipientsCC[i]);
                     if (i != E->Email_RecipientsCC.size()-1) {
-                        StringCC.append(", ");
+                        StringCC.append(",");
                     }
                 }
                 To->setText(StringTo);
@@ -2425,16 +2425,16 @@ private slots:
             Header.append("Subject: =?UTF-8?B?"+Subject->text().toUtf8().toBase64()+"?=\r\n");
             Header.append("Date: "+QDateTime::currentDateTime().toString("dd ")+Months[QDateTime::currentDateTime().date().month()-1]+QDateTime::currentDateTime().toString(" yyyy hh:mm:ss")+"\r\n");
             QList <QString> RcptL;
-            QList <QString> ToL = To->text().split(", ", QString::SkipEmptyParts);
-            QList <QString> CcL = CC->text().split(", ", QString::SkipEmptyParts);
-            QList <QString> BccL = BCC->text().split(", ", QString::SkipEmptyParts);
+            QList <QString> ToL = To->text().split(",", QString::SkipEmptyParts);
+            QList <QString> CcL = CC->text().split(",", QString::SkipEmptyParts);
+            QList <QString> BccL = BCC->text().split(",", QString::SkipEmptyParts);
             if (!ToL.isEmpty()) {
                 Header.append("To: ");
                 for (int i = 0; i < ToL.size(); i++) {
                     RcptL.append(ToL[i]);
                     Header.append(ToL[i]);
                     if (i+1 != ToL.size()) {
-                        Header.append(", ");
+                        Header.append(",");
                     } else {
                         Header.append("\r\n");
                     }
@@ -2446,7 +2446,7 @@ private slots:
                     RcptL.append(CcL[i]);
                     Header.append(CcL[i]);
                     if (i+1 != CcL.size()) {
-                        Header.append(", ");
+                        Header.append(",");
                     } else {
                         Header.append("\r\n");
                     }
@@ -2541,9 +2541,9 @@ private slots:
             QString text = I.mid(0, E->cursorPosition());
             QString newWord;
             QString prefix;
-            if (text.contains(", ")) {
-                newWord = text.mid(text.lastIndexOf(", ")+1, text.length()-text.lastIndexOf(", ")-1);
-                prefix = text.mid(0, text.lastIndexOf(", ")+1);
+            if (text.contains(",")) {
+                newWord = text.mid(text.lastIndexOf(",")+1, text.length()-text.lastIndexOf(",")-1);
+                prefix = text.mid(0, text.lastIndexOf(",")+1);
             } else {
                 newWord = text;
             }
@@ -2724,7 +2724,7 @@ QString qorgMail::output() {
             for (uint k = 0; k < Mailv[i].Mboxv[j]->Mbox_Children.size(); k++) {
                 for (uint l = 0; l < Mailv[i].Mboxv.size(); l++) {
                     if (Mailv[i].Mboxv[j]->Mbox_Children[k] == Mailv[i].Mboxv[l]) {
-                        Childrens.append(Output(l)+", ");
+                        Childrens.append(Output(l)+",");
                         break;
                     }
                 }
@@ -2742,12 +2742,12 @@ QString qorgMail::output() {
                 out.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_ReplyTo)+" ");
                 QString To;
                 for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsTo.size(); l++) {
-                    To.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsTo[l])+", ");
+                    To.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsTo[l])+",");
                 }
                 out.append(To+" ");
                 QString CC;
                 for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsCC.size(); l++) {
-                    CC.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsCC[l])+", ");
+                    CC.append(Output(Mailv[i].Mboxv[j]->Emailv[k]->Email_RecipientsCC[l])+",");
                 }
                 out.append(CC+" \n");
                 for (uint l = 0; l < Mailv[i].Mboxv[j]->Emailv[k]->Structurev.size(); l++) {
@@ -2807,7 +2807,7 @@ void qorgMail::input(QString Input) {
                 cMailbox->Mbox_Attrybutes = InputI(B[2]);
                 cMailbox->Mbox_Refresh = InputB(B[3]);
                 cMailbox->Mbox_Top = InputB(B[4]);
-                QStringList C = B[5].split(", ", QString::SkipEmptyParts);
+                QStringList C = B[5].split(",", QString::SkipEmptyParts);
                 vector <uint> Temp;
                 for (int i = 0; i < C.size(); i++) {
                     Temp.push_back(static_cast<uint>(C[i].toInt()));
@@ -2826,11 +2826,11 @@ void qorgMail::input(QString Input) {
                 cEmail->Email_Flags = InputC(B[6]);
                 cEmail->Email_MessageID = InputS(B[7]);
                 cEmail->Email_ReplyTo = InputS(B[8]);
-                QStringList C = B[9].split(", ", QString::SkipEmptyParts);
+                QStringList C = B[9].split(",", QString::SkipEmptyParts);
                 for (int i = 0; i < C.size(); i++) {
                     cEmail->Email_RecipientsTo.push_back(InputS(C[i]));
                 }
-                QStringList D = B[10].split(", ", QString::SkipEmptyParts);
+                QStringList D = B[10].split(",", QString::SkipEmptyParts);
                 for (int i = 0; i < D.size(); i++) {
                     cEmail->Email_RecipientsCC.push_back(InputS(D[i]));
                 }

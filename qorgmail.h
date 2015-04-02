@@ -217,5 +217,5 @@ signals:
     void doubleClick(QString);
     void sendUpdate(QString);
 };
-
+// TODO(mkarol) Mail Header View
 #endif  // QORGMAIL_H_

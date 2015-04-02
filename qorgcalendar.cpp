@@ -129,9 +129,7 @@ bool Event::occursOnDate(QDate D) {
             }
         }; break;
         }
-
     }
-
     return false;
 }
 QDateTime Event::starts(QDateTime D) {
