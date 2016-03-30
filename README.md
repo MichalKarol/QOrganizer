@@ -1,3 +1,5 @@
+#**Currently develop is not compiling. Use master branch instead!**#
+
 QOrganizer
 ==========
 QOrganizer - personal and business information organizer using AES-256 to encrypt user data.
@@ -10,3 +12,5 @@ Ready packages for Debian and source are available on Sourceforge.
 https://sourceforge.net/p/qorganizerbymkarol
 
 Michał Karol <michal.p.karol@gmail.com>
+
+
