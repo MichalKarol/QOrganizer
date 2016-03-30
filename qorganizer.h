@@ -1,4 +1,4 @@
-//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+//    Copyright (C) 2014 Michał Karol <michal.p.karol@gmail.com>
 
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -15,76 +15,61 @@
 
 #ifndef QORGANIZER_H_
 #define QORGANIZER_H_
-#include <qorgio.h>
-#include <qorglogin.h>
-#include <qorgcalendar.h>
-#include <qorgmail.h>
-#include <qorgnotes.h>
-#include <qorgab.h>
-#include <qorgrss.h>
-#include <qorgpasswd.h>
-#include <qorgoptions.h>
+
+#include <qorgtools.h>
+#include <qorgmodel.h>
 #include <QtWidgets>
+#include <QSslCertificate>
 
 class QOrganizer : public QWidget {
     Q_OBJECT
-public:
-    QOrganizer();
+
+  public:
+    QOrganizer(qorgModel* model, QWidget* parent = NULL);
     ~QOrganizer();
 
-    qorgCalendar* Calendar;
-    qorgMail* Mail;
-    qorgNotes* Notes;
-    qorgAB* AddressBook;
-    qorgRSS* RSS;
-    qorgPasswd* PasswordManager;
-    qorgOptions* Options;
+  private:
+    qorgModel* model = NULL;
 
-    void setUser(QString user, QByteArray hash, QByteArray hashed);
+    // Main widget
+    QStackedWidget* stacked = NULL;
+    QTreeWidget* mainTree = NULL;
+    QSystemTrayIcon* trayIcon = NULL;
 
-private:
-    class VersionUpdater;
-    VersionUpdater* VU;
-    QSystemTrayIcon* Tray;
-    QTreeWidget* TreeWidget;
-    QStackedWidget* Stacked;
-    QString Updates[3];
-    void setTree();
-    void closeEvent(QCloseEvent*);
-    bool shown;
-    bool closing;
-    QLineEdit* BlockL;
-    QPushButton* OKB;
-protected:
-    QString user;
-    QByteArray hash;
-    QByteArray hashed;
-private slots:
-    void launchFunction(QTreeWidgetItem*);
-    void doubleClick(QString);
+    void mainWidgetGenerator();
 
-    void updateCalendar();
 
-    void updateMail();
-    void MailNews(QString);
+    // Login widget
+    QWidget* loginWidget = NULL;
+    ValidatingLineEdit* loginUsername = NULL;
+    ValidatingLineEdit* loginPassword = NULL;
+    QLabel* loginInformation = NULL;
+    QPushButton* registrationButton = NULL;
+    QPushButton* loginButton = NULL;
+    bool loggedIn = false;
 
-    void updateAddressBook();
+    QWidget* loginWidgetGenerator();
 
-    void updateRSS();
-    void RSSNews(QString);
+    // Block widget
+    QWidget* blockWidget = NULL;
+    ValidatingLineEdit* blockPassword = NULL;
+    QPushButton* unlockButton = NULL;
 
-    void TrayClick(QSystemTrayIcon::ActivationReason);
-    void VersionUpdate(QString);
+    QWidget* blockWidgetGenerator();
 
-    void updateTime();
-    void Block();
-    void NewPassword(QByteArray, QByteArray, QByteArray, QByteArray);
+    // Other widgets
 
-    // Block
-    void Unlock();
-public slots:
-    void Notification(QString, QString);
+
+
+  private slots:
+    // void logged(bool);
 };
-// TODO(mkarol) QThread rebuild; https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-full-explanation/
+
+// TODO(mkarol) Check all loops!
+// TODO(mkarol) AutoUpdate after hibernation, time of last unlocking to prevent unlicking and locking again
+// FIXME(mkarol) QThread rebuild; https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-full-explanation/
+// FIXME(mkarol) 1 minute after suspension/hibernation access
 // TODO(mkarol) Bold TreeWidget's children which have: event today or unreded email or unreded post.
+// TODO(mkarol) Language support
+// NOTE(mkarol) Remove all QtWidget includes
 #endif  // QORGANIZER_H_

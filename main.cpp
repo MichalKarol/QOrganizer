@@ -1,4 +1,4 @@
-//    Copyright (C) 2014 Michał Karol <mkarol@linux.pl>
+//    Copyright (C) 2014 Michał Karol <michal.p.karol@gmail.com>
 
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -14,21 +14,21 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <qorganizer.h>
-#include <qorglogin.h>
+#include <qorgmodel.h>
 #include <QApplication>
 
 int main(int argc, char* argv[]) {
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
+    //app.setQuitOnLastWindowClosed(false); // FIXME (mkarol) Enable when QSystemTrayIcon is done
+
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PrivateBrowsingEnabled, true);
     QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
     QWebSettings::globalSettings()->setMaximumPagesInCache(0);
     QWebSettings::globalSettings()->setObjectCacheCapacities(0, 0, 0);
-    QOrganizer* w = new QOrganizer();
-    w->setAttribute(Qt::WA_DeleteOnClose);
-    if ((new qorgLogin(w))->exec() == QDialog::Accepted) {
-       w->show();
-     return a.exec();
-    } else {
-        return 0;
-    }
+
+    qorgModel* model = new qorgModel();
+    QOrganizer* view = new QOrganizer(model);
+    view->show();
+
+    return app.exec();
 }

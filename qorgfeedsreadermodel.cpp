@@ -1,4 +1,4 @@
-//    Copyright (C) 2014 Michał Karol <michal.p.karol@gmail.com>
+//    Copyright (C) 2015 Michał Karol <michal.p.karol@gmail.com>
 
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -13,19 +13,9 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef QORGIO_H_
-#define QORGIO_H_
-#include <qorgmodel.h>
-#include <QtWidgets>
+#include "qorgfeedsreadermodel.h"
 
-using std::vector;
-class QOrganizer;
-
-namespace qorgIO {
-    bool readFile(QPair<QByteArray, QByteArray> passwordPair, qorgModel* mainModel);
-    bool saveFile(QPair<QByteArray, QByteArray> passwordPair, qorgModel* mainModel);
-    // TODO(mkarol) Test input from 1.02 and 1.03 and 1.04
-    // TODO(mkarol) Compression and GCM
+qorgFeedsReaderModel::qorgFeedsReaderModel(QObject* parent) : QObject(parent) {
 
 }
-#endif  // QORGIO_H_
+
